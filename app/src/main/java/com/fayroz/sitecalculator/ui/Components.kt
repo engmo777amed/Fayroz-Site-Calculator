@@ -1,4 +1,6 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)\n\npackage com.fayroz.sitecalculator.ui
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
+package com.fayroz.sitecalculator.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
