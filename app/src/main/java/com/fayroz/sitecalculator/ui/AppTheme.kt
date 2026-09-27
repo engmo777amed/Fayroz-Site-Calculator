@@ -66,7 +66,7 @@ private val T=Typography(
 )
 
 @Composable
-fun FayrozTheme(appearance:Appearance,content:@Composable()->Unit){
+fun FayrozTheme(appearance:Appearance,content: @Composable () -> Unit){
     val dark=when(appearance){Appearance.SYSTEM->isSystemInDarkTheme();Appearance.LIGHT->false;Appearance.DARK->true}
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl){
         MaterialTheme(
