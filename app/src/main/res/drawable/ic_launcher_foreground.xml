@@ -4,21 +4,21 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Blueprint field, deliberately inset for launcher safe area -->
-    <path android:fillColor="@android:color/transparent" android:strokeColor="#315A7C"
-        android:strokeWidth="0.8" android:pathData="M22,28H86M22,40H86M22,52H86M22,64H86M22,76H86M28,22V86M40,22V86M52,22V86M64,22V86M76,22V86" />
-    <path android:fillColor="@android:color/transparent" android:strokeColor="#D3AA54"
-        android:strokeWidth="1.2" android:pathData="M25,75C28,45 43,28 72,24" />
-    <path android:fillColor="#171A1E" android:pathData="M29,82L29,58L38,53L38,43L47,38L47,28L54,24L54,82Z" />
-    <path android:fillColor="#E8DFD1" android:pathData="M50,82L50,28L57,32L57,82Z" />
-    <path android:fillColor="#D9B65F" android:pathData="M54,24L83,40L80,46L57,34L57,32Z" />
-    <path android:fillColor="#B88736" android:pathData="M57,48L76,59L72,66L57,57Z" />
-    <path android:fillColor="#D9B65F" android:pathData="M37,57H39V80H37Z" />
-    <path android:fillColor="#D9B65F" android:pathData="M41,54H43V80H41Z" />
-    <path android:fillColor="#D9B65F" android:pathData="M45,51H47V80H45Z" />
-    <path android:fillColor="#FFE6A6" android:pathData="M56,27L82,41L80,43L57,31Z" />
-    <path android:fillColor="#8F6120" android:pathData="M24,82H86V84H24Z" />
-    <!-- takeoff cue -->
-    <path android:fillColor="@android:color/transparent" android:strokeColor="#79BEEB"
-        android:strokeWidth="1.3" android:pathData="M72,70H84M78,64V76" />
+    <!-- Everything important stays between 20..88 for launcher mask safety. -->
+    <path android:fillColor="@android:color/transparent" android:strokeColor="#123848"
+        android:strokeWidth="0.8" android:pathData="M20,28H88M20,40H88M20,52H88M20,64H88M20,76H88M28,20V88M40,20V88M52,20V88M64,20V88M76,20V88" />
+    <!-- Gold measuring ruler -->
+    <path android:fillColor="@android:color/transparent" android:strokeColor="#F0D38D"
+        android:strokeWidth="1.4" android:pathData="M22,28V82M22,31H29M22,39H26M22,47H29M22,55H26M22,63H29M22,71H26M22,79H29" />
+    <!-- Fayroz F -->
+    <path android:fillColor="#D6A84B" android:pathData="M30,22H39V86H30Z" />
+    <path android:fillColor="#22CDB9" android:pathData="M36,24H78V36H36Z" />
+    <path android:fillColor="#68E6D7" android:pathData="M36,47H67V58H36Z" />
+    <path android:fillColor="#0B6AA8" android:pathData="M36,58H48V84H36Z" />
+    <!-- calculator body -->
+    <path android:fillColor="#071E2C" android:strokeColor="#D6A84B" android:strokeWidth="1.5"
+        android:pathData="M60,58H84Q87,58 87,61V84Q87,87 84,87H60Q57,87 57,84V61Q57,58 60,58Z" />
+    <path android:fillColor="#F0D38D" android:pathData="M62,62H82V68H62Z" />
+    <path android:fillColor="#D6A84B" android:pathData="M62,72H67V77H62ZM70,72H75V77H70ZM78,72H83V77H78ZM62,80H67V85H62ZM70,80H75V85H70Z" />
+    <path android:fillColor="#22CDB9" android:pathData="M78,80H83V85H78Z" />
 </vector>
