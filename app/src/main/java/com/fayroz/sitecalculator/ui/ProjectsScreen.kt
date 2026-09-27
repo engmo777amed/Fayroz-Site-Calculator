@@ -129,6 +129,8 @@ fun ProjectDetailScreen(
     onBack:()->Unit,
     onOpenSection:(String)->Unit,
     onAddSection:(String)->Unit,
+    onDuplicateSection:(String)->Unit,
+    onMoveSection:(String,Int)->Unit,
     onRenameProject:(String)->Unit,
     onDeleteProject:()->Unit,
     onShare:()->Unit,
@@ -141,6 +143,7 @@ fun ProjectDetailScreen(
     var renameText by remember(project.id){mutableStateOf(project.name)}
     var delete by remember{mutableStateOf(false)}
     var showSummary by remember{mutableStateOf(false)}
+    var drillKey by remember{mutableStateOf<Pair<String,MeasureUnit>?>(null)}
     val total=project.sections.sumOf{it.spaces.size}
     val complete=project.sections.sumOf{s->s.spaces.count{it.status==CaptureStatus.DONE||it.status==CaptureStatus.REVIEWED}}
 
@@ -189,7 +192,20 @@ fun ProjectDetailScreen(
                     SectionTitle("ملخص المشروع","اضغط اسم البند من شاشة التقارير لمعرفة مصدر الرقم.")
                     val summary=QuantityEngine.projectSummary(project)
                     if(summary.isEmpty())Text("لا توجد كميات بعد.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    else summary.forEach{(k,v)->MetricRow(k.first,"${fmt(v)} ${k.second.label}")}
+                    else summary.forEach{(k,v)->
+                        Surface(
+                            onClick={drillKey=k},
+                            shape=RoundedCornerShape(10.dp),
+                            color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.30f)
+                        ){
+                            Row(Modifier.fillMaxWidth().padding(horizontal=8.dp,vertical=7.dp),verticalAlignment=Alignment.CenterVertically){
+                                Text(k.first,Modifier.weight(1f),style=MaterialTheme.typography.bodyMedium)
+                                Text("${fmt(v)} ${k.second.label}",style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Black)
+                                Spacer(Modifier.width(4.dp))
+                                Icon(Icons.Rounded.ChevronLeft,null,Modifier.size(18.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
                 }
             }
 
@@ -197,14 +213,15 @@ fun ProjectDetailScreen(
             if(project.sections.isEmpty()) item{EmptyBlock("لا يوجد تقسيم","أضف دورًا أو جزءًا.",Icons.Rounded.Layers)}
             else item{
                 Column(verticalArrangement=Arrangement.spacedBy(6.dp)){
-                    project.sections.forEach{s->
+                    project.sections.forEachIndexed{index,s->
                         val count=s.spaces.size
                         val reviewed=s.spaces.count{it.status==CaptureStatus.DONE||it.status==CaptureStatus.REVIEWED}
+                        var sectionMenu by remember(s.id){mutableStateOf(false)}
                         Surface(
                             onClick={onOpenSection(s.id)},shape=RoundedCornerShape(15.dp),
                             color=MaterialTheme.colorScheme.surface,border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)
                         ){
-                            Row(Modifier.fillMaxWidth().padding(10.dp),verticalAlignment=Alignment.CenterVertically){
+                            Row(Modifier.fillMaxWidth().padding(start=10.dp,end=3.dp,top=8.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically){
                                 Surface(shape=RoundedCornerShape(10.dp),color=MaterialTheme.colorScheme.secondaryContainer){
                                     Icon(Icons.Rounded.Layers,null,Modifier.padding(7.dp).size(18.dp),tint=MaterialTheme.colorScheme.secondary)
                                 }
@@ -213,6 +230,26 @@ fun ProjectDetailScreen(
                                     Text(s.name,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Black)
                                     Text("$reviewed / $count مكتمل",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
+                                Box{
+                                    IconButton(onClick={sectionMenu=true},modifier=Modifier.size(48.dp)){Icon(Icons.Rounded.MoreVert,"إجراءات الدور")}
+                                    DropdownMenu(expanded=sectionMenu,onDismissRequest={sectionMenu=false}){
+                                        DropdownMenuItem(
+                                            text={Text("نسخ الدور/الجزء")},
+                                            leadingIcon={Icon(Icons.Rounded.ContentCopy,null)},
+                                            onClick={sectionMenu=false;onDuplicateSection(s.id)}
+                                        )
+                                        if(index>0)DropdownMenuItem(
+                                            text={Text("تحريك لأعلى")},
+                                            leadingIcon={Icon(Icons.Rounded.KeyboardArrowUp,null)},
+                                            onClick={sectionMenu=false;onMoveSection(s.id,-1)}
+                                        )
+                                        if(index<project.sections.lastIndex)DropdownMenuItem(
+                                            text={Text("تحريك لأسفل")},
+                                            leadingIcon={Icon(Icons.Rounded.KeyboardArrowDown,null)},
+                                            onClick={sectionMenu=false;onMoveSection(s.id,1)}
+                                        )
+                                    }
+                                }
                                 Icon(Icons.Rounded.ChevronLeft,null,tint=MaterialTheme.colorScheme.primary)
                             }
                         }
@@ -220,6 +257,44 @@ fun ProjectDetailScreen(
                 }
             }
         }
+    }
+
+    drillKey?.let{key->
+        val contributions=buildList{
+            project.sections.forEach{section->
+                section.spaces.forEach{space->
+                    space.takeoffs.filter{it.name==key.first && it.unit==key.second}.forEach{item->
+                        val value=QuantityEngine.calculate(space,item).final
+                        if(value>0)add(Triple(section.name,space.name,value))
+                    }
+                }
+            }
+        }
+        AlertDialog(
+            onDismissRequest={drillKey=null},
+            title={Text(key.first,fontWeight=FontWeight.Black)},
+            text={
+                LazyColumn(verticalArrangement=Arrangement.spacedBy(6.dp)){
+                    if(contributions.isEmpty())item{Text("لا توجد تفاصيل.")}
+                    else{
+                        val grouped=contributions.groupBy{it.first}
+                        grouped.forEach{(sectionName,rows)->
+                            item{
+                                Text(sectionName,style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.secondary)
+                                rows.forEach{row->
+                                    Row(Modifier.fillMaxWidth().padding(vertical=3.dp)){
+                                        Text(row.second,Modifier.weight(1f),style=MaterialTheme.typography.bodySmall)
+                                        Text("${fmt(row.third)} ${key.second.label}",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                                HorizontalDivider()
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton={TextButton(onClick={drillKey=null}){Text("إغلاق")}}
+        )
     }
 
     if(add) AlertDialog(
