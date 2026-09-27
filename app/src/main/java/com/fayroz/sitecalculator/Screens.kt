@@ -72,7 +72,7 @@ private fun WarningBox(messages:List<String>){
         shape=RoundedCornerShape(10.dp),
         color=MaterialTheme.colorScheme.errorContainer
     ){
-        Column(Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
+        Column(Modifier.fillMaxWidth().padding(horizontal=9.dp,vertical=6.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
             Text("راجع المدخلات",style=MaterialTheme.typography.titleSmall,color=MaterialTheme.colorScheme.onErrorContainer)
             messages.forEach{Text("• $it",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onErrorContainer)}
         }
@@ -84,17 +84,17 @@ private fun OpeningEditor(
     openings:MutableList<OpeningDraft>,
     onChanged:()->Unit={}
 ){
-    Column(verticalArrangement=Arrangement.spacedBy(10.dp)){
+    Column(verticalArrangement=Arrangement.spacedBy(6.dp)){
         if(openings.isEmpty()){
             Text("لا توجد أبواب أو شبابيك مسجلة.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         openings.forEachIndexed{index,o->
             Surface(
-                shape=RoundedCornerShape(13.dp),
+                shape=RoundedCornerShape(11.dp),
                 color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.42f),
                 border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)
             ){
-                Column(Modifier.padding(8.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
+                Column(Modifier.padding(horizontal=8.dp,vertical=6.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
                     Row(verticalAlignment=Alignment.CenterVertically){
                         Text("${o.type} ${index+1}",Modifier.weight(1f),style=MaterialTheme.typography.titleSmall)
                         Text(
@@ -102,7 +102,7 @@ private fun OpeningEditor(
                             style=MaterialTheme.typography.labelMedium,
                             color=MaterialTheme.colorScheme.tertiary
                         )
-                        IconButton(onClick={openings.removeAt(index);onChanged()}){
+                        IconButton(onClick={openings.removeAt(index);onChanged()},modifier=Modifier.size(32.dp)){
                             Icon(Icons.Rounded.Delete,"حذف")
                         }
                     }
@@ -281,8 +281,8 @@ fun SpaceCalculatorScreen(
 
     LazyColumn(
         modifier=Modifier.fillMaxSize(),
-        contentPadding=PaddingValues(horizontal=12.dp,vertical=10.dp),
-        verticalArrangement=Arrangement.spacedBy(8.dp)
+        contentPadding=PaddingValues(horizontal=11.dp,vertical=8.dp),
+        verticalArrangement=Arrangement.spacedBy(7.dp)
     ){
         if(!projectContext.isNullOrBlank()){
             item{
@@ -487,8 +487,8 @@ fun ItemCalculatorScreen(){
 
     LazyColumn(
         Modifier.fillMaxSize(),
-        contentPadding=PaddingValues(horizontal=12.dp,vertical=10.dp),
-        verticalArrangement=Arrangement.spacedBy(8.dp)
+        contentPadding=PaddingValues(horizontal=11.dp,vertical=8.dp),
+        verticalArrangement=Arrangement.spacedBy(7.dp)
     ){
         item{StepTabs(listOf("البند","طريقة الحصر","النتيجة"),step){step=it}}
         item{
