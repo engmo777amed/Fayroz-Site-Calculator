@@ -83,7 +83,10 @@ object Templates {
             name=name,category="جبس",unit=MeasureUnit.AREA,
             method=CalcMethod.CEILING_SURFACES,wastePercent=defaults.gypsumWaste
         )
-        "سكريد / مونة تسوية" -> TakeoffItem(name=name,category="أرضيات",unit=MeasureUnit.AREA,method=CalcMethod.FLOOR_SURFACES)
+        "سكريد / مونة تسوية" -> TakeoffItem(
+            name=name,category="أرضيات",unit=MeasureUnit.VOLUME,
+            method=CalcMethod.FLOOR_LAYER_VOLUME,layerThickness=0.05
+        )
         "خرسانة بسيطة" -> TakeoffItem(name=name,category="خرسانة",unit=MeasureUnit.VOLUME,method=CalcMethod.DIRECT_VOLUME)
         "رخام / جرانيت" -> TakeoffItem(
             name=name,category="رخام",unit=MeasureUnit.AREA,
@@ -91,6 +94,13 @@ object Templates {
         )
         "واجهات / كسوات" -> TakeoffItem(name=name,category="واجهات",unit=MeasureUnit.AREA,method=CalcMethod.WALL_SEGMENTS)
         "كرانيش / حليات" -> TakeoffItem(name=name,category="حليات",unit=MeasureUnit.LENGTH,method=CalcMethod.DIRECT_LENGTH)
+        "جبس بورد جوانب ساقطة" -> TakeoffItem(name=name,category="جبس",unit=MeasureUnit.AREA,method=CalcMethod.DIRECT_AREA,wastePercent=defaults.gypsumWaste)
+        "بيت نور / كوف" -> TakeoffItem(name=name,category="جبس",unit=MeasureUnit.LENGTH,method=CalcMethod.DIRECT_LENGTH)
+        "سقف معلق بلاطات" -> TakeoffItem(
+            name=name,category="أسقف",unit=MeasureUnit.AREA,
+            method=CalcMethod.CEILING_SURFACES,wastePercent=defaults.gypsumWaste,
+            pieceWidth=0.60,pieceHeight=0.60
+        )
         else -> TakeoffItem(name=name,category="مخصص",unit=MeasureUnit.COUNT,method=CalcMethod.DIRECT_COUNT)
     }
 }
