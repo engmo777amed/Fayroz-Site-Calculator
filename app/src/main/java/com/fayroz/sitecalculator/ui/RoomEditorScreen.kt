@@ -454,6 +454,13 @@ private fun ReviewCard(space:SpaceEntry,warnings:List<String>){
                 MetricRow(item.name,"${fmt(q.final)} ${item.unit.label}",item.manualOverride!=null)
                 Text(q.explanation,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 if(q.overridden)Text("كمية فعلية معتمدة: ${item.overrideReason}",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.secondary)
+                QuantityEngine.purchaseInfo(space,item)?.let{purchase->
+                    Text(
+                        "شراء تقريبي: ${purchase.pieces} قطعة"+(purchase.packs?.let{" • $it كرتونة"} ?: ""),
+                        style=MaterialTheme.typography.labelSmall,
+                        color=MaterialTheme.colorScheme.tertiary
+                    )
+                }
             }
         }
     }
