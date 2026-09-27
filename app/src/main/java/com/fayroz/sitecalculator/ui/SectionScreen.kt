@@ -25,6 +25,8 @@ fun SectionScreen(
     onEditRoom:(String)->Unit,
     onCopyRoom:(String)->Unit,
     onDeleteRoom:(String)->Unit,
+    onMoveRoom:(String,Int)->Unit,
+    onAddDirectItem:()->Unit,
     onRename:(String)->Unit,
     onDeleteSection:()->Unit
 ){
@@ -43,6 +45,7 @@ fun SectionScreen(
                 Box{
                     IconButton(onClick={menu=true},modifier=Modifier.size(48.dp)){Icon(Icons.Rounded.MoreVert,"إجراءات")}
                     DropdownMenu(expanded=menu,onDismissRequest={menu=false}){
+                        DropdownMenuItem(text={Text("حصر بند مباشر")},leadingIcon={Icon(Icons.Rounded.Calculate,null)},onClick={menu=false;onAddDirectItem()})
                         DropdownMenuItem(text={Text("تعديل الاسم")},leadingIcon={Icon(Icons.Rounded.Edit,null)},onClick={menu=false;rename=true})
                         DropdownMenuItem(text={Text("حذف الجزء",color=MaterialTheme.colorScheme.error)},leadingIcon={Icon(Icons.Rounded.Delete,null,tint=MaterialTheme.colorScheme.error)},onClick={menu=false;deleteSection=true})
                     }
@@ -72,7 +75,7 @@ fun SectionScreen(
                 item{EmptyBlock("لا توجد غرف","أضف أول غرفة أو فراغ للبدء.",Icons.Rounded.MeetingRoom)}
             }else item{
                 Column(verticalArrangement=Arrangement.spacedBy(6.dp)){
-                    section.spaces.forEach{space->
+                    section.spaces.forEachIndexed{index,space->
                         var menu by remember(space.id){mutableStateOf(false)}
                         Surface(
                             onClick={onEditRoom.bind(space.id)},
@@ -80,7 +83,7 @@ fun SectionScreen(
                             color=MaterialTheme.colorScheme.surface,
                             border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)
                         ){
-                            Row(Modifier.fillMaxWidth().padding(10.dp),verticalAlignment=Alignment.CenterVertically){
+                            Row(Modifier.fillMaxWidth().padding(start=10.dp,end=3.dp,top=8.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically){
                                 Surface(
                                     shape=RoundedCornerShape(10.dp),
                                     color=when(space.status){
@@ -127,6 +130,8 @@ fun SectionScreen(
                                     DropdownMenu(expanded=menu,onDismissRequest={menu=false}){
                                         DropdownMenuItem(text={Text("تعديل")},leadingIcon={Icon(Icons.Rounded.Edit,null)},onClick={menu=false;onEditRoom(space.id)})
                                         DropdownMenuItem(text={Text("نسخ")},leadingIcon={Icon(Icons.Rounded.ContentCopy,null)},onClick={menu=false;onCopyRoom(space.id)})
+                                        if(index>0)DropdownMenuItem(text={Text("تحريك لأعلى")},leadingIcon={Icon(Icons.Rounded.KeyboardArrowUp,null)},onClick={menu=false;onMoveRoom(space.id,-1)})
+                                        if(index<section.spaces.lastIndex)DropdownMenuItem(text={Text("تحريك لأسفل")},leadingIcon={Icon(Icons.Rounded.KeyboardArrowDown,null)},onClick={menu=false;onMoveRoom(space.id,1)})
                                         DropdownMenuItem(text={Text("حذف",color=MaterialTheme.colorScheme.error)},leadingIcon={Icon(Icons.Rounded.Delete,null,tint=MaterialTheme.colorScheme.error)},onClick={menu=false;deleteRoomId=space.id})
                                     }
                                 }
