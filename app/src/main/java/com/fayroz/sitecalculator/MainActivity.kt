@@ -288,18 +288,26 @@ class MainActivity:ComponentActivity(){
     }
 }
 
-private fun deepCopySpace(src:SpaceEntry,newName:String)=src.copy(
-    id=UUID.randomUUID().toString(),
-    name=newName,
-    walls=src.walls.map{it.copy(id=UUID.randomUUID().toString())},
-    floorSurfaces=src.floorSurfaces.map{it.copy(id=UUID.randomUUID().toString())},
-    ceilingSurfaces=src.ceilingSurfaces.map{it.copy(id=UUID.randomUUID().toString())},
-    openings=src.openings.map{it.copy(id=UUID.randomUUID().toString(),wallId=null)},
-    takeoffs=src.takeoffs.map{t->
-        t.copy(
-            id=UUID.randomUUID().toString(),
-            adjustments=t.adjustments.map{it.copy(id=UUID.randomUUID().toString())}
-        )
-    },
-    updatedAt=System.currentTimeMillis()
-)
+private fun deepCopySpace(src:SpaceEntry,newName:String):SpaceEntry{
+    val wallMap=src.walls.associate{it.id to UUID.randomUUID().toString()}
+    return src.copy(
+        id=UUID.randomUUID().toString(),
+        name=newName,
+        walls=src.walls.map{it.copy(id=wallMap[it.id] ?: UUID.randomUUID().toString())},
+        floorSurfaces=src.floorSurfaces.map{it.copy(id=UUID.randomUUID().toString())},
+        ceilingSurfaces=src.ceilingSurfaces.map{it.copy(id=UUID.randomUUID().toString())},
+        openings=src.openings.map{
+            it.copy(
+                id=UUID.randomUUID().toString(),
+                wallId=it.wallId?.let{oldId->wallMap[oldId]}
+            )
+        },
+        takeoffs=src.takeoffs.map{t->
+            t.copy(
+                id=UUID.randomUUID().toString(),
+                adjustments=t.adjustments.map{it.copy(id=UUID.randomUUID().toString())}
+            )
+        },
+        updatedAt=System.currentTimeMillis()
+    )
+}
