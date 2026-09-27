@@ -269,7 +269,7 @@ fun RoomEditorScreen(
     }
 
     editItemIndex?.let{i->
-        TakeoffEditorDialog(item=takeoffs[i],onDismiss={editItemIndex=null},onSave={takeoffs[i]=it;editItemIndex=null})
+        TakeoffEditorDialog(item=takeoffs[i],walls=space.walls,onDismiss={editItemIndex=null},onSave={takeoffs[i]=it;editItemIndex=null})
     }
 
     if(customDialog)CustomItemDialog(onDismiss={customDialog=false},onAdd={takeoffs.add(it);customDialog=false})
@@ -497,11 +497,16 @@ private fun CustomItemDialog(onDismiss:()->Unit,onAdd:(TakeoffItem)->Unit){
 }
 
 @Composable
-private fun TakeoffEditorDialog(item:TakeoffItem,onDismiss:()->Unit,onSave:(TakeoffItem)->Unit){
+private fun TakeoffEditorDialog(item:TakeoffItem,walls:List<WallSegment>,onDismiss:()->Unit,onSave:(TakeoffItem)->Unit){
     var waste by remember{mutableStateOf(fmt(item.wastePercent))}
     var tileHeight by remember{mutableStateOf(fmt(item.tileHeight))}
     var upstand by remember{mutableStateOf(fmt(item.waterproofUpstand))}
+    var layerThickness by remember{mutableStateOf(if(item.layerThickness==0.0)"" else fmt(item.layerThickness))}
     var direct by remember{mutableStateOf(if(item.directValue==0.0)"" else fmt(item.directValue))}
+    var pieceWidth by remember{mutableStateOf(if(item.pieceWidth==0.0)"" else fmt(item.pieceWidth))}
+    var pieceHeight by remember{mutableStateOf(if(item.pieceHeight==0.0)"" else fmt(item.pieceHeight))}
+    var piecesPerPack by remember{mutableStateOf(if(item.piecesPerPack==0)"" else item.piecesPerPack.toString())}
+    var wallIds by remember{mutableStateOf(item.wallIds.toSet())}
     var reveals by remember{mutableStateOf(item.includeOpeningReveals)}
     var overrideEnabled by remember{mutableStateOf(item.manualOverride!=null)}
     var overrideValue by remember{mutableStateOf(item.manualOverride?.let(::fmt) ?: "")}
@@ -521,11 +526,37 @@ private fun TakeoffEditorDialog(item:TakeoffItem,onDismiss:()->Unit,onSave:(Take
                 }
                 if(item.method==CalcMethod.WALL_TILES)item{NumberFieldX("ارتفاع الكسوة",tileHeight,{tileHeight=it},"م","الخصم من الشباك يتم حسب جلسة الشباك.")}
                 if(item.method==CalcMethod.WATERPROOFING)item{NumberFieldX("رجوع العزل",upstand,{upstand=it},"م","ارتفاع رجوع العزل على الحائط.")}
+                if(item.method==CalcMethod.FLOOR_LAYER_VOLUME)item{NumberFieldX("متوسط السمك",layerThickness,{layerThickness=it},"م","مثال 5 سم = 0.05 م.")}
                 item{NumberFieldX("الهالك",waste,{waste=it},"%","خاص بهذا البند فقط.")}
+                if(item.unit==MeasureUnit.AREA){
+                    item{
+                        HorizontalDivider()
+                        Text("مقاس القطعة / العبوة - اختياري",style=MaterialTheme.typography.labelLarge)
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                            NumberFieldX("عرض القطعة",pieceWidth,{pieceWidth=it},"م",modifier=Modifier.weight(1f))
+                            NumberFieldX("طول القطعة",pieceHeight,{pieceHeight=it},"م",modifier=Modifier.weight(1f))
+                        }
+                        NumberFieldX("عدد القطع/كرتونة",piecesPerPack,{piecesPerPack=it},"قطعة","لو معروف سيظهر عدد الكراتين التقريبي.")
+                    }
+                }
                 if(item.method in listOf(CalcMethod.ROOM_WALLS,CalcMethod.WALL_SEGMENTS,CalcMethod.WALL_TILES)){
-                    item{Row(verticalAlignment=Alignment.CenterVertically){
-                        Text("احتساب جوانب الفتحات",Modifier.weight(1f));Switch(checked=reveals,onCheckedChange={reveals=it})
-                    }}
+                    item{
+                        Row(verticalAlignment=Alignment.CenterVertically){
+                            Text("احتساب جوانب الفتحات",Modifier.weight(1f));Switch(checked=reveals,onCheckedChange={reveals=it})
+                        }
+                        if(walls.isNotEmpty()){
+                            Text("تطبيق على حوائط محددة - اترك الكل غير محدد لتطبيقه على جميع الحوائط.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            walls.forEach{wall->
+                                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+                                    Checkbox(
+                                        checked=wall.id in wallIds,
+                                        onCheckedChange={checked->wallIds=if(checked)wallIds+wall.id else wallIds-wall.id}
+                                    )
+                                    Text(wall.name,style=MaterialTheme.typography.bodyMedium)
+                                }
+                            }
+                        }
+                    }
                 }
                 item{HorizontalDivider();Text("إضافات وخصومات يدوية",style=MaterialTheme.typography.labelLarge)}
                 item{
@@ -567,7 +598,10 @@ private fun TakeoffEditorDialog(item:TakeoffItem,onDismiss:()->Unit,onSave:(Take
         confirmButton={TextButton(onClick={
             onSave(item.copy(
                 wastePercent=n(waste),tileHeight=n(tileHeight),waterproofUpstand=n(upstand),
-                directValue=n(direct),includeOpeningReveals=reveals,
+                layerThickness=n(layerThickness),directValue=n(direct),includeOpeningReveals=reveals,
+                wallIds=wallIds.toList(),
+                pieceWidth=n(pieceWidth),pieceHeight=n(pieceHeight),
+                piecesPerPack=n(piecesPerPack).toInt().coerceAtLeast(0),
                 manualOverride=if(overrideEnabled)n(overrideValue) else null,
                 overrideReason=if(overrideEnabled)overrideReason.trim() else "",
                 adjustments=adjustments
