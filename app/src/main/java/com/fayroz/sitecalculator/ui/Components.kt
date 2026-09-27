@@ -51,12 +51,11 @@ fun BrandBanner(){
             }
             Spacer(Modifier.width(9.dp))
             Column(Modifier.weight(1f)){
-                Text("FAYROZ",style=MaterialTheme.typography.titleMedium,color=Color.White,fontWeight=FontWeight.ExtraBold)
-                Text("SITE CALCULATOR",style=MaterialTheme.typography.labelMedium,color=FayrozGoldLight,fontWeight=FontWeight.Bold)
-                Text("حاسبة كميات الموقع",style=MaterialTheme.typography.bodySmall,color=Color.White.copy(alpha=.78f))
+                Text("FAYROZ SITE CALCULATOR",style=MaterialTheme.typography.titleMedium,color=Color.White,fontWeight=FontWeight.Black)
+                Text("حاسبة كميات الموقع",style=MaterialTheme.typography.bodySmall,color=Color(0xFF68E6D7),fontWeight=FontWeight.Bold)
             }
-            Surface(shape=RoundedCornerShape(999.dp),color=FayrozGold.copy(alpha=.14f)){
-                Text("SITE",Modifier.padding(horizontal=8.dp,vertical=4.dp),style=MaterialTheme.typography.labelSmall,color=FayrozGoldLight)
+            Surface(shape=RoundedCornerShape(999.dp),color=Color(0xFF0B3A3A)){
+                Text("SITE",Modifier.padding(horizontal=8.dp,vertical=4.dp),style=MaterialTheme.typography.labelSmall,color=Color(0xFF68E6D7))
             }
         }
     }
@@ -134,8 +133,8 @@ fun SurfaceCard(content:@Composable ColumnScope.()->Unit){
         shadowElevation=2.dp
     ){
         Column(
-            Modifier.padding(horizontal=13.dp,vertical=11.dp),
-            verticalArrangement=Arrangement.spacedBy(8.dp),
+            Modifier.padding(horizontal=11.dp,vertical=9.dp),
+            verticalArrangement=Arrangement.spacedBy(6.dp),
             content=content
         )
     }
@@ -202,11 +201,11 @@ fun ModeCard(
 @Composable
 fun HelpButton(title:String,help:String){
     var show by remember{mutableStateOf(false)}
-    IconButton(onClick={show=true},modifier=Modifier.size(26.dp)){
+    IconButton(onClick={show=true},modifier=Modifier.size(24.dp)){
         Icon(
             Icons.Rounded.Info,
             contentDescription="شرح $title",
-            modifier=Modifier.size(16.dp),
+            modifier=Modifier.size(15.dp),
             tint=MaterialTheme.colorScheme.tertiary
         )
     }
@@ -294,7 +293,7 @@ fun SelectField(
         Box{
             OutlinedButton(
                 onClick={open=true},
-                modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
+                modifier=Modifier.fillMaxWidth().heightIn(min=44.dp),
                 shape=RoundedCornerShape(10.dp),
                 border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),
                 colors=ButtonDefaults.outlinedButtonColors(containerColor=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.48f))
@@ -331,7 +330,7 @@ fun StepTabs(tabs:List<String>,selected:Int,onSelect:(Int)->Unit){
                     shape=RoundedCornerShape(10.dp),
                     color=if(active) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
                 ){
-                    Box(Modifier.padding(vertical=8.dp),contentAlignment=Alignment.Center){
+                    Box(Modifier.padding(vertical=7.dp),contentAlignment=Alignment.Center){
                         Text(
                             title,
                             style=MaterialTheme.typography.labelLarge,
