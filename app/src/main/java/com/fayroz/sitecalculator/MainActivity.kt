@@ -19,7 +19,7 @@ import com.fayroz.sitecalculator.ui.*
 import java.util.UUID
 
 private enum class RootTab { HOME,PROJECTS,TODAY,TOOLS,SETTINGS }
-private enum class Route { ROOT,NEW_PROJECT,PROJECT,SECTION,ADD_ROOM,EDIT_ROOM,QUICK_ROOM,QUICK_ITEM }
+private enum class Route { ROOT,NEW_PROJECT,PROJECT,SECTION,ADD_ROOM,EDIT_ROOM,ADD_ITEM,QUICK_ROOM,QUICK_ITEM,QUICK_STAIR }
 
 class MainActivity:ComponentActivity(){
     override fun onCreate(savedInstanceState:Bundle?){
@@ -65,8 +65,8 @@ class MainActivity:ComponentActivity(){
                         Route.NEW_PROJECT->Route.ROOT
                         Route.PROJECT->Route.ROOT
                         Route.SECTION->Route.PROJECT
-                        Route.ADD_ROOM,Route.EDIT_ROOM->Route.SECTION
-                        Route.QUICK_ROOM,Route.QUICK_ITEM->Route.ROOT
+                        Route.ADD_ROOM,Route.EDIT_ROOM,Route.ADD_ITEM->Route.SECTION
+                        Route.QUICK_ROOM,Route.QUICK_ITEM,Route.QUICK_STAIR->Route.ROOT
                         Route.ROOT->Route.ROOT
                     }
                     if(route==Route.ROOT && tab==RootTab.HOME)tab=RootTab.PROJECTS
@@ -130,7 +130,8 @@ class MainActivity:ComponentActivity(){
 
                                 RootTab.TOOLS->ToolsScreen(
                                     onRoom={route=Route.QUICK_ROOM},
-                                    onItem={route=Route.QUICK_ITEM}
+                                    onItem={route=Route.QUICK_ITEM},
+                                    onStair={route=Route.QUICK_STAIR}
                                 )
 
                                 RootTab.SETTINGS->SettingsScreen(
@@ -182,6 +183,17 @@ class MainActivity:ComponentActivity(){
                                     project.sections.add(SectionEntry(name=name))
                                     persist("إضافة دور أو جزء")
                                 },
+                                onDuplicateSection={id->
+                                    val src=project.sections.firstOrNull{it.id==id}
+                                    if(src!=null){
+                                        project.sections.add(deepCopySection(src,src.name+" - نسخة"))
+                                        persist("نسخ دور أو جزء")
+                                    }
+                                },
+                                onMoveSection={id,delta->
+                                    moveById(project.sections,id,delta)
+                                    persist("ترتيب الأدوار")
+                                },
                                 onRenameProject={name->project.name=name;persist("تعديل اسم المشروع")},
                                 onDeleteProject={
                                     projects.removeAll{it.id==project.id}
@@ -216,6 +228,11 @@ class MainActivity:ComponentActivity(){
                                     section.spaces.removeAll{it.id==id}
                                     persist("حذف غرفة")
                                 },
+                                onMoveRoom={id,delta->
+                                    moveById(section.spaces,id,delta)
+                                    persist("ترتيب الغرف")
+                                },
+                                onAddDirectItem={route=Route.ADD_ITEM},
                                 onRename={name->section.name=name;persist("تعديل اسم الدور")},
                                 onDeleteSection={
                                     project.sections.removeAll{it.id==section.id}
@@ -269,6 +286,20 @@ class MainActivity:ComponentActivity(){
                             )
                         }
 
+                        Route.ADD_ITEM->{
+                            if(project==null||section==null){
+                                route=Route.SECTION
+                            }else QuickItemScreen(
+                                onBack={route=Route.SECTION},
+                                projectContext="${project.name} ← ${section.name}",
+                                onSave={entry->
+                                    section.spaces.add(entry)
+                                    persist("حصر بند مباشر")
+                                    route=Route.SECTION
+                                }
+                            )
+                        }
+
                         Route.QUICK_ROOM->key("quick_"+quickSession){
                             RoomEditorScreen(
                                 repository=repository,
@@ -280,6 +311,7 @@ class MainActivity:ComponentActivity(){
                         }
 
                         Route.QUICK_ITEM->QuickItemScreen(onBack={route=Route.ROOT})
+                        Route.QUICK_STAIR->StairCalculatorScreen(onBack={route=Route.ROOT})
                         Route.ROOT->Unit
                     }
                 }
@@ -287,6 +319,27 @@ class MainActivity:ComponentActivity(){
         }
     }
 }
+
+private fun <T> moveById(list:MutableList<T>,id:String,delta:Int){
+    val index=list.indexOfFirst{item->
+        when(item){
+            is SectionEntry->item.id==id
+            is SpaceEntry->item.id==id
+            else->false
+        }
+    }
+    if(index<0)return
+    val target=(index+delta).coerceIn(0,list.lastIndex)
+    if(target==index)return
+    val item=list.removeAt(index)
+    list.add(target,item)
+}
+
+private fun deepCopySection(src:SectionEntry,newName:String)=SectionEntry(
+    id=UUID.randomUUID().toString(),
+    name=newName,
+    spaces=src.spaces.map{deepCopySpace(it,it.name)}.toMutableList()
+)
 
 private fun deepCopySpace(src:SpaceEntry,newName:String):SpaceEntry{
     val wallMap=src.walls.associate{it.id to UUID.randomUUID().toString()}
