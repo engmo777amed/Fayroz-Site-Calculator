@@ -364,43 +364,46 @@ private fun HomeScreen(
                 }
             }
         }else{
-            items(filtered.size){index->
-                val project=filtered[index]
-                val rooms=project.sections.sumOf{sec->sec.spaces.sumOf{it.repeatCount}}
-                Surface(
-                    modifier=Modifier.fillMaxWidth(),
-                    onClick={onOpenProject(project.id)},
-                    shape=MaterialTheme.shapes.medium,
-                    color=MaterialTheme.colorScheme.surface,
-                    border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),
-                    shadowElevation=1.dp
-                ){
-                    Row(
-                        Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=8.dp),
-                        verticalAlignment=Alignment.CenterVertically
-                    ){
+            item{
+                Column(verticalArrangement=Arrangement.spacedBy(6.dp)){
+                    filtered.forEach{project->
+                        val rooms=project.sections.sumOf{sec->sec.spaces.sumOf{it.repeatCount}}
                         Surface(
-                            shape=MaterialTheme.shapes.small,
-                            color=MaterialTheme.colorScheme.secondaryContainer
+                            modifier=Modifier.fillMaxWidth(),
+                            onClick={onOpenProject(project.id)},
+                            shape=MaterialTheme.shapes.medium,
+                            color=MaterialTheme.colorScheme.surface,
+                            border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),
+                            shadowElevation=1.dp
                         ){
-                            Icon(
-                                Icons.Rounded.Apartment,
-                                null,
-                                Modifier.padding(7.dp).size(19.dp),
-                                tint=MaterialTheme.colorScheme.secondary
-                            )
+                            Row(
+                                Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=8.dp),
+                                verticalAlignment=Alignment.CenterVertically
+                            ){
+                                Surface(
+                                    shape=MaterialTheme.shapes.small,
+                                    color=MaterialTheme.colorScheme.secondaryContainer
+                                ){
+                                    Icon(
+                                        Icons.Rounded.Apartment,
+                                        null,
+                                        Modifier.padding(7.dp).size(19.dp),
+                                        tint=MaterialTheme.colorScheme.secondary
+                                    )
+                                }
+                                Spacer(Modifier.width(8.dp))
+                                Column(Modifier.weight(1f)){
+                                    Text(project.name,style=MaterialTheme.typography.titleMedium,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold)
+                                    Text(
+                                        "${project.type} • $rooms غرفة/فراغ • ${project.sections.size} جزء",
+                                        style=MaterialTheme.typography.bodySmall,
+                                        color=MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines=1
+                                    )
+                                }
+                                Text("فتح",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.primary)
+                            }
                         }
-                        Spacer(Modifier.width(8.dp))
-                        Column(Modifier.weight(1f)){
-                            Text(project.name,style=MaterialTheme.typography.titleMedium,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold)
-                            Text(
-                                "${project.type} • $rooms غرفة/فراغ • ${project.sections.size} جزء",
-                                style=MaterialTheme.typography.bodySmall,
-                                color=MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines=1
-                            )
-                        }
-                        Text("فتح",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.primary)
                     }
                 }
             }
