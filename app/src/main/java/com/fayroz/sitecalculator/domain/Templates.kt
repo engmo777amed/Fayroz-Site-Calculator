@@ -12,49 +12,85 @@ object Templates {
 
     fun forRoom(type:String,defaults:AppDefaults):List<TakeoffItem> = when(type){
         "حمام" -> listOf(
-            TakeoffItem("سيراميك الحوائط","تشطيبات",MeasureUnit.AREA,CalcMethod.WALL_TILES,defaults.wallTileWaste,defaults.defaultTileHeight),
+            TakeoffItem(
+                name="سيراميك الحوائط",category="تشطيبات",unit=MeasureUnit.AREA,
+                method=CalcMethod.WALL_TILES,wastePercent=defaults.wallTileWaste,tileHeight=defaults.defaultTileHeight
+            ),
             floor("الأرضيات",defaults.floorWaste),
-            TakeoffItem("عزل الأرضية","عزل",MeasureUnit.AREA,CalcMethod.WATERPROOFING,waterproofUpstand=defaults.waterproofUpstand),
-            TakeoffItem("سقف جبس بورد","جبس",MeasureUnit.AREA,CalcMethod.CEILING_SURFACES,defaults.gypsumWaste)
+            TakeoffItem(
+                name="عزل الأرضية",category="عزل",unit=MeasureUnit.AREA,
+                method=CalcMethod.WATERPROOFING,waterproofUpstand=defaults.waterproofUpstand
+            ),
+            TakeoffItem(
+                name="سقف جبس بورد",category="جبس",unit=MeasureUnit.AREA,
+                method=CalcMethod.CEILING_SURFACES,wastePercent=defaults.gypsumWaste
+            )
         )
         "مطبخ" -> listOf(
             walls("محارة الحوائط"),
-            TakeoffItem("سيراميك الحوائط","تشطيبات",MeasureUnit.AREA,CalcMethod.WALL_TILES,defaults.wallTileWaste,1.50),
+            TakeoffItem(
+                name="سيراميك الحوائط",category="تشطيبات",unit=MeasureUnit.AREA,
+                method=CalcMethod.WALL_TILES,wastePercent=defaults.wallTileWaste,tileHeight=1.50
+            ),
             floor("الأرضيات",defaults.floorWaste),
-            TakeoffItem("دهان السقف","دهانات",MeasureUnit.AREA,CalcMethod.CEILING_SURFACES)
+            TakeoffItem(name="دهان السقف",category="دهانات",unit=MeasureUnit.AREA,method=CalcMethod.CEILING_SURFACES)
         )
         "بلكونة" -> listOf(
             floor("الأرضيات",defaults.floorWaste),
-            TakeoffItem("عزل الأرضية","عزل",MeasureUnit.AREA,CalcMethod.WATERPROOFING,waterproofUpstand=defaults.waterproofUpstand),
+            TakeoffItem(
+                name="عزل الأرضية",category="عزل",unit=MeasureUnit.AREA,
+                method=CalcMethod.WATERPROOFING,waterproofUpstand=defaults.waterproofUpstand
+            ),
             walls("محارة الحوائط"),
             walls("دهان الحوائط")
         )
         else -> listOf(
             walls("محارة الحوائط"),
-            TakeoffItem("محارة السقف","تشطيبات",MeasureUnit.AREA,CalcMethod.CEILING_SURFACES),
+            TakeoffItem(name="محارة السقف",category="تشطيبات",unit=MeasureUnit.AREA,method=CalcMethod.CEILING_SURFACES),
             walls("دهان الحوائط"),
-            TakeoffItem("دهان السقف","دهانات",MeasureUnit.AREA,CalcMethod.CEILING_SURFACES),
+            TakeoffItem(name="دهان السقف",category="دهانات",unit=MeasureUnit.AREA,method=CalcMethod.CEILING_SURFACES),
             floor("الأرضيات",defaults.floorWaste),
-            TakeoffItem("الوزرات","تشطيبات",MeasureUnit.LENGTH,CalcMethod.SKIRTING,defaults.skirtingWaste)
+            TakeoffItem(
+                name="الوزرات",category="تشطيبات",unit=MeasureUnit.LENGTH,
+                method=CalcMethod.SKIRTING,wastePercent=defaults.skirtingWaste
+            )
         )
     }
 
     fun defaultForName(name:String,defaults:AppDefaults):TakeoffItem = when(name){
-        "مباني" -> TakeoffItem(name,"مباني",MeasureUnit.AREA,CalcMethod.ROOM_WALLS)
-        "محارة الحوائط" -> TakeoffItem(name,"محارة",MeasureUnit.AREA,CalcMethod.ROOM_WALLS)
-        "محارة السقف" -> TakeoffItem(name,"محارة",MeasureUnit.AREA,CalcMethod.CEILING_SURFACES)
-        "دهان الحوائط" -> TakeoffItem(name,"دهانات",MeasureUnit.AREA,CalcMethod.ROOM_WALLS)
-        "دهان السقف" -> TakeoffItem(name,"دهانات",MeasureUnit.AREA,CalcMethod.CEILING_SURFACES)
-        "الأرضيات" -> TakeoffItem(name,"أرضيات",MeasureUnit.AREA,CalcMethod.FLOOR_SURFACES,defaults.floorWaste)
-        "سيراميك الحوائط" -> TakeoffItem(name,"سيراميك",MeasureUnit.AREA,CalcMethod.WALL_TILES,defaults.wallTileWaste,defaults.defaultTileHeight)
-        "الوزرات" -> TakeoffItem(name,"أرضيات",MeasureUnit.LENGTH,CalcMethod.SKIRTING,defaults.skirtingWaste)
-        "عزل الأرضية" -> TakeoffItem(name,"عزل",MeasureUnit.AREA,CalcMethod.WATERPROOFING,waterproofUpstand=defaults.waterproofUpstand)
-        "سقف جبس بورد" -> TakeoffItem(name,"جبس",MeasureUnit.AREA,CalcMethod.CEILING_SURFACES,defaults.gypsumWaste)
-        "سكريد / مونة تسوية" -> TakeoffItem(name,"أرضيات",MeasureUnit.AREA,CalcMethod.FLOOR_SURFACES)
-        "خرسانة بسيطة" -> TakeoffItem(name,"خرسانة",MeasureUnit.VOLUME,CalcMethod.DIRECT_VOLUME)
-        "رخام / جرانيت" -> TakeoffItem(name,"رخام",MeasureUnit.AREA,CalcMethod.FLOOR_SURFACES,defaults.floorWaste)
-        "واجهات / كسوات" -> TakeoffItem(name,"واجهات",MeasureUnit.AREA,CalcMethod.WALL_SEGMENTS)
-        "كرانيش / حليات" -> TakeoffItem(name,"حليات",MeasureUnit.LENGTH,CalcMethod.DIRECT_LENGTH)
-        else -> TakeoffItem(name,"مخصص",MeasureUnit.COUNT,CalcMethod.DIRECT_COUNT)
+        "مباني" -> TakeoffItem(name=name,category="مباني",unit=MeasureUnit.AREA,method=CalcMethod.ROOM_WALLS)
+        "محارة الحوائط" -> TakeoffItem(name=name,category="محارة",unit=MeasureUnit.AREA,method=CalcMethod.ROOM_WALLS)
+        "محارة السقف" -> TakeoffItem(name=name,category="محارة",unit=MeasureUnit.AREA,method=CalcMethod.CEILING_SURFACES)
+        "دهان الحوائط" -> TakeoffItem(name=name,category="دهانات",unit=MeasureUnit.AREA,method=CalcMethod.ROOM_WALLS)
+        "دهان السقف" -> TakeoffItem(name=name,category="دهانات",unit=MeasureUnit.AREA,method=CalcMethod.CEILING_SURFACES)
+        "الأرضيات" -> TakeoffItem(
+            name=name,category="أرضيات",unit=MeasureUnit.AREA,
+            method=CalcMethod.FLOOR_SURFACES,wastePercent=defaults.floorWaste
+        )
+        "سيراميك الحوائط" -> TakeoffItem(
+            name=name,category="سيراميك",unit=MeasureUnit.AREA,
+            method=CalcMethod.WALL_TILES,wastePercent=defaults.wallTileWaste,tileHeight=defaults.defaultTileHeight
+        )
+        "الوزرات" -> TakeoffItem(
+            name=name,category="أرضيات",unit=MeasureUnit.LENGTH,
+            method=CalcMethod.SKIRTING,wastePercent=defaults.skirtingWaste
+        )
+        "عزل الأرضية" -> TakeoffItem(
+            name=name,category="عزل",unit=MeasureUnit.AREA,
+            method=CalcMethod.WATERPROOFING,waterproofUpstand=defaults.waterproofUpstand
+        )
+        "سقف جبس بورد" -> TakeoffItem(
+            name=name,category="جبس",unit=MeasureUnit.AREA,
+            method=CalcMethod.CEILING_SURFACES,wastePercent=defaults.gypsumWaste
+        )
+        "سكريد / مونة تسوية" -> TakeoffItem(name=name,category="أرضيات",unit=MeasureUnit.AREA,method=CalcMethod.FLOOR_SURFACES)
+        "خرسانة بسيطة" -> TakeoffItem(name=name,category="خرسانة",unit=MeasureUnit.VOLUME,method=CalcMethod.DIRECT_VOLUME)
+        "رخام / جرانيت" -> TakeoffItem(
+            name=name,category="رخام",unit=MeasureUnit.AREA,
+            method=CalcMethod.FLOOR_SURFACES,wastePercent=defaults.floorWaste
+        )
+        "واجهات / كسوات" -> TakeoffItem(name=name,category="واجهات",unit=MeasureUnit.AREA,method=CalcMethod.WALL_SEGMENTS)
+        "كرانيش / حليات" -> TakeoffItem(name=name,category="حليات",unit=MeasureUnit.LENGTH,method=CalcMethod.DIRECT_LENGTH)
+        else -> TakeoffItem(name=name,category="مخصص",unit=MeasureUnit.COUNT,method=CalcMethod.DIRECT_COUNT)
     }
 }
