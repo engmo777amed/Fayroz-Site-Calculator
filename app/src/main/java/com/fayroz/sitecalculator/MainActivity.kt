@@ -271,98 +271,10 @@ private fun HomeScreen(
 
     LazyColumn(
         modifier=Modifier.fillMaxSize(),
-        contentPadding=PaddingValues(horizontal=13.dp,vertical=8.dp),
-        verticalArrangement=Arrangement.spacedBy(8.dp)
+        contentPadding=PaddingValues(horizontal=12.dp,vertical=8.dp),
+        verticalArrangement=Arrangement.spacedBy(7.dp)
     ){
-        item{ BrandBanner() }
-
-        item{
-            AppearanceSelector(
-                appearance=appearance,
-                onAppearance=onAppearance
-            )
-        }
-
-        item{
-            SectionHeading(
-                "مشروعات الموقع",
-                "احفظ البيت أو الشقة ورتّب الحصر حسب الدور والغرفة."
-            )
-        }
-
-        item{
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(7.dp)){
-                Box(Modifier.weight(1f)){
-                    TextFieldSimple(
-                        "بحث",
-                        search,
-                        {search=it},
-                        "ابحث باسم المشروع أو الدور أو الغرفة أو الملاحظة.",
-                        "مثال: حمام رئيسي"
-                    )
-                }
-                Button(
-                    onClick=onNewProject,
-                    modifier=Modifier.align(Alignment.Bottom).heightIn(min=48.dp),
-                    shape=MaterialTheme.shapes.medium,
-                    colors=ButtonDefaults.buttonColors(
-                        containerColor=MaterialTheme.colorScheme.secondary,
-                        contentColor=MaterialTheme.colorScheme.onSecondary
-                    )
-                ){
-                    Icon(Icons.Rounded.Add,null)
-                    Spacer(Modifier.width(5.dp))
-                    Text("مشروع")
-                }
-            }
-        }
-
-        if(filtered.isEmpty()){
-            item{
-                SurfaceCard{
-                    Text(
-                        if(q.isBlank())"لا توجد مشروعات محفوظة. ابدأ مشروعًا جديدًا." else "لا توجد نتيجة مطابقة للبحث.",
-                        color=MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }else{
-            item{
-                Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
-                    filtered.forEach{project->
-                        Surface(
-                            modifier=Modifier.fillMaxWidth(),
-                            onClick={onOpenProject(project.id)},
-                            shape=MaterialTheme.shapes.large,
-                            color=MaterialTheme.colorScheme.surface,
-                            border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),
-                            shadowElevation=1.dp
-                        ){
-                            Row(
-                                Modifier.fillMaxWidth().padding(horizontal=11.dp,vertical=9.dp),
-                                verticalAlignment=Alignment.CenterVertically
-                            ){
-                                Icon(Icons.Rounded.Apartment,null,tint=MaterialTheme.colorScheme.secondary)
-                                Spacer(Modifier.width(9.dp))
-                                Column(Modifier.weight(1f)){
-                                    Text(project.name,style=MaterialTheme.typography.titleMedium)
-                                    Text(
-                                        "${project.type} • ${project.sections.sumOf{sec->sec.spaces.sumOf{it.repeatCount}}} غرفة/فراغ",
-                                        style=MaterialTheme.typography.bodySmall,
-                                        color=MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                Text("فتح",style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.tertiary)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        item{
-            SectionHeading("حساب سريع","بدون إنشاء مشروع.")
-        }
+        item{BrandBanner()}
 
         item{
             Row(
@@ -387,6 +299,109 @@ private fun HomeScreen(
                         onClick=onItem,
                         compact=true
                     )
+                }
+            }
+        }
+
+        item{
+            AppearanceSelector(
+                appearance=appearance,
+                onAppearance=onAppearance
+            )
+        }
+
+        item{
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment=Alignment.CenterVertically
+            ){
+                Column(Modifier.weight(1f)){
+                    Text(
+                        "مشروعات الموقع",
+                        style=MaterialTheme.typography.titleLarge,
+                        fontWeight=androidx.compose.ui.text.font.FontWeight.Black
+                    )
+                    Text(
+                        "${projects.size} مشروع محفوظ",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Button(
+                    onClick=onNewProject,
+                    contentPadding=PaddingValues(horizontal=12.dp,vertical=7.dp),
+                    colors=ButtonDefaults.buttonColors(
+                        containerColor=MaterialTheme.colorScheme.secondary,
+                        contentColor=MaterialTheme.colorScheme.onSecondary
+                    )
+                ){
+                    Icon(Icons.Rounded.Add,null,Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("مشروع")
+                }
+            }
+        }
+
+        if(projects.isNotEmpty()){
+            item{
+                TextFieldSimple(
+                    "بحث",
+                    search,
+                    {search=it},
+                    "ابحث باسم المشروع أو الدور أو الغرفة أو الملاحظة.",
+                    "بحث في المشروعات..."
+                )
+            }
+        }
+
+        if(filtered.isEmpty()){
+            item{
+                SurfaceCard{
+                    Text(
+                        if(q.isBlank())"لا توجد مشروعات محفوظة. ابدأ مشروعًا جديدًا." else "لا توجد نتيجة مطابقة للبحث.",
+                        color=MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }else{
+            items(filtered.size){index->
+                val project=filtered[index]
+                val rooms=project.sections.sumOf{sec->sec.spaces.sumOf{it.repeatCount}}
+                Surface(
+                    modifier=Modifier.fillMaxWidth(),
+                    onClick={onOpenProject(project.id)},
+                    shape=MaterialTheme.shapes.medium,
+                    color=MaterialTheme.colorScheme.surface,
+                    border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),
+                    shadowElevation=1.dp
+                ){
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=8.dp),
+                        verticalAlignment=Alignment.CenterVertically
+                    ){
+                        Surface(
+                            shape=MaterialTheme.shapes.small,
+                            color=MaterialTheme.colorScheme.secondaryContainer
+                        ){
+                            Icon(
+                                Icons.Rounded.Apartment,
+                                null,
+                                Modifier.padding(7.dp).size(19.dp),
+                                tint=MaterialTheme.colorScheme.secondary
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f)){
+                            Text(project.name,style=MaterialTheme.typography.titleMedium,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold)
+                            Text(
+                                "${project.type} • $rooms غرفة/فراغ • ${project.sections.size} جزء",
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines=1
+                            )
+                        }
+                        Text("فتح",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.primary)
+                    }
                 }
             }
         }
