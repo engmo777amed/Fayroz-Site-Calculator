@@ -15,6 +15,7 @@ enum class CalcMethod(val label:String){
     WALL_TILES("كسوة حوائط"),
     SKIRTING("وزرات"),
     WATERPROOFING("عزل أرضية"),
+    FLOOR_LAYER_VOLUME("طبقة أرضية بالحجم"),
     DIRECT_AREA("مساحة جاهزة"),
     DIRECT_LENGTH("طول جاهز"),
     DIRECT_VOLUME("حجم جاهز"),
@@ -66,8 +67,13 @@ data class TakeoffItem(
     val wastePercent:Double=0.0,
     val tileHeight:Double=2.4,
     val waterproofUpstand:Double=0.20,
+    val layerThickness:Double=0.0,
     val includeOpeningReveals:Boolean=false,
+    val wallIds:List<String> = emptyList(),
     val directValue:Double=0.0,
+    val pieceWidth:Double=0.0,
+    val pieceHeight:Double=0.0,
+    val piecesPerPack:Int=0,
     val manualOverride:Double?=null,
     val overrideReason:String="",
     val adjustments:List<Adjustment> = emptyList(),
@@ -116,6 +122,12 @@ data class AppDefaults(
     val wallTileWaste:Double=5.0,
     val gypsumWaste:Double=10.0,
     val skirtingWaste:Double=5.0
+)
+
+data class PurchaseInfo(
+    val pieceArea:Double,
+    val pieces:Int,
+    val packs:Int?
 )
 
 data class QuantityBreakdown(
