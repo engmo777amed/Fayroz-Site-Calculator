@@ -1,6 +1,7 @@
 package com.fayroz.sitecalculator.domain
 
 import com.fayroz.sitecalculator.core.*
+import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
 
@@ -13,7 +14,7 @@ object QuantityEngine {
         "عزل الأرضية","سقف جبس بورد",
         "سكريد / مونة تسوية","خرسانة بسيطة",
         "رخام / جرانيت","واجهات / كسوات",
-        "كرانيش / حليات","عدد قطع / وحدات"
+        "كرانيش / حليات","جبس بورد جوانب ساقطة","بيت نور / كوف","سقف معلق بلاطات","عدد قطع / وحدات"
     )
 
     fun rectangularWalls(space:SpaceEntry):List<WallSegment> = listOf(
@@ -59,8 +60,9 @@ object QuantityEngine {
         return (vertical+horizontal)*depth*o.count
     }
 
-    fun wallArea(space:SpaceEntry,includeReveals:Boolean=false):Double{
-        val walls=effectiveWalls(space)
+    fun wallArea(space:SpaceEntry,includeReveals:Boolean=false,wallIds:Set<String> = emptySet()):Double{
+        val allWalls=effectiveWalls(space)
+        val walls=if(wallIds.isEmpty()) allWalls else allWalls.filter{it.id in wallIds}
         return walls.mapIndexed{index,wall->
             val gross=wall.length*wall.height
             val ops=openingsForWall(space,wall.id,index)
@@ -70,8 +72,9 @@ object QuantityEngine {
         }.sum()*space.repeatCount
     }
 
-    fun wallTiles(space:SpaceEntry,tileHeight:Double,includeReveals:Boolean=false):Double{
-        val walls=effectiveWalls(space)
+    fun wallTiles(space:SpaceEntry,tileHeight:Double,includeReveals:Boolean=false,wallIds:Set<String> = emptySet()):Double{
+        val allWalls=effectiveWalls(space)
+        val walls=if(wallIds.isEmpty()) allWalls else allWalls.filter{it.id in wallIds}
         return walls.mapIndexed{index,wall->
             val level=min(tileHeight,wall.height).coerceAtLeast(0.0)
             val gross=wall.length*level
@@ -102,10 +105,10 @@ object QuantityEngine {
 
     private fun baseValue(space:SpaceEntry,item:TakeoffItem):Pair<Double,String> = when(item.method){
         CalcMethod.ROOM_WALLS,
-        CalcMethod.WALL_SEGMENTS -> wallArea(space,item.includeOpeningReveals) to
+        CalcMethod.WALL_SEGMENTS -> wallArea(space,item.includeOpeningReveals,item.wallIds.toSet()) to
             "صافي الحوائط بعد خصم الفتحات${if(item.includeOpeningReveals)" وإضافة جوانب الفتحات" else ""}"
 
-        CalcMethod.WALL_TILES -> wallTiles(space,item.tileHeight,item.includeOpeningReveals) to
+        CalcMethod.WALL_TILES -> wallTiles(space,item.tileHeight,item.includeOpeningReveals,item.wallIds.toSet()) to
             "كسوة الحوائط حتى منسوب ${item.tileHeight} م مع خصم الجزء المتداخل من كل فتحة"
 
         CalcMethod.FLOOR_SURFACES -> floorArea(space) to "إجمالي مسطحات الأرضية بعد الخصومات"
@@ -113,6 +116,8 @@ object QuantityEngine {
         CalcMethod.SKIRTING -> skirtingLength(space) to "محيط الحوائط ناقص عروض الأبواب"
         CalcMethod.WATERPROOFING -> waterproofArea(space,item.waterproofUpstand) to
             "الأرضية + رجوع العزل ${item.waterproofUpstand} م على الحوائط"
+        CalcMethod.FLOOR_LAYER_VOLUME -> floorArea(space)*item.layerThickness.coerceAtLeast(0.0) to
+            "مساحة الأرضية × متوسط السمك ${item.layerThickness} م"
         CalcMethod.DIRECT_AREA,
         CalcMethod.DIRECT_LENGTH,
         CalcMethod.DIRECT_VOLUME,
@@ -128,6 +133,15 @@ object QuantityEngine {
         val calculated=afterAdjust+waste
         val final=item.manualOverride ?: calculated
         return QuantityBreakdown(base,additions,deductions,waste,calculated,final,item.manualOverride!=null,explanation)
+    }
+
+    fun purchaseInfo(space:SpaceEntry,item:TakeoffItem):PurchaseInfo?{
+        if(item.unit!=MeasureUnit.AREA || item.pieceWidth<=0.0 || item.pieceHeight<=0.0)return null
+        val pieceArea=item.pieceWidth*item.pieceHeight
+        if(pieceArea<=0.0)return null
+        val pieces=ceil(calculate(space,item).final/pieceArea).toInt().coerceAtLeast(0)
+        val packs=if(item.piecesPerPack>0)ceil(pieces.toDouble()/item.piecesPerPack.toDouble()).toInt() else null
+        return PurchaseInfo(pieceArea,pieces,packs)
     }
 
     fun projectSummary(project:SiteProject):Map<Pair<String,MeasureUnit>,Double>{
