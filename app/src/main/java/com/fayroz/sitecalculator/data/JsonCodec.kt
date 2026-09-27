@@ -215,13 +215,13 @@ object JsonCodec {
         val waste=o.optDouble("waste",7.0)
         val tileHeight=o.optDouble("tileHeight",2.4)
         return when(name){
-            "محارة الحوائط","دهان الحوائط","مباني" -> TakeoffItem(name,"تشطيبات",MeasureUnit.AREA,CalcMethod.ROOM_WALLS)
-            "محارة السقف","دهان السقف" -> TakeoffItem(name,"تشطيبات",MeasureUnit.AREA,CalcMethod.CEILING_SURFACES)
-            "الأرضيات","سقف جبس بورد" -> TakeoffItem(name,"تشطيبات",MeasureUnit.AREA,CalcMethod.FLOOR_SURFACES,waste)
-            "سيراميك الحوائط" -> TakeoffItem(name,"تشطيبات",MeasureUnit.AREA,CalcMethod.WALL_TILES,waste,tileHeight)
-            "الوزرات" -> TakeoffItem(name,"تشطيبات",MeasureUnit.LENGTH,CalcMethod.SKIRTING,waste)
-            "عزل الأرضية" -> TakeoffItem(name,"عزل",MeasureUnit.AREA,CalcMethod.WATERPROOFING,waste,waterproofUpstand=0.20)
-            else -> TakeoffItem(name,"مخصص",MeasureUnit.AREA,CalcMethod.DIRECT_AREA)
+            "محارة الحوائط","دهان الحوائط","مباني" -> TakeoffItem(name=name,category="تشطيبات",unit=MeasureUnit.AREA,method=CalcMethod.ROOM_WALLS)
+            "محارة السقف","دهان السقف" -> TakeoffItem(name=name,category="تشطيبات",unit=MeasureUnit.AREA,method=CalcMethod.CEILING_SURFACES)
+            "الأرضيات","سقف جبس بورد" -> TakeoffItem(name=name,category="تشطيبات",unit=MeasureUnit.AREA,method=CalcMethod.FLOOR_SURFACES,wastePercent=waste)
+            "سيراميك الحوائط" -> TakeoffItem(name=name,category="تشطيبات",unit=MeasureUnit.AREA,method=CalcMethod.WALL_TILES,wastePercent=waste,tileHeight=tileHeight)
+            "الوزرات" -> TakeoffItem(name=name,category="تشطيبات",unit=MeasureUnit.LENGTH,method=CalcMethod.SKIRTING,wastePercent=waste)
+            "عزل الأرضية" -> TakeoffItem(name=name,category="عزل",unit=MeasureUnit.AREA,method=CalcMethod.WATERPROOFING,wastePercent=waste,waterproofUpstand=0.20)
+            else -> TakeoffItem(name=name,category="مخصص",unit=MeasureUnit.AREA,method=CalcMethod.DIRECT_AREA)
         }
     }
 }
