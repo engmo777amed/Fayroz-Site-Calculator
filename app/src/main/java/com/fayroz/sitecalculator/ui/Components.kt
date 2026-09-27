@@ -1,4 +1,4 @@
-package com.fayroz.sitecalculator.ui
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)\n\npackage com.fayroz.sitecalculator.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -148,12 +148,12 @@ fun SurfaceCard(
 fun HelpButton(title:String,help:String){
     var show by remember{mutableStateOf(false)}
     IconButton(onClick={show=true},modifier=Modifier.size(26.dp)){
-        Icon(Icons.Rounded.InfoOutline,"شرح $title",Modifier.size(17.dp),tint=MaterialTheme.colorScheme.primary)
+        Icon(Icons.Rounded.Info,"شرح $title",Modifier.size(17.dp),tint=MaterialTheme.colorScheme.primary)
     }
     if(show){
         AlertDialog(
             onDismissRequest={show=false},
-            icon={Icon(Icons.Rounded.InfoOutline,null,tint=MaterialTheme.colorScheme.primary)},
+            icon={Icon(Icons.Rounded.Info,null,tint=MaterialTheme.colorScheme.primary)},
             title={Text(title,fontWeight=FontWeight.Black)},
             text={Text(help,style=MaterialTheme.typography.bodyMedium)},
             confirmButton={TextButton(onClick={show=false}){Text("فهمت")}}
