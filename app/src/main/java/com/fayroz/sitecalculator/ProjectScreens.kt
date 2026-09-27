@@ -11,6 +11,7 @@ import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.MeetingRoom
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -163,16 +164,35 @@ fun ProjectScreen(
                     if(multi)"افتح الدور ثم أضف الغرف الموجودة داخله." else "افتح القسم ثم أضف الغرف."
                 )
 
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(7.dp)){
-                    OutlinedButton(onClick={renameProject=true},modifier=Modifier.weight(1f)){
-                        Icon(Icons.Rounded.Edit,null);Spacer(Modifier.width(4.dp));Text("تعديل الاسم")
-                    }
-                    OutlinedButton(onClick={deleteProjectConfirm=true},modifier=Modifier.weight(1f)){
-                        Icon(Icons.Rounded.Delete,null);Spacer(Modifier.width(4.dp));Text("حذف المشروع")
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+                    Text(
+                        "${project.sections.size} جزء • $totalRooms غرفة/فراغ",
+                        Modifier.weight(1f),
+                        style=MaterialTheme.typography.labelMedium,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    var projectMenu by remember{mutableStateOf(false)}
+                    Box{
+                        IconButton(onClick={projectMenu=true},modifier=Modifier.size(34.dp)){
+                            Icon(Icons.Rounded.MoreVert,"إجراءات المشروع")
+                        }
+                        DropdownMenu(expanded=projectMenu,onDismissRequest={projectMenu=false}){
+                            DropdownMenuItem(
+                                text={Text("تعديل الاسم")},
+                                leadingIcon={Icon(Icons.Rounded.Edit,null)},
+                                onClick={projectMenu=false;renameProject=true}
+                            )
+                            DropdownMenuItem(
+                                text={Text("حذف المشروع",color=MaterialTheme.colorScheme.error)},
+                                leadingIcon={Icon(Icons.Rounded.Delete,null,tint=MaterialTheme.colorScheme.error)},
+                                onClick={projectMenu=false;deleteProjectConfirm=true}
+                            )
+                        }
                     }
                 }
 
                 project.sections.forEach{sec->
+                    var sectionMenu by remember(sec.id){mutableStateOf(false)}
                     Surface(
                         onClick={onOpenSection(sec.id)},
                         modifier=Modifier.fillMaxWidth(),
@@ -194,11 +214,27 @@ fun ProjectScreen(
                                     color=MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            IconButton(onClick={
-                                renameSectionId=sec.id
-                                renameSectionName=sec.name
-                            }){Icon(Icons.Rounded.Edit,"تعديل")}
-                            IconButton(onClick={deleteSectionId=sec.id}){Icon(Icons.Rounded.Delete,"حذف")}
+                            Box{
+                                IconButton(onClick={sectionMenu=true},modifier=Modifier.size(34.dp)){
+                                    Icon(Icons.Rounded.MoreVert,"إجراءات")
+                                }
+                                DropdownMenu(expanded=sectionMenu,onDismissRequest={sectionMenu=false}){
+                                    DropdownMenuItem(
+                                        text={Text("تعديل الاسم")},
+                                        leadingIcon={Icon(Icons.Rounded.Edit,null)},
+                                        onClick={
+                                            sectionMenu=false
+                                            renameSectionId=sec.id
+                                            renameSectionName=sec.name
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text={Text("حذف",color=MaterialTheme.colorScheme.error)},
+                                        leadingIcon={Icon(Icons.Rounded.Delete,null,tint=MaterialTheme.colorScheme.error)},
+                                        onClick={sectionMenu=false;deleteSectionId=sec.id}
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -319,21 +355,24 @@ fun SectionScreen(
 
         if(tab==0){
             SurfaceCard{
-                SectionHeading("الغرف والفراغات","تقدر تعدل أو تنسخ أو تحذف أي غرفة.")
-                OutlinedButton(onClick={rename=true},modifier=Modifier.fillMaxWidth()){
-                    Icon(Icons.Rounded.Edit,null);Spacer(Modifier.width(5.dp));Text("تعديل اسم الدور أو الجزء")
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+                    SectionHeading("الغرف والفراغات","تعديل ونسخ وحذف من قائمة ⋮")
+                    IconButton(onClick={rename=true},modifier=Modifier.size(34.dp)){
+                        Icon(Icons.Rounded.Edit,"تعديل اسم الدور أو الجزء")
+                    }
                 }
 
                 if(section.spaces.isEmpty()){
                     Text("لا توجد غرف مسجلة هنا حتى الآن.",color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }else{
                     section.spaces.forEach{space->
+                        var spaceMenu by remember(space.id){mutableStateOf(false)}
                         Surface(
                             shape=MaterialTheme.shapes.medium,
                             color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.42f),
                             border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)
                         ){
-                            Column(Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
+                            Column(Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=7.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
                                 Row(verticalAlignment=Alignment.CenterVertically){
                                     Icon(Icons.Rounded.MeetingRoom,null,tint=MaterialTheme.colorScheme.secondary)
                                     Spacer(Modifier.width(9.dp))
@@ -347,13 +386,30 @@ fun SectionScreen(
                                         )
                                     }
                                     Text("${space.works.size} بنود",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.tertiary)
+                                    Box{
+                                        IconButton(onClick={spaceMenu=true},modifier=Modifier.size(34.dp)){
+                                            Icon(Icons.Rounded.MoreVert,"إجراءات")
+                                        }
+                                        DropdownMenu(expanded=spaceMenu,onDismissRequest={spaceMenu=false}){
+                                            DropdownMenuItem(
+                                                text={Text("تعديل")},
+                                                leadingIcon={Icon(Icons.Rounded.Edit,null)},
+                                                onClick={spaceMenu=false;onEditSpace(space.id)}
+                                            )
+                                            DropdownMenuItem(
+                                                text={Text("نسخ")},
+                                                leadingIcon={Icon(Icons.Rounded.ContentCopy,null)},
+                                                onClick={spaceMenu=false;onCopySpace(space.id)}
+                                            )
+                                            DropdownMenuItem(
+                                                text={Text("حذف",color=MaterialTheme.colorScheme.error)},
+                                                leadingIcon={Icon(Icons.Rounded.Delete,null,tint=MaterialTheme.colorScheme.error)},
+                                                onClick={spaceMenu=false;deleteSpaceId=space.id}
+                                            )
+                                        }
+                                    }
                                 }
-                                if(space.note.isNotBlank()) Text("ملاحظة: ${space.note}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(2.dp)){
-                                    TextButton(onClick={onEditSpace(space.id)},modifier=Modifier.weight(1f)){Icon(Icons.Rounded.Edit,null);Spacer(Modifier.width(3.dp));Text("تعديل")}
-                                    TextButton(onClick={onCopySpace(space.id)},modifier=Modifier.weight(1f)){Icon(Icons.Rounded.ContentCopy,null);Spacer(Modifier.width(3.dp));Text("نسخ")}
-                                    TextButton(onClick={deleteSpaceId=space.id},modifier=Modifier.weight(1f)){Icon(Icons.Rounded.Delete,null);Spacer(Modifier.width(3.dp));Text("حذف")}
-                                }
+                                if(space.note.isNotBlank()) Text("ملاحظة: ${space.note}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1)
                             }
                         }
                     }
@@ -453,8 +509,8 @@ fun CalculatorPage(
     ){padding->
         LazyColumn(
             modifier=Modifier.fillMaxSize().padding(padding),
-            contentPadding=PaddingValues(horizontal=12.dp,vertical=10.dp),
-            verticalArrangement=Arrangement.spacedBy(8.dp)
+            contentPadding=PaddingValues(horizontal=11.dp,vertical=8.dp),
+            verticalArrangement=Arrangement.spacedBy(7.dp)
         ){
             item{Column(verticalArrangement=Arrangement.spacedBy(8.dp),content=content)}
         }
