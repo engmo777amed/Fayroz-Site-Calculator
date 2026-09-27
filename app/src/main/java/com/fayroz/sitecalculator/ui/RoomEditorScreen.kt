@@ -39,6 +39,7 @@ fun RoomEditorScreen(
     val defaults=remember{repository.getDefaults()}
     val restored=remember(draftKey,initial?.id){initial ?: repository.loadDraft(draftKey)}
     val seed=restored
+    val stableSpaceId=remember(draftKey,initial?.id){initial?.id ?: seed?.id ?: UUID.randomUUID().toString()}
 
     var page by remember{mutableIntStateOf(0)}
     var type by remember{mutableStateOf(seed?.type ?: "غرفة نوم")}
@@ -73,7 +74,7 @@ fun RoomEditorScreen(
     var applyTemplateConfirm by remember{mutableStateOf(false)}
 
     fun currentSpace():SpaceEntry=SpaceEntry(
-        id=initial?.id ?: seed?.id ?: UUID.randomUUID().toString(),
+        id=stableSpaceId,
         name=name.trim().ifBlank{type},
         type=type,
         length=n(length),width=n(width),height=n(height),
@@ -488,7 +489,9 @@ private fun CustomItemDialog(onDismiss:()->Unit,onAdd:(TakeoffItem)->Unit){
                 ChoiceFieldX("طريقة الحصر",method.label,methods.map{it.label},{label->method=methods.first{it.label==label}})
             }
         },
-        confirmButton={TextButton(onClick={if(name.isNotBlank())onAdd(TakeoffItem(name.trim(),"مخصص",unit,method))}){Text("إضافة")}},
+        confirmButton={TextButton(onClick={
+            if(name.isNotBlank())onAdd(TakeoffItem(name=name.trim(),category="مخصص",unit=unit,method=method))
+        }){Text("إضافة")}},
         dismissButton={TextButton(onClick=onDismiss){Text("إلغاء")}}
     )
 }
