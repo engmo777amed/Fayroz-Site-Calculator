@@ -2,7 +2,7 @@ name: Build Fayroz Site Calculator
 
 on:
   push:
-    branches: [ main, "feature/**" ]
+    branches: [ main, "feature/**", "rebuild/**" ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -33,11 +33,11 @@ jobs:
         run: gradle :app:assembleDebug --stacktrace
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Fayroz-Site-Calculator-v4.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk Fayroz-Site-Calculator-V6.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Fayroz-Site-Calculator-v4
-          path: Fayroz-Site-Calculator-v4.apk
+          name: Fayroz-Site-Calculator-V6
+          path: Fayroz-Site-Calculator-V6.apk
           if-no-files-found: error
