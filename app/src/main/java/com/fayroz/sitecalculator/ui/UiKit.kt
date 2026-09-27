@@ -49,7 +49,11 @@ fun CompactBrandHeader(
                     border=BorderStroke(1.dp,Turquoise.copy(alpha=.25f))
                 ){
                     Box(Modifier.size(44.dp),contentAlignment=Alignment.Center){
-                        Icon(Icons.Rounded.Straighten,null,tint=GoldLight,modifier=Modifier.size(23.dp))
+                        androidx.compose.foundation.Image(
+                            painter=androidx.compose.ui.res.painterResource(com.fayroz.sitecalculator.R.drawable.ic_site_foreground),
+                            contentDescription=null,
+                            modifier=Modifier.fillMaxSize().padding(3.dp)
+                        )
                     }
                 }
                 Spacer(Modifier.width(9.dp))
