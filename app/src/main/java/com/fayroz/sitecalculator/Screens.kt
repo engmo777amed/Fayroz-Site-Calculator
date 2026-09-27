@@ -5,13 +5,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.fayroz.sitecalculator.ui.*
 import org.json.JSONArray
@@ -21,16 +21,15 @@ import kotlin.math.min
 
 private val spaceTypes=listOf("غرفة نوم","ريسبشن","حمام","مطبخ","ممر","بلكونة","مخزن","فراغ آخر")
 private val workTypes=QuantityEngine.workOrder
-
 private val workHelp=mapOf(
     "محارة الحوائط" to "مساحة الحوائط الصافية بعد خصم الأبواب والشبابيك.",
-    "محارة السقف" to "مساحة السقف وتساوي الطول × العرض.",
+    "محارة السقف" to "مساحة السقف = الطول × العرض.",
     "دهان الحوائط" to "مساحة الحوائط الصافية بعد خصم الفتحات.",
-    "دهان السقف" to "مساحة السقف الصافية.",
-    "الأرضيات" to "مساحة الأرضية مع إضافة نسبة القص والهالك.",
-    "سيراميك الحوائط" to "محيط الفراغ × ارتفاع السيراميك، مع خصم الفتحات وإضافة الهالك.",
-    "الوزرات" to "محيط الغرفة بعد خصم عروض الأبواب وإضافة الهالك.",
-    "عزل الأرضية" to "مساحة الأرضية مع رجوع العزل على الحائط 20 سم.",
+    "دهان السقف" to "مساحة السقف.",
+    "الأرضيات" to "مساحة الأرضية مع نسبة القص والهالك.",
+    "سيراميك الحوائط" to "محيط الفراغ × ارتفاع السيراميك - الفتحات + الهالك.",
+    "الوزرات" to "محيط الغرفة - عروض الأبواب + الهالك.",
+    "عزل الأرضية" to "مساحة الأرضية + رجوع 20 سم على الحوائط + الهالك.",
     "سقف جبس بورد" to "مساحة السقف مع نسبة القص والهالك."
 )
 
@@ -51,7 +50,7 @@ private data class WallDraft(
 
 private fun nextRoomName(type:String,existing:List<SavedSpace>):String{
     val n=existing.count{it.type==type}+1
-    return if(n==1 && existing.none{it.type==type}) type else "$type $n"
+    return if(n==1) type else "$type $n"
 }
 
 private fun openingArea(list:List<OpeningDraft>)=list.sumOf{
@@ -61,22 +60,10 @@ private fun doorWidth(list:List<OpeningDraft>)=list.filter{it.type=="باب"}.su
     num(it.width)*num(it.count).toInt().coerceAtLeast(1)
 }
 private fun toOpenings(list:List<OpeningDraft>)=list.mapNotNull{
-    val w=num(it.width); val h=num(it.height); val c=num(it.count).toInt().coerceAtLeast(1)
+    val w=num(it.width)
+    val h=num(it.height)
+    val c=num(it.count).toInt().coerceAtLeast(1)
     if(w>0 && h>0) Opening(id=it.id,type=it.type,width=w,height=h,count=c) else null
-}
-
-@Composable
-private fun WarningBox(messages:List<String>){
-    if(messages.isEmpty()) return
-    Surface(
-        shape=RoundedCornerShape(10.dp),
-        color=MaterialTheme.colorScheme.errorContainer
-    ){
-        Column(Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
-            Text("راجع المدخلات",style=MaterialTheme.typography.titleSmall,color=MaterialTheme.colorScheme.onErrorContainer)
-            messages.forEach{Text("• $it",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onErrorContainer)}
-        }
-    }
 }
 
 @Composable
@@ -84,38 +71,33 @@ private fun OpeningEditor(
     openings:MutableList<OpeningDraft>,
     onChanged:()->Unit={}
 ){
-    Column(verticalArrangement=Arrangement.spacedBy(10.dp)){
+    Column(verticalArrangement=Arrangement.spacedBy(6.dp)){
         if(openings.isEmpty()){
-            Text("لا توجد أبواب أو شبابيك مسجلة.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("لا توجد فتحات مسجلة.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         openings.forEachIndexed{index,o->
             Surface(
                 shape=RoundedCornerShape(13.dp),
-                color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.42f),
+                color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.40f),
                 border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)
             ){
-                Column(Modifier.padding(8.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
+                Column(Modifier.padding(horizontal=8.dp,vertical=7.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
                     Row(verticalAlignment=Alignment.CenterVertically){
-                        Text("${o.type} ${index+1}",Modifier.weight(1f),style=MaterialTheme.typography.titleSmall)
+                        Text("${o.type} ${index+1}",Modifier.weight(1f),style=MaterialTheme.typography.labelLarge,fontWeight=FontWeight.Black)
                         Text(
                             "${qty(num(o.width)*num(o.height)*num(o.count).toInt().coerceAtLeast(1))} م²",
                             style=MaterialTheme.typography.labelMedium,
-                            color=MaterialTheme.colorScheme.tertiary
+                            color=MaterialTheme.colorScheme.primary
                         )
-                        IconButton(onClick={openings.removeAt(index);onChanged()}){
-                            Icon(Icons.Rounded.Delete,"حذف")
-                        }
+                        IconButton(
+                            onClick={openings.removeAt(index);onChanged()},
+                            modifier=Modifier.size(30.dp)
+                        ){Icon(Icons.Rounded.Delete,"حذف",Modifier.size(17.dp))}
                     }
-                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                        Box(Modifier.weight(1f)){
-                            NumberField("العرض",o.width,{v->openings[index]=o.copy(width=v);onChanged()},"م","عرض الفتحة الصافي.")
-                        }
-                        Box(Modifier.weight(1f)){
-                            NumberField("الارتفاع",o.height,{v->openings[index]=o.copy(height=v);onChanged()},"م","ارتفاع الفتحة الصافي.")
-                        }
-                        Box(Modifier.weight(.8f)){
-                            NumberField("العدد",o.count,{v->openings[index]=o.copy(count=v);onChanged()},"","عدد الفتحات بنفس المقاس.")
-                        }
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)){
+                        NumberField("العرض",o.width,{v->openings[index]=o.copy(width=v);onChanged()},"م","عرض الفتحة.",Modifier.weight(1f))
+                        NumberField("الارتفاع",o.height,{v->openings[index]=o.copy(height=v);onChanged()},"م","ارتفاع الفتحة.",Modifier.weight(1f))
+                        NumberField("العدد",o.count,{v->openings[index]=o.copy(count=v);onChanged()},"","عدد الفتحات.",Modifier.weight(.78f))
                     }
                 }
             }
@@ -124,11 +106,11 @@ private fun OpeningEditor(
             OutlinedButton(
                 onClick={openings.add(OpeningDraft(type="باب"));onChanged()},
                 modifier=Modifier.weight(1f)
-            ){Icon(Icons.Rounded.Add,null);Spacer(Modifier.width(4.dp));Text("باب")}
+            ){Icon(Icons.Rounded.DoorFront,null);Spacer(Modifier.width(4.dp));Text("باب")}
             OutlinedButton(
                 onClick={openings.add(OpeningDraft(type="شباك"));onChanged()},
                 modifier=Modifier.weight(1f)
-            ){Icon(Icons.Rounded.Add,null);Spacer(Modifier.width(4.dp));Text("شباك")}
+            ){Icon(Icons.Rounded.Window,null);Spacer(Modifier.width(4.dp));Text("شباك")}
         }
     }
 }
@@ -146,118 +128,97 @@ fun SpaceCalculatorScreen(
     val draftKey=remember(projectContext,initialSpace?.id){
         "room_"+(initialSpace?.id ?: projectContext?.hashCode()?.toString() ?: "quick")
     }
-
-    fun initialOpeningDrafts(space:SavedSpace?):List<OpeningDraft>{
-        if(space==null) return emptyList()
-        if(space.openings.isNotEmpty()) return space.openings.map{
-            OpeningDraft(it.id,it.type,qty(it.width),qty(it.height),it.count.toString())
-        }
-        val result=mutableListOf<OpeningDraft>()
-        if(space.doorArea>0){
-            val w=if(space.doorWidth>0) space.doorWidth else .9
-            result += OpeningDraft(type="باب",width=qty(w),height=qty(space.doorArea/w),count="1")
-        }
-        if(space.windowArea>0) result += OpeningDraft(type="شباك",width="1.00",height=qty(space.windowArea),count="1")
-        return result
+    val draft=remember(draftKey){
+        if(initialSpace==null) runCatching{JSONObject(store.loadDraft(draftKey)?:"{}")}.getOrNull() else null
     }
 
-    val savedDraft=remember{if(initialSpace==null) store.loadDraft(draftKey) else null}
-    val draftObject=remember(savedDraft){runCatching{savedDraft?.let{JSONObject(it)}}.getOrNull()}
-
-    var step by remember{mutableStateOf(0)}
-    var autoName by remember{mutableStateOf(initialSpace==null)}
-    var roomName by remember{
-        mutableStateOf(
-            initialSpace?.name
-                ?: draftObject?.optString("name")?.takeIf{it.isNotBlank()}
-                ?: nextRoomName(spaceTypes.first(),existingSpaces)
-        )
-    }
-    var spaceType by remember{mutableStateOf(initialSpace?.type ?: draftObject?.optString("type",spaceTypes.first()) ?: spaceTypes.first())}
-    var length by remember{mutableStateOf(initialSpace?.length?.let(::qty) ?: draftObject?.optString("length","") ?: "")}
-    var width by remember{mutableStateOf(initialSpace?.width?.let(::qty) ?: draftObject?.optString("width","") ?: "")}
-    var height by remember{
-        mutableStateOf(
-            initialSpace?.height?.let(::qty)
-                ?: draftObject?.optString("height")?.takeIf{it.isNotBlank()}
-                ?: qty(store.lastHeight())
-        )
-    }
-    var repeatCount by remember{mutableStateOf((initialSpace?.repeatCount ?: draftObject?.optInt("repeat",1) ?: 1).toString())}
-    var tileHeight by remember{mutableStateOf(initialSpace?.tileHeight?.let(::qty) ?: draftObject?.optString("tileHeight","2.40") ?: "2.40")}
-    var waste by remember{mutableStateOf(initialSpace?.waste?.let(::qty) ?: draftObject?.optString("waste","7") ?: "7")}
-    var note by remember{mutableStateOf(initialSpace?.note ?: draftObject?.optString("note","") ?: "")}
+    val initialType=initialSpace?.type ?: draft?.optString("type","غرفة نوم") ?: "غرفة نوم"
+    var roomName by remember{mutableStateOf(initialSpace?.name ?: draft?.optString("name",nextRoomName(initialType,existingSpaces)) ?: nextRoomName(initialType,existingSpaces))}
+    var autoName by remember{mutableStateOf(initialSpace==null && (draft?.optString("name","").isNullOrBlank()))}
+    var spaceType by remember{mutableStateOf(initialType)}
+    var length by remember{mutableStateOf(initialSpace?.length?.let(::qty) ?: draft?.optString("length","") ?: "")}
+    var width by remember{mutableStateOf(initialSpace?.width?.let(::qty) ?: draft?.optString("width","") ?: "")}
+    var height by remember{mutableStateOf(initialSpace?.height?.let(::qty) ?: draft?.optString("height",qty(store.lastHeight())) ?: qty(store.lastHeight()))}
+    var repeatCount by remember{mutableStateOf(initialSpace?.repeatCount?.toString() ?: draft?.optString("repeat","1") ?: "1")}
+    var tileHeight by remember{mutableStateOf(initialSpace?.tileHeight?.let(::qty) ?: draft?.optString("tileHeight","2.40") ?: "2.40")}
+    var waste by remember{mutableStateOf(initialSpace?.waste?.let(::qty) ?: draft?.optString("waste","7") ?: "7")}
+    var note by remember{mutableStateOf(initialSpace?.note ?: draft?.optString("note","") ?: "")}
+    var step by remember{mutableIntStateOf(0)}
 
     val openings=remember{
         mutableStateListOf<OpeningDraft>().apply{
-            if(initialSpace!=null) addAll(initialOpeningDrafts(initialSpace))
-            else {
-                val arr=draftObject?.optJSONArray("openings")
-                if(arr!=null) for(i in 0 until arr.length()){
-                    val o=arr.getJSONObject(i)
-                    add(OpeningDraft(
-                        id=o.optString("id",UUID.randomUUID().toString()),
-                        type=o.optString("type","باب"),
-                        width=o.optString("width",""),
-                        height=o.optString("height",""),
-                        count=o.optString("count","1")
-                    ))
+            when{
+                initialSpace!=null && initialSpace.openings.isNotEmpty() -> initialSpace.openings.forEach{
+                    add(OpeningDraft(it.id,it.type,qty(it.width),qty(it.height),it.count.toString()))
+                }
+                draft!=null -> {
+                    val arr=draft.optJSONArray("openings") ?: JSONArray()
+                    for(i in 0 until arr.length()){
+                        val o=arr.optJSONObject(i) ?: continue
+                        add(OpeningDraft(
+                            o.optString("id",UUID.randomUUID().toString()),
+                            o.optString("type","باب"),
+                            o.optString("width",""),
+                            o.optString("height",""),
+                            o.optString("count","1")
+                        ))
+                    }
                 }
             }
         }
     }
-
     val selected=remember{
         mutableStateMapOf<String,Boolean>().apply{
-            val initialWorks=initialSpace?.works
-                ?: draftObject?.optJSONArray("works")?.let{a->List(a.length()){a.optString(it)}}
-                ?: listOf("محارة الحوائط","محارة السقف","الأرضيات")
-            workTypes.forEach{put(it,it in initialWorks)}
+            workTypes.forEach{put(it,initialSpace?.works?.contains(it)==true)}
+            if(initialSpace==null && draft!=null){
+                val wa=draft.optJSONArray("works") ?: JSONArray()
+                workTypes.forEach{put(it,false)}
+                for(i in 0 until wa.length()) put(wa.optString(i),true)
+            }
         }
     }
 
     fun saveDraft(){
         if(initialSpace!=null) return
-        val j=JSONObject().apply{
-            put("name",roomName);put("type",spaceType);put("length",length);put("width",width);put("height",height)
-            put("repeat",num(repeatCount).toInt().coerceAtLeast(1));put("tileHeight",tileHeight);put("waste",waste);put("note",note)
+        val o=JSONObject().apply{
+            put("name",roomName);put("type",spaceType)
+            put("length",length);put("width",width);put("height",height)
+            put("repeat",repeatCount);put("tileHeight",tileHeight);put("waste",waste);put("note",note)
             put("works",JSONArray(workTypes.filter{selected[it]==true}))
-            val a=JSONArray()
-            openings.forEach{o->a.put(JSONObject().apply{
-                put("id",o.id);put("type",o.type);put("width",o.width);put("height",o.height);put("count",o.count)
-            })}
-            put("openings",a)
+            put("openings",JSONArray().apply{
+                openings.forEach{x->
+                    put(JSONObject().apply{
+                        put("id",x.id);put("type",x.type);put("width",x.width);put("height",x.height);put("count",x.count)
+                    })
+                }
+            })
         }
-        store.saveDraft(draftKey,j.toString())
+        store.saveDraft(draftKey,o.toString())
     }
 
-    LaunchedEffect(roomName,spaceType,length,width,height,repeatCount,tileHeight,waste,note,openings.toList(),selected.toMap()){
-        saveDraft()
-        num(height).takeIf{it>0}?.let{store.setLastHeight(it)}
-    }
-
-    val l=num(length); val w=num(width); val h=num(height)
+    val l=num(length)
+    val w=num(width)
+    val h=num(height)
     val repeats=num(repeatCount).toInt().coerceAtLeast(1)
-    val allOpenings=toOpenings(openings)
-    val dArea=allOpenings.filter{it.type=="باب"}.sumOf{it.area}
-    val winArea=allOpenings.filter{it.type=="شباك"}.sumOf{it.area}
-    val dWidth=allOpenings.filter{it.type=="باب"}.sumOf{it.totalWidth}
-    val grossOne=2*(l+w)*h
-    val floor=l*w*repeats
-    val netWalls=(grossOne-dArea-winArea).coerceAtLeast(0.0)*repeats
+    val dArea=openingArea(openings.filter{it.type=="باب"})
+    val winArea=openingArea(openings.filter{it.type=="شباك"})
+    val dWidth=doorWidth(openings)
     val factor=1+num(waste)/100.0
-    val wallTile=(2*(l+w)*min(num(tileHeight),h)-dArea-winArea).coerceAtLeast(0.0)*repeats*factor
+    val floor=l*w*repeats
+    val grossOne=2*(l+w)*h
+    val netWalls=(grossOne-dArea-winArea).coerceAtLeast(0.0)*repeats
+    val wallTile=((2*(l+w)*min(num(tileHeight),h)-dArea-winArea).coerceAtLeast(0.0))*repeats*factor
     val skirting=(2*(l+w)-dWidth).coerceAtLeast(0.0)*repeats*factor
     val waterproof=(l*w+2*(l+w)*0.20)*repeats*factor
 
     val warnings=buildList{
-        if(l>30 || w>30) add("أحد أبعاد الغرفة أكبر من 30 م؛ تأكد أن الرقم بالمتر.")
-        if(h>8) add("ارتفاع الحائط أكبر من 8 م؛ راجع الرقم قبل الاعتماد.")
-        if(grossOne>0 && dArea+winArea>=grossOne) add("مساحة الفتحات تساوي أو تتجاوز مساحة الحوائط.")
-        if(num(waste)>30) add("نسبة الهالك أكبر من 30%؛ تأكد أنها مقصودة.")
+        if(h>8) add("ارتفاع الحائط أكبر من 8 م.")
+        if(l>50 || w>50) add("أحد الأبعاد كبير جدًا؛ تأكد أن الوحدة بالمتر.")
+        if(grossOne>0 && dArea+winArea>=grossOne) add("مساحة الفتحات أكبر من مساحة الحوائط.")
+        if(num(waste)>30) add("نسبة الهالك أكبر من 30%.")
     }
 
-    fun buildSpace():SavedSpace=SavedSpace(
+    fun buildSpace()=SavedSpace(
         id=initialSpace?.id ?: UUID.randomUUID().toString(),
         name=roomName.trim().ifBlank{spaceType},
         type=spaceType,
@@ -265,7 +226,7 @@ fun SpaceCalculatorScreen(
         doorArea=dArea,windowArea=winArea,doorWidth=dWidth,
         tileHeight=num(tileHeight),waste=num(waste),
         works=workTypes.filter{selected[it]==true},
-        openings=allOpenings,
+        openings=toOpenings(openings),
         repeatCount=repeats,
         note=note.trim()
     )
@@ -277,36 +238,41 @@ fun SpaceCalculatorScreen(
         length="";width="";repeatCount="1";note=""
         openings.clear()
         step=0
+        saveDraft()
     }
 
     LazyColumn(
-        modifier=Modifier.fillMaxSize(),
-        contentPadding=PaddingValues(horizontal=12.dp,vertical=10.dp),
+        Modifier.fillMaxSize(),
+        contentPadding=PaddingValues(horizontal=11.dp,vertical=9.dp),
         verticalArrangement=Arrangement.spacedBy(8.dp)
     ){
         if(!projectContext.isNullOrBlank()){
             item{
-                Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.tertiaryContainer){
-                    Text(projectContext,Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=8.dp),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onTertiaryContainer)
+                Surface(shape=RoundedCornerShape(12.dp),color=MaterialTheme.colorScheme.primaryContainer){
+                    Row(Modifier.fillMaxWidth().padding(8.dp),verticalAlignment=Alignment.CenterVertically){
+                        Icon(Icons.Rounded.FolderOpen,null,Modifier.size(17.dp),tint=MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(6.dp))
+                        Text(projectContext,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onPrimaryContainer)
+                    }
                 }
             }
         }
-        if(initialSpace==null && savedDraft!=null){
+        if(initialSpace==null && draft!=null && draft.length()>0){
             item{
-                Surface(shape=RoundedCornerShape(10.dp),color=MaterialTheme.colorScheme.secondaryContainer){
-                    Text("تم استعادة آخر بيانات غير محفوظة تلقائيًا.",Modifier.fillMaxWidth().padding(horizontal=9.dp,vertical=7.dp),style=MaterialTheme.typography.bodySmall)
+                Surface(shape=RoundedCornerShape(11.dp),color=MaterialTheme.colorScheme.secondaryContainer){
+                    Text("تم استعادة آخر بيانات غير محفوظة.",Modifier.fillMaxWidth().padding(8.dp),style=MaterialTheme.typography.bodySmall)
                 }
             }
         }
-        item{StepTabs(listOf("الغرفة","الفتحات","البنود","النتيجة"),step){step=it}}
+        item{StepTabs(listOf("الفراغ","الفتحات","البنود","النتيجة"),step){step=it}}
         item{
             when(step){
                 0 -> SurfaceCard{
-                    SectionHeading("بيانات الغرفة","اكتب المقاسات الأساسية مرة واحدة.")
+                    SectionHeader("بيانات الفراغ","المقاسات الصافية داخل المكان.")
                     TextFieldSimple(
                         "اسم الغرفة أو الفراغ",roomName,
-                        {roomName=it;autoName=false},
-                        "اسم واضح للمكان، مثل غرفة نوم رئيسية أو حمام الضيوف.",
+                        {roomName=it;autoName=false;saveDraft()},
+                        "اسم واضح مثل: غرفة نوم رئيسية أو حمام الضيوف.",
                         "مثال: غرفة نوم رئيسية"
                     )
                     SelectField(
@@ -314,37 +280,55 @@ fun SpaceCalculatorScreen(
                         {newType->
                             spaceType=newType
                             if(autoName) roomName=nextRoomName(newType,existingSpaces)
+                            saveDraft()
                         },
                         "يساعد في ترتيب الغرف واقتراح الاسم تلقائيًا."
                     )
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                        Box(Modifier.weight(1f)){NumberField("الطول",length,{length=it},"م","المسافة الصافية داخل الغرفة.")}
-                        Box(Modifier.weight(1f)){NumberField("العرض",width,{width=it},"م","المسافة الصافية داخل الغرفة.")}
+                        NumberField("الطول",length,{length=it;saveDraft()},"م","الطول الصافي.",Modifier.weight(1f))
+                        NumberField("العرض",width,{width=it;saveDraft()},"م","العرض الصافي.",Modifier.weight(1f))
                     }
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                        Box(Modifier.weight(1f)){NumberField("ارتفاع الحائط",height,{height=it},"م","من منسوب الأرضية حتى السقف.")}
-                        Box(Modifier.weight(1f)){NumberField("عدد الغرف بنفس المقاس",repeatCount,{repeatCount=it},"عدد","استخدمه لو نفس الغرفة مكررة عدة مرات.")}
+                        NumberField("الارتفاع",height,{height=it;store.setLastHeight(num(it));saveDraft()},"م","من الأرضية للسقف.",Modifier.weight(1f))
+                        NumberField("التكرار",repeatCount,{repeatCount=it;saveDraft()},"عدد","لو نفس الفراغ مكرر.",Modifier.weight(1f))
                     }
-                    TextFieldSimple("ملاحظات",note,{note=it},"أي ملاحظة تنفيذية تريد الاحتفاظ بها مع الغرفة.","مثال: السيراميك لحد 2.20 م")
+                    TextFieldSimple("ملاحظات",note,{note=it;saveDraft()},"ملاحظة تنفيذية تحفظ مع الغرفة.","مثال: السيراميك حتى 2.20 م")
                     WarningBox(warnings)
-                    Button(onClick={step=1},modifier=Modifier.fillMaxWidth()){Text("التالي: الأبواب والشبابيك")}
+                    Button(onClick={step=1},modifier=Modifier.fillMaxWidth()){
+                        Text("التالي: الفتحات")
+                        Spacer(Modifier.width(5.dp))
+                        Icon(Icons.Rounded.ArrowBack,null)
+                    }
                 }
                 1 -> SurfaceCard{
-                    SectionHeading("الأبواب والشبابيك","أضف كل نوع بمقاسه وعدده، والبرنامج يجمعهم تلقائيًا.")
-                    OpeningEditor(openings)
+                    SectionHeader("الأبواب والشبابيك","أدخل المقاس والعدد، وسيتم الخصم تلقائيًا.")
+                    OpeningEditor(openings){saveDraft()}
                     HorizontalDivider()
-                    QuantityRow("إجمالي مساحة الفتحات",dArea+winArea,"م²")
-                    NumberField("ارتفاع سيراميك الحائط",tileHeight,{tileHeight=it},"م","الارتفاع الذي سيصل إليه سيراميك الحائط.")
-                    NumberField("زيادة للهالك والقص",waste,{waste=it},"%","تضاف لكمية الشراء فقط.")
+                    QuantityRow("إجمالي مساحة الفتحات",dArea+winArea,"م²",true)
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                        NumberField("ارتفاع السيراميك",tileHeight,{tileHeight=it;saveDraft()},"م","ارتفاع سيراميك الحائط.",Modifier.weight(1f))
+                        NumberField("الهالك والقص",waste,{waste=it;saveDraft()},"%","يضاف لكمية الشراء.",Modifier.weight(1f))
+                    }
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
                         OutlinedButton(onClick={step=0},modifier=Modifier.weight(1f)){Text("السابق")}
                         Button(onClick={step=2},modifier=Modifier.weight(1f)){Text("التالي: البنود")}
                     }
                 }
                 2 -> SurfaceCard{
-                    SectionHeading("الأعمال الموجودة","فعّل فقط الأعمال التي ستنفذ في هذه الغرفة.")
-                    workTypes.forEach{work->
-                        ExplainedToggle(work,workHelp[work].orEmpty(),selected[work]==true){selected[work]=it}
+                    SectionHeader("البنود المطلوبة","فعّل الأعمال الموجودة فقط في هذا الفراغ.")
+                    workTypes.chunked(2).forEach{row->
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp),verticalAlignment=Alignment.Top){
+                            row.forEach{work->
+                                Box(Modifier.weight(1f)){
+                                    ExplainedToggle(
+                                        work,
+                                        workHelp[work].orEmpty(),
+                                        selected[work]==true
+                                    ){selected[work]=it;saveDraft()}
+                                }
+                            }
+                            if(row.size==1) Spacer(Modifier.weight(1f))
+                        }
                     }
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
                         OutlinedButton(onClick={step=1},modifier=Modifier.weight(1f)){Text("السابق")}
@@ -352,7 +336,10 @@ fun SpaceCalculatorScreen(
                     }
                 }
                 else -> SurfaceCard{
-                    SectionHeading("نتيجة ${roomName.ifBlank{spaceType}}",if(repeats>1)"الكميات تشمل التكرار × $repeats" else "راجع الكميات قبل الحفظ.")
+                    SectionHeader(
+                        "نتيجة ${roomName.ifBlank{spaceType}}",
+                        if(repeats>1)"الكميات تشمل التكرار × $repeats" else "راجع الكميات قبل الحفظ."
+                    )
                     WarningBox(warnings)
                     if(l<=0 || w<=0){
                         Text("أدخل الطول والعرض أولًا.",color=MaterialTheme.colorScheme.error)
@@ -367,36 +354,48 @@ fun SpaceCalculatorScreen(
                         if(selected["عزل الأرضية"]==true) QuantityRow("عزل الأرضية",waterproof,"م²")
                         if(selected["سقف جبس بورد"]==true) QuantityRow("سقف جبس بورد بالهالك",floor*factor,"م²")
                         HorizontalDivider()
-                        HelpButton(
-                            "طريقة حساب الحوائط",
-                            "محيط الغرفة = 2 × (${qty(l)} + ${qty(w)}) = ${qty(2*(l+w))} م\n"+
-                            "مساحة الحوائط قبل الخصم = ${qty(2*(l+w))} × ${qty(h)} = ${qty(grossOne)} م²\n"+
-                            "الفتحات = ${qty(dArea+winArea)} م²\n"+
-                            "الصافي للغرفة الواحدة = ${qty((grossOne-dArea-winArea).coerceAtLeast(0.0))} م²"+
-                            if(repeats>1)"\nثم × $repeats غرف = ${qty(netWalls)} م²" else ""
-                        )
+                        Row(verticalAlignment=Alignment.CenterVertically){
+                            Text("طريقة حساب الحوائط",Modifier.weight(1f),style=MaterialTheme.typography.labelLarge)
+                            HelpButton(
+                                "طريقة حساب الحوائط",
+                                "المحيط = 2 × (${qty(l)} + ${qty(w)}) = ${qty(2*(l+w))} م\n"+
+                                    "قبل الخصم = ${qty(2*(l+w))} × ${qty(h)} = ${qty(grossOne)} م²\n"+
+                                    "الفتحات = ${qty(dArea+winArea)} م²\n"+
+                                    "الصافي = ${qty((grossOne-dArea-winArea).coerceAtLeast(0.0))} م² للفراغ الواحد."
+                            )
+                        }
                         if(note.isNotBlank()) Text("ملاحظة: $note",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
 
                         if(onSave!=null){
-                            Button(
-                                onClick={
-                                    val s=buildSpace()
-                                    store.clearDraft(draftKey)
-                                    onSave(s)
-                                },
-                                modifier=Modifier.fillMaxWidth()
-                            ){Text(if(initialSpace==null)"حفظ الغرفة" else "حفظ التعديلات")}
-                        }
-                        if(onSaveAndContinue!=null && initialSpace==null){
-                            OutlinedButton(
-                                onClick={
-                                    val s=buildSpace()
-                                    onSaveAndContinue(s)
-                                    store.clearDraft(draftKey)
-                                    resetForNext()
-                                },
-                                modifier=Modifier.fillMaxWidth()
-                            ){Text("حفظ وإضافة غرفة أخرى بنفس البنود")}
+                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                                Button(
+                                    onClick={
+                                        val s=buildSpace()
+                                        store.clearDraft(draftKey)
+                                        onSave(s)
+                                    },
+                                    modifier=Modifier.weight(1f)
+                                ){
+                                    Icon(Icons.Rounded.Save,null)
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(if(initialSpace==null)"حفظ" else "حفظ التعديل")
+                                }
+                                if(onSaveAndContinue!=null && initialSpace==null){
+                                    OutlinedButton(
+                                        onClick={
+                                            val s=buildSpace()
+                                            onSaveAndContinue(s)
+                                            store.clearDraft(draftKey)
+                                            resetForNext()
+                                        },
+                                        modifier=Modifier.weight(1f)
+                                    ){
+                                        Icon(Icons.Rounded.Add,null)
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("حفظ + غرفة")
+                                    }
+                                }
+                            }
                         }
                     }
                     OutlinedButton(onClick={step=0},modifier=Modifier.fillMaxWidth()){Text("تعديل البيانات")}
@@ -415,7 +414,7 @@ private val itemTypes=listOf(
 fun ItemCalculatorScreen(){
     val context=LocalContext.current
     val store=remember{ProjectStore(context.applicationContext)}
-    var step by remember{mutableStateOf(0)}
+    var step by remember{mutableIntStateOf(0)}
     var item by remember{mutableStateOf(itemTypes.first())}
     var method by remember{mutableStateOf("غرفة كاملة")}
     var length by remember{mutableStateOf("")}
@@ -436,9 +435,14 @@ fun ItemCalculatorScreen(){
         item=="الوزرات" -> listOf("غرفة كاملة","طول جاهز")
         else -> listOf("غرفة أو مسطح","مساحة جاهزة")
     }
-    LaunchedEffect(item){method=methodOptions.first()}
+    LaunchedEffect(item){
+        method=methodOptions.first()
+        step=0
+    }
 
-    val l=num(length); val w=num(width); val h=num(height)
+    val l=num(length)
+    val w=num(width)
+    val h=num(height)
     val n=num(count).toInt().coerceAtLeast(1)
     val factor=1+num(waste)/100.0
     val openingsArea=openingArea(openings)
@@ -476,91 +480,119 @@ fun ItemCalculatorScreen(){
     fun formula():String=when{
         wallBased && method=="غرفة كاملة" ->
             "المحيط = 2 × (${qty(l)} + ${qty(w)})\nالمسطح = المحيط × ${qty(h)} - ${qty(openingsArea)} فتحات"+
-            if(n>1)"\nثم × $n فراغات" else ""+
-            if(item=="سيراميك الحوائط")"\nثم إضافة هالك ${qty(num(waste))}%." else ""
+                (if(n>1)"\nثم × $n فراغات" else "")+
+                (if(item=="سيراميك الحوائط")"\nثم إضافة هالك ${qty(num(waste))}%." else "")
         wallBased && method=="عدة حوائط" ->
-            walls.mapIndexed{i,x->"حائط ${i+1}: ${qty(num(x.length))} × ${qty(num(x.height))} - ${qty(num(x.openingArea))} = ${qty((num(x.length)*num(x.height)-num(x.openingArea)).coerceAtLeast(0.0))} م²"}.joinToString("\n")+
-            "\nالإجمالي = ${qty(multiWallArea)} م²"
-        method=="مساحة جاهزة" || method=="طول جاهز" -> "تم استخدام الكمية المدخلة مباشرة: ${qty(num(directArea))}."
+            walls.mapIndexed{i,x->
+                "حائط ${i+1}: ${qty(num(x.length))} × ${qty(num(x.height))} - ${qty(num(x.openingArea))} = ${qty((num(x.length)*num(x.height)-num(x.openingArea)).coerceAtLeast(0.0))} م²"
+            }.joinToString("\n")+"\nالإجمالي = ${qty(multiWallArea)} م²"
+        method=="مساحة جاهزة" || method=="طول جاهز" ->
+            "تم استخدام الكمية المدخلة مباشرة: ${qty(num(directArea))}."
         else -> "المساحة = ${qty(l)} × ${qty(w)} × $n = ${qty(l*w*n)} م²."
     }
 
     LazyColumn(
         Modifier.fillMaxSize(),
-        contentPadding=PaddingValues(horizontal=12.dp,vertical=10.dp),
+        contentPadding=PaddingValues(horizontal=11.dp,vertical=9.dp),
         verticalArrangement=Arrangement.spacedBy(8.dp)
     ){
-        item{StepTabs(listOf("البند","طريقة الحصر","النتيجة"),step){step=it}}
+        item{StepTabs(listOf("البند","القياس","النتيجة"),step){step=it}}
         item{
             when(step){
                 0 -> SurfaceCard{
-                    SectionHeading("اختر البند","ابدأ بالبند الذي تريد حصره.")
-                    SelectField("البند المطلوب",item,itemTypes,{item=it},"يغير طريقة القياس والمدخلات المطلوبة.")
-                    Button(onClick={step=1},modifier=Modifier.fillMaxWidth()){Text("التالي")}
+                    SectionHeader("اختيار البند","اختر البند وطريقة الحصر المناسبة للموقع.")
+                    SelectField("البند المطلوب",item,itemTypes,{item=it},"يغير المدخلات وطريقة الحساب.")
+                    SelectField(
+                        "طريقة الحصر",method,methodOptions,{method=it},
+                        "غرفة كاملة للأربع حوائط، عدة حوائط للصالة أو الشكل غير المنتظم، أو كمية جاهزة."
+                    )
+                    Button(onClick={step=1},modifier=Modifier.fillMaxWidth()){Text("إدخال المقاسات")}
                 }
                 1 -> SurfaceCard{
-                    SectionHeading("طريقة حصر $item","اختر الطريقة الأقرب لشكل المكان في الموقع.")
-                    SelectField("طريقة الإدخال",method,methodOptions,{method=it},"غرفة كاملة للأربع حوائط، وعدة حوائط للصالة أو الشكل غير المنتظم، أو كمية جاهزة لو لديك المسطح.")
+                    SectionHeader("مقاسات $item","الحقول المطلوبة تتغير حسب طريقة الحصر.")
                     when{
                         wallBased && method=="غرفة كاملة" -> {
                             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                                Box(Modifier.weight(1f)){NumberField("طول الغرفة",length,{length=it},"م","الطول الصافي.")}
-                                Box(Modifier.weight(1f)){NumberField("عرض الغرفة",width,{width=it},"م","العرض الصافي.")}
+                                NumberField("الطول",length,{length=it},"م","الطول الصافي.",Modifier.weight(1f))
+                                NumberField("العرض",width,{width=it},"م","العرض الصافي.",Modifier.weight(1f))
                             }
                             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                                Box(Modifier.weight(1f)){NumberField("ارتفاع الحائط",height,{height=it;store.setLastHeight(num(it))},"م","الارتفاع الصافي.")}
-                                Box(Modifier.weight(1f)){NumberField("عدد الفراغات",count,{count=it},"عدد","لو نفس الغرفة مكررة.")}
+                                NumberField("الارتفاع",height,{height=it;store.setLastHeight(num(it))},"م","الارتفاع الصافي.",Modifier.weight(1f))
+                                NumberField("التكرار",count,{count=it},"عدد","عدد الفراغات بنفس المقاس.",Modifier.weight(1f))
                             }
                             OpeningEditor(openings)
                         }
                         wallBased && method=="عدة حوائط" -> {
+                            Text(
+                                "أدخل الحوائط المتتابعة واحدًا وراء الآخر؛ البرنامج يجمع الصافي تلقائيًا.",
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                             walls.forEachIndexed{i,wall->
                                 Surface(
-                                    shape=RoundedCornerShape(10.dp),
-                                    color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.42f),
+                                    shape=RoundedCornerShape(13.dp),
+                                    color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.40f),
                                     border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)
                                 ){
                                     Column(Modifier.padding(8.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
                                         Row(verticalAlignment=Alignment.CenterVertically){
-                                            Text("حائط ${i+1}",Modifier.weight(1f),style=MaterialTheme.typography.titleSmall)
-                                            Text("${qty((num(wall.length)*num(wall.height)-num(wall.openingArea)).coerceAtLeast(0.0))} م²",color=MaterialTheme.colorScheme.tertiary)
-                                            if(walls.size>1) IconButton(onClick={walls.removeAt(i)}){Icon(Icons.Rounded.Delete,"حذف")}
+                                            Text("حائط ${i+1}",Modifier.weight(1f),style=MaterialTheme.typography.labelLarge,fontWeight=FontWeight.Black)
+                                            Text(
+                                                "${qty((num(wall.length)*num(wall.height)-num(wall.openingArea)).coerceAtLeast(0.0))} م²",
+                                                color=MaterialTheme.colorScheme.primary,
+                                                style=MaterialTheme.typography.labelLarge
+                                            )
+                                            if(walls.size>1){
+                                                IconButton(onClick={walls.removeAt(i)},modifier=Modifier.size(30.dp)){
+                                                    Icon(Icons.Rounded.Delete,"حذف",Modifier.size(17.dp))
+                                                }
+                                            }
                                         }
                                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                                            Box(Modifier.weight(1f)){NumberField("الطول",wall.length,{v->walls[i]=wall.copy(length=v)},"م","طول هذا الحائط.")}
-                                            Box(Modifier.weight(1f)){NumberField("الارتفاع",wall.height,{v->walls[i]=wall.copy(height=v);store.setLastHeight(num(v))},"م","ارتفاع هذا الحائط.")}
+                                            NumberField("الطول",wall.length,{v->walls[i]=wall.copy(length=v)},"م","طول الحائط.",Modifier.weight(1f))
+                                            NumberField("الارتفاع",wall.height,{v->walls[i]=wall.copy(height=v);store.setLastHeight(num(v))},"م","ارتفاع الحائط.",Modifier.weight(1f))
                                         }
-                                        NumberField("مساحة الفتحات بالحائط",wall.openingArea,{v->walls[i]=wall.copy(openingArea=v)},"م²","إجمالي أبواب وشبابيك هذا الحائط.")
+                                        NumberField("مساحة الفتحات",wall.openingArea,{v->walls[i]=wall.copy(openingArea=v)},"م²","إجمالي أبواب وشبابيك هذا الحائط.")
                                     }
                                 }
                             }
                             OutlinedButton(
                                 onClick={walls.add(WallDraft(height=height.ifBlank{qty(store.lastHeight())}))},
                                 modifier=Modifier.fillMaxWidth()
-                            ){Icon(Icons.Rounded.Add,null);Spacer(Modifier.width(4.dp));Text("إضافة حائط")}
+                            ){
+                                Icon(Icons.Rounded.Add,null)
+                                Spacer(Modifier.width(4.dp))
+                                Text("إضافة حائط")
+                            }
+                            QuantityRow("إجمالي الحوائط",multiWallArea,"م²",true)
                         }
-                        wallBased && method=="مساحة جاهزة" -> NumberField("المساحة الصافية",directArea,{directArea=it},"م²","اكتب المساحة النهائية مباشرة.")
+                        wallBased && method=="مساحة جاهزة" ->
+                            NumberField("المساحة الصافية",directArea,{directArea=it},"م²","اكتب المساحة النهائية مباشرة.")
                         flatBased && method=="غرفة أو مسطح" -> {
                             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                                Box(Modifier.weight(1f)){NumberField("الطول",length,{length=it},"م","طول المسطح.")}
-                                Box(Modifier.weight(1f)){NumberField("العرض",width,{width=it},"م","عرض المسطح.")}
+                                NumberField("الطول",length,{length=it},"م","طول المسطح.",Modifier.weight(1f))
+                                NumberField("العرض",width,{width=it},"م","عرض المسطح.",Modifier.weight(1f))
                             }
                             NumberField("عدد المسطحات",count,{count=it},"عدد","لو نفس المقاس مكرر.")
-                            if(item=="عزل الأرضية") NumberField("ارتفاع رجوع العزل",upstand,{upstand=it},"م","ارتفاع العزل على الحائط.")
+                            if(item=="عزل الأرضية"){
+                                NumberField("ارتفاع رجوع العزل",upstand,{upstand=it},"م","ارتفاع العزل على الحائط.")
+                            }
                         }
-                        flatBased && method=="مساحة جاهزة" -> NumberField("المساحة الصافية",directArea,{directArea=it},"م²","أدخل المساحة مباشرة.")
+                        flatBased && method=="مساحة جاهزة" ->
+                            NumberField("المساحة الصافية",directArea,{directArea=it},"م²","أدخل المساحة مباشرة.")
                         item=="الوزرات" && method=="غرفة كاملة" -> {
                             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                                Box(Modifier.weight(1f)){NumberField("الطول",length,{length=it},"م","طول الغرفة.")}
-                                Box(Modifier.weight(1f)){NumberField("العرض",width,{width=it},"م","عرض الغرفة.")}
+                                NumberField("الطول",length,{length=it},"م","طول الغرفة.",Modifier.weight(1f))
+                                NumberField("العرض",width,{width=it},"م","عرض الغرفة.",Modifier.weight(1f))
                             }
                             NumberField("عدد الغرف",count,{count=it},"عدد","عدد الغرف بنفس المقاس.")
                             OpeningEditor(openings)
                         }
-                        item=="الوزرات" -> NumberField("الطول الصافي",directArea,{directArea=it},"م ط","أدخل طول الوزرات مباشرة.")
+                        item=="الوزرات" ->
+                            NumberField("الطول الصافي",directArea,{directArea=it},"م ط","أدخل طول الوزرات مباشرة.")
                     }
                     if(item in listOf("الأرضيات","سيراميك الحوائط","الوزرات","عزل الأرضية","سقف جبس بورد")){
-                        NumberField("زيادة للهالك والقص",waste,{waste=it},"%","زيادة على كمية الشراء.")
+                        NumberField("الهالك والقص",waste,{waste=it},"%","زيادة على كمية الشراء.")
                     }
                     if(item=="المباني"){
                         NumberField("سمك الحائط",thickness,{thickness=it},"م","مثال: 12 سم = 0.12 م.")
@@ -572,15 +604,24 @@ fun ItemCalculatorScreen(){
                     }
                 }
                 else -> SurfaceCard{
-                    SectionHeading("نتيجة $item","الكمية محسوبة بالطريقة التي اخترتها.")
+                    SectionHeader("نتيجة $item","الكمية محسوبة بالطريقة المختارة.")
                     WarningBox(warnings)
                     if(item=="المباني"){
-                        QuantityRow("مساحة المباني",result,"م²")
+                        QuantityRow("مساحة المباني",result,"م²",true)
                         QuantityRow("حجم المباني",result*num(thickness),"م³")
-                    }else QuantityRow(item,result,if(item=="الوزرات")"م ط" else "م²")
+                    }else{
+                        QuantityRow(item,result,if(item=="الوزرات")"م ط" else "م²",true)
+                    }
                     HorizontalDivider()
-                    HelpButton("طريقة الحساب",formula())
-                    OutlinedButton(onClick={step=1},modifier=Modifier.fillMaxWidth()){Text("تعديل المقاسات")}
+                    Row(verticalAlignment=Alignment.CenterVertically){
+                        Text("طريقة الحساب",Modifier.weight(1f),style=MaterialTheme.typography.labelLarge)
+                        HelpButton("طريقة الحساب",formula())
+                    }
+                    OutlinedButton(onClick={step=1},modifier=Modifier.fillMaxWidth()){
+                        Icon(Icons.Rounded.Edit,null)
+                        Spacer(Modifier.width(4.dp))
+                        Text("تعديل المقاسات")
+                    }
                 }
             }
         }
