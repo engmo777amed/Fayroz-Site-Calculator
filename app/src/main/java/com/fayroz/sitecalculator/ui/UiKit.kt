@@ -116,7 +116,7 @@ fun CardBox(content:@Composable ColumnScope.()->Unit){
 }
 
 @Composable
-fun SectionTitle(title:String,subtitle:String?=null,trailing:(@Composable()->Unit)?=null){
+fun SectionTitle(title:String,subtitle:String?=null,trailing: (@Composable () -> Unit)? = null){
     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
         Box(Modifier.width(4.dp).height(if(subtitle==null)22.dp else 34.dp).background(MaterialTheme.colorScheme.primary,RoundedCornerShape(999.dp)))
         Spacer(Modifier.width(7.dp))
@@ -208,7 +208,7 @@ fun MetricRow(label:String,value:String,highlight:Boolean=false){
 }
 
 @Composable
-fun AppBarX(title:String,subtitle:String?=null,onBack:(()->Unit)?=null,actions:@Composable RowScope.()->Unit={}){
+fun AppBarX(title:String,subtitle:String?=null,onBack:(()->Unit)?=null,actions: @Composable RowScope.() -> Unit = {}){
     TopAppBar(
         title={Column{
             Text(title,fontWeight=FontWeight.Black,maxLines=1,overflow=TextOverflow.Ellipsis)
