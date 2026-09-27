@@ -1,21 +1,19 @@
-name: Build Fayroz Site Calculator
+name: Build Clean Fayroz Site Calculator
 
 on:
   push:
-    branches: [ main, "feature/**" ]
-  pull_request:
-    branches: [ main ]
+    branches: [ "clean-rebuild-v1" ]
   workflow_dispatch:
 
 concurrency:
-  group: fayroz-site-calculator-${{ github.ref }}
+  group: clean-site-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-apk:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout clean rebuild
         uses: actions/checkout@v4
 
       - name: Java 17
@@ -29,15 +27,33 @@ jobs:
         with:
           gradle-version: '8.11.1'
 
-      - name: Build APK
+      - name: Restore approved Fayroz icon
+        shell: bash
+        run: |
+          mkdir -p app/src/main/res/drawable-nodpi
+          cat brand/icon.part1 brand/icon.part2 brand/icon.part3 brand/icon.part4 | base64 -d > app/src/main/res/drawable-nodpi/fayroz_site_icon.png
+          file app/src/main/res/drawable-nodpi/fayroz_site_icon.png
+          test "$(wc -c < app/src/main/res/drawable-nodpi/fayroz_site_icon.png)" -gt 10000
+
+      - name: Verify clean source tree
+        shell: bash
+        run: |
+          test ! -f app/src/main/java/com/fayroz/sitecalculator/Screens.kt
+          test ! -f app/src/main/java/com/fayroz/sitecalculator/ProjectScreens.kt
+          test ! -f app/src/main/java/com/fayroz/sitecalculator/ProjectStore.kt
+          test -f app/src/main/java/com/fayroz/sitecalculator/ui/HomeProjectScreens.kt
+          test -f app/src/main/java/com/fayroz/sitecalculator/ui/CalculatorScreens.kt
+          grep -q "fayroz_site_icon" app/src/main/java/com/fayroz/sitecalculator/ui/Components.kt
+
+      - name: Build clean APK
         run: gradle :app:assembleDebug --stacktrace
 
-      - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Fayroz-Site-Calculator-v4.apk
+      - name: Package APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk Fayroz-Site-Calculator-Clean-Rebuild.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Fayroz-Site-Calculator-v4
-          path: Fayroz-Site-Calculator-v4.apk
+          name: Fayroz-Site-Calculator-Clean-Rebuild
+          path: Fayroz-Site-Calculator-Clean-Rebuild.apk
           if-no-files-found: error
