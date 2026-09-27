@@ -64,6 +64,9 @@ object QuantityEngine {
     fun floor(space:SavedSpace):Double =
         space.length * space.width * space.repeatCount
 
+    fun grossWalls(space:SavedSpace):Double =
+        2 * (space.length + space.width) * space.height * space.repeatCount
+
     fun netWalls(space:SavedSpace):Double {
         val oneGross=2*(space.length+space.width)*space.height
         val oneOpenings=space.effectiveDoorArea+space.effectiveWindowArea
@@ -85,9 +88,9 @@ object QuantityEngine {
         return one*space.repeatCount*factor
     }
 
-    fun waterproof(space:SavedSpace):Double {
+    fun waterproof(space:SavedSpace,upstand:Double=0.20):Double {
         val factor=1+space.waste/100.0
-        val one=space.length*space.width + 2*(space.length+space.width)*0.20
+        val one=space.length*space.width + 2*(space.length+space.width)*upstand
         return one*space.repeatCount*factor
     }
 
@@ -120,6 +123,10 @@ object QuantityEngine {
 }
 
 class ProjectStore(context:Context){
+    /*
+     * Keep the exact legacy keys/schema so the from-scratch app opens existing
+     * projects automatically instead of forcing a manual migration.
+     */
     private val prefs=context.getSharedPreferences("fayroz_site_projects",Context.MODE_PRIVATE)
     private val uiPrefs=context.getSharedPreferences("fayroz_site_ui",Context.MODE_PRIVATE)
 
@@ -138,7 +145,9 @@ class ProjectStore(context:Context){
     }
 
     fun lastHeight():Double=uiPrefs.getFloat("last_height",3f).toDouble()
-    fun setLastHeight(v:Double){ if(v in 1.5..8.0) uiPrefs.edit().putFloat("last_height",v.toFloat()).apply() }
+    fun setLastHeight(v:Double){
+        if(v in 1.5..8.0) uiPrefs.edit().putFloat("last_height",v.toFloat()).apply()
+    }
 
     fun saveDraft(key:String,json:String){uiPrefs.edit().putString("draft_$key",json).apply()}
     fun loadDraft(key:String):String?=uiPrefs.getString("draft_$key",null)
