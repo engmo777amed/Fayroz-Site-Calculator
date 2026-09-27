@@ -88,7 +88,7 @@ fun QuickCard(title:String,subtitle:String,icon:ImageVector,accent:Boolean=false
 }
 
 @Composable
-fun SectionTitle(title:String,subtitle:String?=null,trailing:(@Composable()->Unit)?=null){
+fun SectionTitle(title: String, subtitle: String? = null, trailing: (@Composable () -> Unit)? = null) {
     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
         Box(Modifier.width(4.dp).height(if(subtitle==null)22.dp else 34.dp).background(MaterialTheme.colorScheme.primary,RoundedCornerShape(9.dp)))
         Spacer(Modifier.width(7.dp))
@@ -101,7 +101,7 @@ fun SectionTitle(title:String,subtitle:String?=null,trailing:(@Composable()->Uni
 }
 
 @Composable
-fun CardBox(content:@Composable ColumnScope.()->Unit){
+fun CardBox(content: @Composable ColumnScope.() -> Unit) {
     Surface(shape=RoundedCornerShape(17.dp),color=MaterialTheme.colorScheme.surface,border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),shadowElevation=1.dp){
         Column(Modifier.fillMaxWidth().padding(10.dp),verticalArrangement=Arrangement.spacedBy(7.dp),content=content)
     }
@@ -219,7 +219,7 @@ fun AppearanceBar(current:Appearance,onChange:(Appearance)->Unit){
 }
 
 @Composable
-fun AppBar(title:String,subtitle:String="",onBack:(()->Unit)?=null,actions:@Composable RowScope.()->Unit={}){
+fun AppBar(title: String, subtitle: String = "", onBack: (() -> Unit)? = null, actions: @Composable RowScope.() -> Unit = {}) {
     TopAppBar(
         title={
             Column{
