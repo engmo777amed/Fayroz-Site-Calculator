@@ -64,8 +64,10 @@ object JsonCodec {
         put("id",t.id);put("name",t.name);put("category",t.category)
         put("unit",t.unit.name);put("method",t.method.name)
         put("wastePercent",t.wastePercent);put("tileHeight",t.tileHeight)
-        put("waterproofUpstand",t.waterproofUpstand);put("includeOpeningReveals",t.includeOpeningReveals)
+        put("waterproofUpstand",t.waterproofUpstand);put("layerThickness",t.layerThickness)
+        put("includeOpeningReveals",t.includeOpeningReveals);put("wallIds",JSONArray(t.wallIds))
         put("directValue",t.directValue)
+        put("pieceWidth",t.pieceWidth);put("pieceHeight",t.pieceHeight);put("piecesPerPack",t.piecesPerPack)
         if(t.manualOverride!=null) put("manualOverride",t.manualOverride) else put("manualOverride",JSONObject.NULL)
         put("overrideReason",t.overrideReason);put("note",t.note)
         put("adjustments",JSONArray().apply{t.adjustments.forEach{a->
@@ -204,8 +206,16 @@ object JsonCodec {
             method=runCatching{CalcMethod.valueOf(x.optString("method","DIRECT_AREA"))}.getOrDefault(CalcMethod.DIRECT_AREA),
             wastePercent=x.optDouble("wastePercent",0.0),tileHeight=x.optDouble("tileHeight",2.4),
             waterproofUpstand=x.optDouble("waterproofUpstand",0.20),
+            layerThickness=x.optDouble("layerThickness",0.0),
             includeOpeningReveals=x.optBoolean("includeOpeningReveals",false),
+            wallIds=buildList{
+                val ids=x.optJSONArray("wallIds") ?: JSONArray()
+                for(i in 0 until ids.length())add(ids.optString(i))
+            },
             directValue=x.optDouble("directValue",0.0),
+            pieceWidth=x.optDouble("pieceWidth",0.0),
+            pieceHeight=x.optDouble("pieceHeight",0.0),
+            piecesPerPack=x.optInt("piecesPerPack",0),
             manualOverride=if(x.isNull("manualOverride"))null else x.optDouble("manualOverride"),
             overrideReason=x.optString("overrideReason",""),adjustments=adjustments,note=x.optString("note","")
         )
