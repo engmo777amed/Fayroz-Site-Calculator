@@ -12,8 +12,8 @@ android {
         applicationId = "com.fayroz.sitecalculator"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "4.0.0"
+        versionCode = 10
+        versionName = "10.0-clean"
     }
 
     buildFeatures { compose = true }
