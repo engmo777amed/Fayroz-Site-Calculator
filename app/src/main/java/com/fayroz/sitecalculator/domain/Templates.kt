@@ -83,7 +83,7 @@ object Templates {
             name=name,category="جبس",unit=MeasureUnit.AREA,
             method=CalcMethod.CEILING_SURFACES,wastePercent=defaults.gypsumWaste
         )
-        "سكريد / مونة تسوية" -> TakeoffItem(
+        "مونة تسوية الأرضيات" -> TakeoffItem(
             name=name,category="أرضيات",unit=MeasureUnit.VOLUME,
             method=CalcMethod.FLOOR_LAYER_VOLUME,layerThickness=0.05
         )
