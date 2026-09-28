@@ -73,7 +73,7 @@ fun MaterialCalculatorScreen(
     }
     fun resetDefaults(){
         when(toolId){
-            "plaster","splash","screed"->mortarOptions.firstOrNull()?.let(::applyPreset)
+            "plaster","splash","screed"->mortarOptions.firstOrNull()?.let{applyPreset(it.name)}
             "masonry"->{
                 wallThickness="12";wallUnit="سم";brickL="25";brickW="12";brickH="6";brickUnit="سم";joint="10";jointUnit="مم";waste="5"
                 pref("masonry.wall",wallThickness);pref("masonry.wallUnit",wallUnit)
