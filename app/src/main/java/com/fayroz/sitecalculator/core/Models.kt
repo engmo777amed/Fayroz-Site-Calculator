@@ -3,23 +3,23 @@ package com.fayroz.sitecalculator.core
 import java.util.UUID
 
 enum class MeasureUnit(val label:String){ AREA("م²"), LENGTH("م ط"), VOLUME("م³"), COUNT("عدد") }
-enum class CaptureStatus(val label:String){ NOT_STARTED("لم يبدأ"), IN_PROGRESS("جاري"), DONE("تم الحصر"), REVIEWED("تمت المراجعة") }
+enum class CaptureStatus(val label:String){ NOT_STARTED("لسه ما بدأتش"), IN_PROGRESS("شغال عليها"), DONE("خلصت الحصر"), REVIEWED("اتراجعت") }
 enum class AdjustmentType { ADD, DEDUCT }
 enum class OpeningType(val label:String){ DOOR("باب"), WINDOW("شباك"), VOID("فتحة") }
 
 enum class CalcMethod(val label:String){
-    ROOM_WALLS("حوائط الفراغ"),
-    WALL_SEGMENTS("حوائط متتابعة"),
-    FLOOR_SURFACES("مسطحات أرضية"),
-    CEILING_SURFACES("مسطحات سقف"),
-    WALL_TILES("كسوة حوائط"),
+    ROOM_WALLS("حوائط المكان"),
+    WALL_SEGMENTS("أكتر من حائط"),
+    FLOOR_SURFACES("قسم الأرضية لأجزاء"),
+    CEILING_SURFACES("قسم السقف لأجزاء"),
+    WALL_TILES("سيراميك الحوائط"),
     SKIRTING("وزرات"),
     WATERPROOFING("عزل أرضية"),
-    FLOOR_LAYER_VOLUME("طبقة أرضية بالحجم"),
-    DIRECT_AREA("مساحة جاهزة"),
-    DIRECT_LENGTH("طول جاهز"),
-    DIRECT_VOLUME("حجم جاهز"),
-    DIRECT_COUNT("عدد جاهز")
+    FLOOR_LAYER_VOLUME("مونة تسوية بالحجم"),
+    DIRECT_AREA("عندي المساحة جاهزة"),
+    DIRECT_LENGTH("عندي الطول جاهز"),
+    DIRECT_VOLUME("عندي الحجم جاهز"),
+    DIRECT_COUNT("عندي العدد جاهز")
 }
 
 data class Opening(
