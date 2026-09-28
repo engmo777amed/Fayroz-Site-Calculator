@@ -44,7 +44,8 @@ object LegacyMigration {
                 id=w.optString("id",UUID.randomUUID().toString()),
                 name=w.optString("name","حائط"),
                 length=w.optDouble("length"),
-                height=w.optDouble("height",o.optDouble("height",3.0))
+                height=w.optDouble("height",o.optDouble("height",3.0)),
+                note=w.optString("note")
             )
         }
 
@@ -58,7 +59,10 @@ object LegacyMigration {
                 width=x.optDouble("width"),
                 height=x.optDouble("height"),
                 sill=x.optDouble("sillHeight",0.0),
-                count=x.optInt("count",1).coerceAtLeast(1)
+                count=x.optInt("count",1).coerceAtLeast(1),
+                wallId=if(x.isNull("wallId"))null else x.optString("wallId"),
+                revealDepth=x.optDouble("revealDepth",0.0),
+                note=x.optString("note")
             )
         }
 
@@ -73,6 +77,25 @@ object LegacyMigration {
             }
         }
 
+        fun surfaces(key:String):List<SurfacePart>{
+            val arr=o.optJSONArray(key)?:JSONArray()
+            return buildList{
+                for(i in 0 until arr.length()){
+                    val x=arr.getJSONObject(i)
+                    add(SurfacePart(
+                        id=x.optString("id",UUID.randomUUID().toString()),
+                        name=x.optString("name","مسطح"),
+                        length=x.optDouble("length"),width=x.optDouble("width"),
+                        deductionArea=x.optDouble("deductionArea"),note=x.optString("note")
+                    ))
+                }
+            }
+        }
+        val photos=buildList{
+            val pa=o.optJSONArray("photoUris")?:JSONArray()
+            for(i in 0 until pa.length())add(pa.optString(i))
+        }
+
         return Space(
             id=o.optString("id",UUID.randomUUID().toString()),
             name=o.optString("name","مكان"),
@@ -81,7 +104,10 @@ object LegacyMigration {
             repeatCount=o.optInt("repeatCount",1).coerceAtLeast(1),
             walls=walls,openings=openings,takeoffs=takeoffs,note=o.optString("note"),
             status=runCatching{WorkStatus.valueOf(o.optString("status","IN_PROGRESS"))}.getOrDefault(WorkStatus.IN_PROGRESS),
-            updatedAt=o.optLong("updatedAt",System.currentTimeMillis())
+            updatedAt=o.optLong("updatedAt",System.currentTimeMillis()),
+            floorSurfaces=surfaces("floorSurfaces"),
+            ceilingSurfaces=surfaces("ceilingSurfaces"),
+            photoUris=photos
         )
     }
 
@@ -98,6 +124,21 @@ object LegacyMigration {
             "FLOOR_LAYER_VOLUME"->CalcKind.SCREED_VOLUME
             else->CalcKind.DIRECT
         }
+        val adjustments=buildList{
+            val aa=x.optJSONArray("adjustments")?:JSONArray()
+            for(i in 0 until aa.length()){
+                val a=aa.getJSONObject(i)
+                add(Adjustment(
+                    id=a.optString("id",UUID.randomUUID().toString()),
+                    kind=runCatching{AdjustKind.valueOf(a.optString("type","ADD"))}.getOrDefault(AdjustKind.ADD),
+                    amount=a.optDouble("amount"),note=a.optString("note")
+                ))
+            }
+        }
+        val wallIds=buildList{
+            val ids=x.optJSONArray("wallIds")?:JSONArray()
+            for(i in 0 until ids.length())add(ids.optString(i))
+        }
         return Takeoff(
             id=x.optString("id",UUID.randomUUID().toString()),
             name=normalizedName,
@@ -108,7 +149,13 @@ object LegacyMigration {
             upstand=x.optDouble("waterproofUpstand",.20),
             layerThickness=x.optDouble("layerThickness"),
             directValue=x.optDouble("directValue"),
-            manualValue=if(x.isNull("manualOverride"))null else x.optDouble("manualOverride")
+            manualValue=if(x.isNull("manualOverride"))null else x.optDouble("manualOverride"),
+            adjustments=adjustments,
+            includeOpeningReveals=x.optBoolean("includeOpeningReveals",false),
+            wallIds=wallIds,
+            pieceWidth=x.optDouble("pieceWidth"),pieceHeight=x.optDouble("pieceHeight"),
+            piecesPerPack=x.optInt("piecesPerPack",0),
+            overrideReason=x.optString("overrideReason"),note=x.optString("note")
         )
     }
 
