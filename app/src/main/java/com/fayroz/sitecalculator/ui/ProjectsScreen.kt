@@ -39,20 +39,14 @@ fun ProjectsScreen(
         verticalArrangement=Arrangement.spacedBy(8.dp)
     ){
         item{
-            SectionTitle(
-                "المشروعات",
-                "مشروع ← دور/جزء ← غرف وفراغات.",
-                trailing={
-                    Row{
-                        if(canUndo){
-                            IconButton(onClick=onUndo,modifier=Modifier.size(48.dp)){Icon(Icons.Rounded.Undo,"تراجع")}
-                        }
-                        FilledTonalButton(onClick=onNew,contentPadding=PaddingValues(horizontal=10.dp,vertical=7.dp)){
-                            Icon(Icons.Rounded.Add,null,Modifier.size(18.dp));Spacer(Modifier.width(4.dp));Text("مشروع")
-                        }
+            ScreenHeader("المشروعات","مشروع ← دور أو جزء ← غرف"){
+                Row{
+                    if(canUndo)IconButton(onClick=onUndo,modifier=Modifier.size(44.dp)){Icon(Icons.Rounded.Undo,"تراجع")}
+                    FilledTonalButton(onClick=onNew,contentPadding=PaddingValues(horizontal=10.dp,vertical=7.dp)){
+                        Icon(Icons.Rounded.Add,null,Modifier.size(18.dp));Spacer(Modifier.width(4.dp));Text("مشروع")
                     }
                 }
-            )
+            }
         }
 
         if(projects.isNotEmpty()) item{
@@ -60,7 +54,13 @@ fun ProjectsScreen(
         }
 
         if(filtered.isEmpty()){
-            item{EmptyBlock(if(q.isBlank())"لا توجد مشروعات" else "لا توجد نتيجة",if(q.isBlank())"أنشئ أول مشروع وابدأ الحصر." else "جرّب كلمة بحث أخرى.",Icons.Rounded.FolderOpen)}
+            item{EmptyBlock(
+                if(q.isBlank())"مفيش مشروعات لسه" else "مفيش نتيجة",
+                if(q.isBlank())"اعمل أول مشروع وابدأ الحصر." else "جرّب كلمة بحث تانية.",
+                Icons.Rounded.FolderOpen,
+                if(q.isBlank())"اعمل مشروع جديد" else null,
+                if(q.isBlank())onNew else null
+            )}
         }else item{
             Column(verticalArrangement=Arrangement.spacedBy(7.dp)){
                 filtered.forEach{p->
@@ -69,7 +69,7 @@ fun ProjectsScreen(
                     Surface(
                         onClick={onOpen(p.id)},shape=RoundedCornerShape(16.dp),
                         color=MaterialTheme.colorScheme.surface,
-                        border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)
+                        tonalElevation=1.dp
                     ){
                         Column(Modifier.fillMaxWidth().padding(10.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
                             Row(verticalAlignment=Alignment.CenterVertically){
@@ -90,7 +90,7 @@ fun ProjectsScreen(
                                     color=MaterialTheme.colorScheme.secondary,
                                     trackColor=MaterialTheme.colorScheme.surfaceVariant
                                 )
-                                Text("تم $complete من $total",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("خلص $complete من $total",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -158,8 +158,8 @@ fun ProjectDetailScreen(
                     DropdownMenu(expanded=menu,onDismissRequest={menu=false}){
                         DropdownMenuItem(text={Text("تعديل الاسم")},leadingIcon={Icon(Icons.Rounded.Edit,null)},onClick={menu=false;rename=true})
                         DropdownMenuItem(text={Text("مشاركة ملخص")},leadingIcon={Icon(Icons.Rounded.Share,null)},onClick={menu=false;onShare()})
-                        DropdownMenuItem(text={Text("تصدير CSV")},leadingIcon={Icon(Icons.Rounded.TableView,null)},onClick={menu=false;onExportCsv()})
-                        DropdownMenuItem(text={Text("تصدير PDF")},leadingIcon={Icon(Icons.Rounded.PictureAsPdf,null)},onClick={menu=false;onExportPdf()})
+                        DropdownMenuItem(text={Text("جدول بيانات (CSV)")},leadingIcon={Icon(Icons.Rounded.TableView,null)},onClick={menu=false;onExportCsv()})
+                        DropdownMenuItem(text={Text("تقرير PDF")},leadingIcon={Icon(Icons.Rounded.PictureAsPdf,null)},onClick={menu=false;onExportPdf()})
                         DropdownMenuItem(text={Text("حذف المشروع",color=MaterialTheme.colorScheme.error)},leadingIcon={Icon(Icons.Rounded.Delete,null,tint=MaterialTheme.colorScheme.error)},onClick={menu=false;delete=true})
                     }
                 }
@@ -176,7 +176,7 @@ fun ProjectDetailScreen(
                 CardBox{
                     Row(verticalAlignment=Alignment.CenterVertically){
                         Column(Modifier.weight(1f)){
-                            Text("تقدم الحصر",style=MaterialTheme.typography.labelLarge)
+                            Text("تقدم الشغل",style=MaterialTheme.typography.labelLarge)
                             Text("$complete من $total غرفة/فراغ",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Text(if(total==0)"0%" else "${(complete*100/total)}%",style=MaterialTheme.typography.titleLarge,color=MaterialTheme.colorScheme.secondary)
