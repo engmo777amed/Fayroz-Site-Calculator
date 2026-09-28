@@ -50,6 +50,7 @@ class MainActivity:ComponentActivity(){
                 var quickSession by remember{mutableIntStateOf(1)}
                 var selectedToolId by remember{mutableStateOf<String?>(null)}
                 var toolSeedArea by remember{mutableStateOf<Double?>(null)}
+                var toolBackRoute by remember{mutableStateOf(Route.ROOT)}
 
                 fun reload(){projects=repository.loadProjects()}
                 fun persist(reason:String){
@@ -68,7 +69,8 @@ class MainActivity:ComponentActivity(){
                         Route.PROJECT->Route.ROOT
                         Route.SECTION->Route.PROJECT
                         Route.ADD_ROOM,Route.EDIT_ROOM,Route.ADD_ITEM->Route.SECTION
-                        Route.QUICK_ROOM,Route.QUICK_ITEM,Route.QUICK_STAIR,Route.QUICK_TOOL->Route.ROOT
+                        Route.QUICK_ROOM,Route.QUICK_ITEM,Route.QUICK_STAIR->Route.ROOT
+                        Route.QUICK_TOOL->toolBackRoute
                         Route.ROOT->Route.ROOT
                     }
                     if(route==Route.ROOT && tab==RootTab.HOME)tab=RootTab.PROJECTS
@@ -138,6 +140,7 @@ class MainActivity:ComponentActivity(){
                                     onTool={id->
                                         selectedToolId=id
                                         toolSeedArea=null
+                                        toolBackRoute=Route.ROOT
                                         route=Route.QUICK_TOOL
                                     }
                                 )
@@ -212,7 +215,14 @@ class MainActivity:ComponentActivity(){
                                 },
                                 onShare={Reports.shareText(context,project.name,Reports.summaryText(project))},
                                 onExportCsv={Reports.shareCsv(context,project)},
-                                onExportPdf={Reports.sharePdf(context,project)}
+                                onExportPdf={Reports.sharePdf(context,project)},
+                                onOpenMaterialTool={id,area->
+                                    repository.recordToolUse(id)
+                                    selectedToolId=id
+                                    toolSeedArea=area
+                                    toolBackRoute=Route.PROJECT
+                                    route=Route.QUICK_TOOL
+                                }
                             )
                         }
 
@@ -329,7 +339,10 @@ class MainActivity:ComponentActivity(){
                                 toolId=id,
                                 repository=repository,
                                 seedArea=toolSeedArea,
-                                onBack={route=Route.ROOT;tab=RootTab.TOOLS},
+                                onBack={
+                                    route=toolBackRoute
+                                    if(toolBackRoute==Route.ROOT)tab=RootTab.TOOLS
+                                },
                                 onOpenTool={nextId,area->
                                     repository.recordToolUse(nextId)
                                     selectedToolId=nextId
