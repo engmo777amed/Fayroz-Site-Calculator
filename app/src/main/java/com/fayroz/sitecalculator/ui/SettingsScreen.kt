@@ -39,7 +39,7 @@ fun SettingsScreen(
         contentPadding=PaddingValues(12.dp),
         verticalArrangement=Arrangement.spacedBy(9.dp)
     ){
-        item{CompactBrandHeader("الإعدادات","افتراضات الحصر وهوية Fayroz.")}
+        item{CompactBrandHeader("الإعدادات","القيم اللي البرنامج يبدأ بيها وشكل البرنامج.")}
 
         item{
             CardBox{
@@ -70,7 +70,7 @@ fun SettingsScreen(
 
         item{
             CardBox{
-                SectionTitle("افتراضات الموقع","تقدر تعدل أي قيمة داخل البند لاحقًا.")
+                SectionTitle("القيم اللي البرنامج يبدأ بيها","تقدر تغير أي قيمة جوه الحاسبة أو البند بعد كده.")
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
                     NumberFieldX("ارتفاع الغرفة",height,{height=it},"م",modifier=Modifier.weight(1f))
                     NumberFieldX("ارتفاع السيراميك",tile,{tile=it},"م",modifier=Modifier.weight(1f))
@@ -101,7 +101,7 @@ fun SettingsScreen(
 
         item{
             CardBox{
-                SectionTitle("البنود المفضلة","تظهر أول القائمة أثناء إضافة بند.")
+                SectionTitle("البنود اللي بستخدمها كتير","هتظهر لك في أول قائمة البنود.")
                 QuantityEngine.standardItems.forEach{item->
                     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
                         Text(item,Modifier.weight(1f),style=MaterialTheme.typography.bodyMedium)
@@ -122,10 +122,10 @@ fun SettingsScreen(
                 SectionTitle("نسخة احتياطية","تحتوي المشروعات والكميات.")
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(7.dp)){
                     OutlinedButton(onClick=onShareBackup,modifier=Modifier.weight(1f).heightIn(min=48.dp)){
-                        Icon(Icons.Rounded.Share,null);Spacer(Modifier.width(4.dp));Text("تصدير")
+                        Icon(Icons.Rounded.Share,null);Spacer(Modifier.width(4.dp));Text("طلّع نسخة")
                     }
                     OutlinedButton(onClick={importDialog=true},modifier=Modifier.weight(1f).heightIn(min=48.dp)){
-                        Icon(Icons.Rounded.Restore,null);Spacer(Modifier.width(4.dp));Text("استيراد")
+                        Icon(Icons.Rounded.Restore,null);Spacer(Modifier.width(4.dp));Text("رجّع نسخة")
                     }
                 }
                 importResult?.let{Text(it,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.primary)}
@@ -136,10 +136,10 @@ fun SettingsScreen(
     if(importDialog){
         AlertDialog(
             onDismissRequest={importDialog=false},
-            title={Text("استيراد نسخة احتياطية")},
+            title={Text("رجّع نسخة محفوظة")},
             text={
                 Column(verticalArrangement=Arrangement.spacedBy(6.dp)){
-                    Text("الصق نص النسخة الاحتياطية هنا.",style=MaterialTheme.typography.bodySmall)
+                    Text("الصق النسخة اللي حفظتها قبل كده هنا.",style=MaterialTheme.typography.bodySmall)
                     OutlinedTextField(importText,{importText=it},minLines=6,maxLines=10)
                 }
             },
