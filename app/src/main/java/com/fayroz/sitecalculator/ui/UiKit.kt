@@ -109,9 +109,9 @@ fun CardBox(content:@Composable ColumnScope.()->Unit){
         Modifier.fillMaxWidth(),
         shape=RoundedCornerShape(16.dp),
         color=MaterialTheme.colorScheme.surface,
-        border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)
+        tonalElevation=1.dp
     ){
-        Column(Modifier.padding(horizontal=11.dp,vertical=9.dp),verticalArrangement=Arrangement.spacedBy(7.dp),content=content)
+        Column(Modifier.padding(horizontal=12.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(8.dp),content=content)
     }
 }
 
@@ -129,29 +129,39 @@ fun SectionTitle(title:String,subtitle:String?=null,trailing: (@Composable () ->
 }
 
 @Composable
-fun HelpButton(title:String,help:String){
+fun CompactHelpIcon(title:String,help:String){
     var show by remember{mutableStateOf(false)}
-    IconButton(onClick={show=true},modifier=Modifier.size(48.dp)){
-        Icon(Icons.Rounded.PriorityHigh,"شرح",Modifier.size(18.dp),tint=MaterialTheme.colorScheme.primary)
+    IconButton(onClick={show=true},modifier=Modifier.size(40.dp)){
+        Surface(
+            shape=RoundedCornerShape(999.dp),
+            color=MaterialTheme.colorScheme.primaryContainer
+        ){
+            Box(Modifier.size(22.dp),contentAlignment=Alignment.Center){
+                Text("!",style=MaterialTheme.typography.labelMedium,fontWeight=FontWeight.Black,color=MaterialTheme.colorScheme.primary)
+            }
+        }
     }
     if(show){
         AlertDialog(
-            onDismissRequest={show=false},title={Text(title,fontWeight=FontWeight.Black)},
-            text={Text(help)},confirmButton={TextButton(onClick={show=false}){Text("إغلاق")}}
+            onDismissRequest={show=false},
+            title={Text(title,fontWeight=FontWeight.Black)},
+            text={Text(help)},
+            confirmButton={TextButton(onClick={show=false}){Text("تمام")}}
         )
     }
 }
 
 @Composable
+fun HelpButton(title:String,help:String)=CompactHelpIcon(title,help)
+
+@Composable
 fun TextFieldX(label:String,value:String,onChange:(String)->Unit,help:String?=null,placeholder:String="",modifier:Modifier=Modifier){
     Column(modifier,verticalArrangement=Arrangement.spacedBy(3.dp)){
-        Row(verticalAlignment=Alignment.CenterVertically){
-            Text(label,Modifier.weight(1f),style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
-            if(help!=null)HelpButton(label,help)
-        }
+        Text(label,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedTextField(
             value=value,onValueChange=onChange,modifier=Modifier.fillMaxWidth(),singleLine=true,
             placeholder={if(placeholder.isNotBlank())Text(placeholder,maxLines=1)},
+            trailingIcon={if(help!=null){{CompactHelpIcon(label,help)}}else null},
             shape=RoundedCornerShape(11.dp)
         )
     }
@@ -160,14 +170,12 @@ fun TextFieldX(label:String,value:String,onChange:(String)->Unit,help:String?=nu
 @Composable
 fun NumberFieldX(label:String,value:String,onChange:(String)->Unit,unit:String,help:String?=null,modifier:Modifier=Modifier){
     Column(modifier,verticalArrangement=Arrangement.spacedBy(3.dp)){
-        Row(verticalAlignment=Alignment.CenterVertically){
-            Text(label,Modifier.weight(1f),style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
-            if(help!=null)HelpButton(label,help)
-        }
+        Text(label,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedTextField(
             value=value,onValueChange={raw->onChange(raw.filter{it.isDigit()||it=='.'||it==','||it=='٫'})},
             modifier=Modifier.fillMaxWidth(),singleLine=true,
             suffix={Text(unit,style=MaterialTheme.typography.labelSmall)},
+            trailingIcon={if(help!=null){{CompactHelpIcon(label,help)}}else null},
             keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
             shape=RoundedCornerShape(11.dp)
         )
@@ -178,16 +186,14 @@ fun NumberFieldX(label:String,value:String,onChange:(String)->Unit,unit:String,h
 fun ChoiceFieldX(label:String,value:String,options:List<String>,onChange:(String)->Unit,help:String?=null,modifier:Modifier=Modifier){
     var open by remember{mutableStateOf(false)}
     Column(modifier,verticalArrangement=Arrangement.spacedBy(3.dp)){
-        Row(verticalAlignment=Alignment.CenterVertically){
-            Text(label,Modifier.weight(1f),style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
-            if(help!=null)HelpButton(label,help)
-        }
+        Text(label,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
         Box{
             OutlinedButton(
                 onClick={open=true},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
                 shape=RoundedCornerShape(11.dp),contentPadding=PaddingValues(horizontal=10.dp,vertical=7.dp)
             ){
-                Text(value,Modifier.weight(1f),maxLines=1,overflow=TextOverflow.Ellipsis,color=MaterialTheme.colorScheme.onSurface)
+                Text(value,Modifier.weight(1f),maxLines=2,overflow=TextOverflow.Ellipsis,color=MaterialTheme.colorScheme.onSurface)
+                if(help!=null)CompactHelpIcon(label,help)
                 Icon(Icons.Rounded.ExpandMore,null)
             }
             DropdownMenu(expanded=open,onDismissRequest={open=false}){
@@ -199,10 +205,21 @@ fun ChoiceFieldX(label:String,value:String,options:List<String>,onChange:(String
 
 @Composable
 fun MetricRow(label:String,value:String,highlight:Boolean=false){
-    Surface(color=if(highlight)MaterialTheme.colorScheme.primaryContainer else Color.Transparent,shape=RoundedCornerShape(9.dp)){
-        Row(Modifier.fillMaxWidth().padding(horizontal=if(highlight)8.dp else 0.dp,vertical=5.dp),verticalAlignment=Alignment.CenterVertically){
+    Surface(
+        color=if(highlight)MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+        shape=RoundedCornerShape(12.dp)
+    ){
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal=if(highlight)10.dp else 0.dp,vertical=if(highlight)8.dp else 5.dp),
+            verticalAlignment=Alignment.CenterVertically
+        ){
             Text(label,Modifier.weight(1f),style=if(highlight)MaterialTheme.typography.labelLarge else MaterialTheme.typography.bodyMedium)
-            Text(value,style=if(highlight)MaterialTheme.typography.titleMedium else MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Black)
+            Text(
+                value,
+                style=if(highlight)MaterialTheme.typography.titleLarge else MaterialTheme.typography.labelLarge,
+                color=MaterialTheme.colorScheme.primary,
+                fontWeight=FontWeight.Black
+            )
         }
     }
 }
