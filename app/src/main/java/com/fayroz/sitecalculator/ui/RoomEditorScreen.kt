@@ -54,8 +54,8 @@ fun RoomEditorScreen(
     var geometryMode by remember{
         mutableStateOf(
             when{
-                seed?.walls?.isNotEmpty()==true -> "حوائط متتابعة"
-                seed?.floorSurfaces?.isNotEmpty()==true -> "مسطحات متعددة"
+                seed?.walls?.isNotEmpty()==true -> "أكتر من حائط ورا بعض"
+                seed?.floorSurfaces?.isNotEmpty()==true -> "قسم المساحة لكذا جزء"
                 else -> "مستطيل بسيط"
             }
         )
@@ -79,8 +79,8 @@ fun RoomEditorScreen(
         type=type,
         length=n(length),width=n(width),height=n(height),
         repeatCount=n(repeatCount).toInt().coerceAtLeast(1),
-        walls=if(geometryMode=="حوائط متتابعة")walls.toList() else emptyList(),
-        floorSurfaces=if(geometryMode=="مسطحات متعددة")floors.toList() else emptyList(),
+        walls=if(geometryMode=="أكتر من حائط ورا بعض")walls.toList() else emptyList(),
+        floorSurfaces=if(geometryMode=="قسم المساحة لكذا جزء")floors.toList() else emptyList(),
         ceilingSurfaces=ceilings.toList(),
         openings=openings.toList(),
         takeoffs=takeoffs.toList(),
@@ -109,8 +109,8 @@ fun RoomEditorScreen(
     val warnings=buildList{
         if(space.height<=0)add("ارتفاع الفراغ غير صحيح.")
         if(geometryMode=="مستطيل بسيط" && (space.length<=0||space.width<=0))add("أدخل طول وعرض الفراغ.")
-        if(geometryMode=="حوائط متتابعة" && walls.none{it.length>0})add("أضف أطوال الحوائط.")
-        if(geometryMode=="مسطحات متعددة" && floors.none{it.length>0&&it.width>0})add("أضف مسطح أرضية واحد على الأقل.")
+        if(geometryMode=="أكتر من حائط ورا بعض" && walls.none{it.length>0})add("أضف أطوال الحوائط.")
+        if(geometryMode=="قسم المساحة لكذا جزء" && floors.none{it.length>0&&it.width>0})add("أضف مسطح أرضية واحد على الأقل.")
         openings.forEachIndexed{i,o->
             if(o.width<=0||o.height<=0)add("مقاس الفتحة ${i+1} غير مكتمل.")
             if(o.type==OpeningType.WINDOW && o.sillHeight<0)add("جلسة الشباك ${i+1} غير صحيحة.")
@@ -188,15 +188,15 @@ fun RoomEditorScreen(
                         defaultHeight=n(height).takeIf{it>0}?:defaults.defaultHeight
                     )
 
-                    2 -> OpeningsCard(openings,if(geometryMode=="حوائط متتابعة")walls else emptyList())
+                    2 -> OpeningsCard(openings,if(geometryMode=="أكتر من حائط ورا بعض")walls else emptyList())
 
                     3 -> CardBox{
                         SectionTitle(
                             "بنود الحصر",
-                            "الهالك والـOverride والتعديلات محفوظة لكل بند لوحده.",
+                            "كل بند ليه هالك وإضافة أو خصم، وتقدر تعتمد كمية فعلية لو محتاج.",
                             trailing={
                                 Row{
-                                    TextButton(onClick={applyTemplateConfirm=true}){Text("قالب")}
+                                    TextButton(onClick={applyTemplateConfirm=true}){Text("تجهيز جاهز")}
                                     Box{
                                         IconButton(onClick={addStandardOpen=true},modifier=Modifier.size(48.dp)){Icon(Icons.Rounded.Add,"إضافة بند")}
                                         DropdownMenu(expanded=addStandardOpen,onDismissRequest={addStandardOpen=false}){
@@ -222,7 +222,7 @@ fun RoomEditorScreen(
                                 }
                             }
                         )
-                        if(takeoffs.isEmpty())Text("أضف بندًا أو طبّق قالب نوع الغرفة.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        if(takeoffs.isEmpty())Text("ضيف بند أو استخدم تجهيز جاهز مناسب لنوع الغرفة.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                         takeoffs.forEachIndexed{i,item->
                             val q=QuantityEngine.calculate(space.copy(takeoffs=takeoffs.toList()),item)
                             Surface(
@@ -244,7 +244,7 @@ fun RoomEditorScreen(
                     }
 
                     4 -> CardBox{
-                        SectionTitle("مراجع وحالة الحصر","صور الموقع والملاحظات لا تدخل في الحساب.")
+                        SectionTitle("صور وملاحظات","صور الموقع والملاحظات لا تدخل في الحساب.")
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(7.dp)){
                             OutlinedButton(onClick={photoPicker.launch(arrayOf("image/*"))},modifier=Modifier.weight(1f).heightIn(min=48.dp)){
                                 Icon(Icons.Rounded.AddAPhoto,null);Spacer(Modifier.width(4.dp));Text("إضافة صورة")
@@ -256,10 +256,10 @@ fun RoomEditorScreen(
                             }
                         }
                         if(photos.isNotEmpty())TextButton(onClick={photos.clear()}){Text("إزالة كل الصور",color=MaterialTheme.colorScheme.error)}
-                        ChoiceFieldX("حالة الحصر",status.label,CaptureStatus.entries.map{it.label},{label->
+                        ChoiceFieldX("وصلت لفين؟",status.label,CaptureStatus.entries.map{it.label},{label->
                             status=CaptureStatus.entries.first{it.label==label}
-                        },"استخدم «تمت المراجعة» بعد مراجعة الكميات.")
-                        TextFieldX("ملاحظات تنفيذية",note,{note=it},"ملاحظة تحفظ مع الغرفة.","مثال: استبعاد خلف وحدات المطبخ")
+                        },"اختار «اتراجعت» بعد ما تراجع الكميات.")
+                        TextFieldX("ملاحظات الموقع",note,{note=it},"ملاحظة تحفظ مع الغرفة.","مثال: استبعاد خلف وحدات المطبخ")
                     }
 
                     else -> ReviewCard(space,warnings)
@@ -276,8 +276,8 @@ fun RoomEditorScreen(
 
     if(applyTemplateConfirm)AlertDialog(
         onDismissRequest={applyTemplateConfirm=false},
-        title={Text("تطبيق قالب $type؟")},
-        text={Text("سيتم إضافة البنود الافتراضية غير الموجودة فقط، ولن يتم حذف تعديلاتك الحالية.")},
+        title={Text("استخدم تجهيز جاهز $type؟")},
+        text={Text("هيضيف البنود المعتادة الناقصة بس، ومش هيمسح أي تعديل عملته.")},
         confirmButton={TextButton(onClick={
             Templates.forRoom(type,defaults).forEach{preset->if(takeoffs.none{it.name==preset.name})takeoffs.add(preset)}
             applyTemplateConfirm=false
@@ -299,9 +299,9 @@ private fun BasicsCard(
     note:String,onNote:(String)->Unit,status:CaptureStatus,onStatus:(CaptureStatus)->Unit
 ){
     CardBox{
-        SectionTitle("بيانات الفراغ","المستطيل البسيط اختصار فقط؛ الأشكال غير المنتظمة في الخطوة التالية.")
+        SectionTitle("بيانات المكان","المستطيل البسيط اختصار فقط؛ الأشكال غير المنتظمة في الخطوة التالية.")
         TextFieldX("اسم الغرفة أو الفراغ",name,onName,"اسم واضح في المشروع.","مثال: صالة رئيسية")
-        ChoiceFieldX("نوع الفراغ",type,roomTypes,onType,"يستخدم في القوالب والبحث.")
+        ChoiceFieldX("نوع المكان",type,roomTypes,onType,"يستخدم في القوالب والبحث.")
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
             NumberFieldX("الطول",length,onLength,"م","للمستطيل البسيط.",Modifier.weight(1f))
             NumberFieldX("العرض",width,onWidth,"م","للمستطيل البسيط.",Modifier.weight(1f))
@@ -310,7 +310,7 @@ private fun BasicsCard(
             NumberFieldX("الارتفاع",height,onHeight,"م","ارتفاع افتراضي للحوائط.",Modifier.weight(1f))
             NumberFieldX("التكرار",repeatCount,onRepeat,"عدد","مثال غرفة نموذجية ×6.",Modifier.weight(1f))
         }
-        ChoiceFieldX("حالة الحصر",status.label,CaptureStatus.entries.map{it.label},{label->onStatus(CaptureStatus.entries.first{it.label==label})})
+        ChoiceFieldX("وصلت لفين؟",status.label,CaptureStatus.entries.map{it.label},{label->onStatus(CaptureStatus.entries.first{it.label==label})})
         TextFieldX("ملاحظة",note,onNote,"مرجع للموقع.","مثال: يوجد عمود 30×60")
     }
 }
@@ -322,11 +322,11 @@ private fun GeometryCard(
     defaultHeight:Double
 ){
     CardBox{
-        SectionTitle("شكل الفراغ","اختار الطريقة الأقرب للموقع، بدون إجبار الفراغ على مستطيل.")
-        ChoiceFieldX("طريقة القياس",mode,listOf("مستطيل بسيط","حوائط متتابعة","مسطحات متعددة"),onMode,"الصالة L-Shape استخدم حوائط متتابعة أو مسطحات متعددة.")
+        SectionTitle("شكل المكان","اختار الطريقة الأقرب للموقع، بدون إجبار الفراغ على مستطيل.")
+        ChoiceFieldX("هتحسب المكان إزاي؟",mode,listOf("مستطيل بسيط","أكتر من حائط ورا بعض","قسم المساحة لكذا جزء"),onMode,"لو الصالة أو المكان مش مستطيل، اختار أكتر من حائط أو قسم المساحة لأجزاء.")
         when(mode){
             "مستطيل بسيط" -> Text("سيتم استخدام الطول × العرض، ومحيط 2×(الطول+العرض).",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-            "حوائط متتابعة" -> {
+            "أكتر من حائط ورا بعض" -> {
                 SegmentWallsEditor(walls,defaultHeight)
                 OutlinedButton(onClick={walls.add(WallSegment(name="حائط ${walls.size+1}",height=defaultHeight))},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){
                     Icon(Icons.Rounded.Add,null);Spacer(Modifier.width(4.dp));Text("إضافة حائط")
@@ -437,13 +437,13 @@ private fun OpeningEditorRow(index:Int,o:Opening,walls:List<WallSegment>,onChang
 @Composable
 private fun ReviewCard(space:SpaceEntry,warnings:List<String>){
     CardBox{
-        SectionTitle("المراجعة النهائية","راجع التحذيرات ومصدر كل كمية قبل الاعتماد.")
+        SectionTitle("راجع الحساب","راجع التنبيهات والكميات قبل ما تعتمدها.")
         if(warnings.isNotEmpty()){
             Surface(shape=RoundedCornerShape(12.dp),color=MaterialTheme.colorScheme.errorContainer){
                 Column(Modifier.padding(9.dp)){warnings.forEach{Text("• $it",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onErrorContainer)}}
             }
         }
-        MetricRow("حالة الحصر",space.status.label)
+        MetricRow("وصلت لفين؟",space.status.label)
         MetricRow("الفتحات","${space.openings.size} فتحة")
         MetricRow("الصور","${space.photoUris.size} صورة")
         HorizontalDivider()
@@ -493,7 +493,7 @@ private fun CustomItemDialog(onDismiss:()->Unit,onAdd:(TakeoffItem)->Unit){
                         MeasureUnit.COUNT->m==CalcMethod.DIRECT_COUNT
                     }
                 }
-                ChoiceFieldX("طريقة الحصر",method.label,methods.map{it.label},{label->method=methods.first{it.label==label}})
+                ChoiceFieldX("هتحسب البند إزاي؟",method.label,methods.map{it.label},{label->method=methods.first{it.label==label}})
             }
         },
         confirmButton={TextButton(onClick={
@@ -538,7 +538,7 @@ private fun TakeoffEditorDialog(item:TakeoffItem,walls:List<WallSegment>,onDismi
                 if(item.unit==MeasureUnit.AREA){
                     item{
                         HorizontalDivider()
-                        Text("مقاس القطعة / العبوة - اختياري",style=MaterialTheme.typography.labelLarge)
+                        Text("مقاس البلاطة أو القطعة - لو محتاج العدد",style=MaterialTheme.typography.labelLarge)
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
                             NumberFieldX("عرض القطعة",pieceWidth,{pieceWidth=it},"م",modifier=Modifier.weight(1f))
                             NumberFieldX("طول القطعة",pieceHeight,{pieceHeight=it},"م",modifier=Modifier.weight(1f))
@@ -549,10 +549,10 @@ private fun TakeoffEditorDialog(item:TakeoffItem,walls:List<WallSegment>,onDismi
                 if(item.method in listOf(CalcMethod.ROOM_WALLS,CalcMethod.WALL_SEGMENTS,CalcMethod.WALL_TILES)){
                     item{
                         Row(verticalAlignment=Alignment.CenterVertically){
-                            Text("احتساب جوانب الفتحات",Modifier.weight(1f));Switch(checked=reveals,onCheckedChange={reveals=it})
+                            Text("احسب جوانب الباب أو الشباك",Modifier.weight(1f));Switch(checked=reveals,onCheckedChange={reveals=it})
                         }
                         if(walls.isNotEmpty()){
-                            Text("تطبيق على حوائط محددة - اترك الكل غير محدد لتطبيقه على جميع الحوائط.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("احسب البند على حوائط معينة. لو ما اخترتش حاجة، هيتحسب على كل الحوائط.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                             walls.forEach{wall->
                                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
                                     Checkbox(
@@ -593,7 +593,7 @@ private fun TakeoffEditorDialog(item:TakeoffItem,walls:List<WallSegment>,onDismi
                 item{
                     HorizontalDivider()
                     Row(verticalAlignment=Alignment.CenterVertically){
-                        Text("اعتماد كمية فعلية بدل المحسوبة",Modifier.weight(1f));Switch(checked=overrideEnabled,onCheckedChange={overrideEnabled=it})
+                        Text("استخدم كمية فعلية بدل المحسوبة",Modifier.weight(1f));Switch(checked=overrideEnabled,onCheckedChange={overrideEnabled=it})
                     }
                     if(overrideEnabled){
                         NumberFieldX("الكمية الفعلية",overrideValue,{overrideValue=it},item.unit.label,"يظل الرقم النظري محفوظًا للمقارنة.")
