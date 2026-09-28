@@ -311,20 +311,25 @@ class MainActivity:ComponentActivity(){
                     }
 
                     is Route.Tool->{
-                        val projectId=r.projectId ?: active?.projectId
-                        val targetProject=projectId?.let{id->projects.firstOrNull{it.id==id}}
-                        MaterialCalculatorScreen(
-                            toolId=r.toolId,
-                            seed=r.seed,
-                            repository=repository,
-                            activeProject=targetProject,
-                            onBack={
-                                route=if(r.projectId!=null)Route.ProjectDetail(r.projectId) else Route.Root
-                            },
-                            onSave={result,sectionId,spaceId->
-                                if(targetProject!=null)saveCalculation(targetProject.id,result,sectionId,spaceId)
-                            }
-                        )
+                        val back={
+                            route=if(r.projectId!=null)Route.ProjectDetail(r.projectId) else Route.Root
+                        }
+                        if(r.toolId in setOf("slope","convert","area")){
+                            SiteUtilityScreen(r.toolId,onBack=back)
+                        }else{
+                            val projectId=r.projectId ?: active?.projectId
+                            val targetProject=projectId?.let{id->projects.firstOrNull{it.id==id}}
+                            MaterialCalculatorScreen(
+                                toolId=r.toolId,
+                                seed=r.seed,
+                                repository=repository,
+                                activeProject=targetProject,
+                                onBack=back,
+                                onSave={result,sectionId,spaceId->
+                                    if(targetProject!=null)saveCalculation(targetProject.id,result,sectionId,spaceId)
+                                }
+                            )
+                        }
                     }
                 }
             }
