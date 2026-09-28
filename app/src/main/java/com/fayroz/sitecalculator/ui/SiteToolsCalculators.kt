@@ -21,34 +21,50 @@ fun SlopeLevelsScreen(repository:ProjectRepository,onBack:()->Unit){
     val toolId="slope_levels"
     var mode by remember{mutableStateOf("معايا الميل")}
     var length by remember{mutableStateOf(repository.getToolValue("$toolId.length",""))}
+    var lengthUnit by remember{mutableStateOf(repository.getToolValue("$toolId.lengthUnit","م"))}
     var slope by remember{mutableStateOf(repository.getToolValue("$toolId.slope","1"))}
+    var slopeUnit by remember{mutableStateOf(repository.getToolValue("$toolId.slopeUnit","%"))}
     var startLevel by remember{mutableStateOf(repository.getToolValue("$toolId.startLevel","0.00"))}
     var endLevel by remember{mutableStateOf(repository.getToolValue("$toolId.endLevel",""))}
+    var levelUnit by remember{mutableStateOf(repository.getToolValue("$toolId.levelUnit","م"))}
     var direction by remember{mutableStateOf("نازل")}
     fun set(k:String,v:String){repository.setToolValue("$toolId.$k",v)}
 
-    val l=n(length)
-    val diff=if(mode=="معايا الميل")l*n(slope)/100.0 else abs(n(endLevel)-n(startLevel))
+    val l=lengthToMeters(length,lengthUnit)
+    val startM=lengthToMeters(startLevel,levelUnit)
+    val endM=lengthToMeters(endLevel,levelUnit)
+    val slopePercent=n(slope)
+    val diff=if(mode=="معايا الميل")l*slopePercent/100.0 else kotlin.math.abs(endM-startM)
     val calculatedSlope=if(l>0)diff/l*100.0 else 0.0
-    val calculatedEnd=if(direction=="نازل")n(startLevel)-diff else n(startLevel)+diff
+    val calculatedEnd=if(direction=="نازل")startM-diff else startM+diff
 
     ToolPage("الميل والمناسيب","فرق منسوب أو نسبة ميل في ثواني",repository,toolId,onBack){
         CardBox{
-            ChoiceFieldX("معاك إيه؟",mode,listOf("معايا الميل","معايا المنسوبين"),{mode=it})
-            NumberFieldX("طول المسار",length,{length=it;set("length",it)},"م","المسافة الأفقية اللي الميل ماشي عليها.")
-            NumberFieldX("منسوب البداية",startLevel,{startLevel=it;set("startLevel",it)},"م")
-            if(mode=="معايا الميل"){
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                    NumberFieldX("الميل",slope,{slope=it;set("slope",it)},"%",modifier=Modifier.weight(1f))
-                    ChoiceFieldX("الاتجاه",direction,listOf("نازل","طالع"),{direction=it},modifier=Modifier.weight(1f))
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
+                Text("دخل البيانات",style=MaterialTheme.typography.titleSmall)
+                ResetDefaultsButton{
+                    lengthUnit="م";slope="1";slopeUnit="%";startLevel="0.00";levelUnit="م";direction="نازل"
+                    set("lengthUnit",lengthUnit);set("slope",slope);set("slopeUnit",slopeUnit);set("startLevel",startLevel);set("levelUnit",levelUnit)
                 }
-            }else{
-                NumberFieldX("منسوب النهاية",endLevel,{endLevel=it;set("endLevel",it)},"م")
             }
+            ChoiceFieldX("معاك إيه؟",mode,listOf("معايا الميل","معايا المنسوبين"),{mode=it})
+            NumberWithUnitX("طول المسار",length,{length=it;set("length",it)},lengthUnit,{lengthUnit=it;set("lengthUnit",it)},help="المسافة الأفقية اللي الميل ماشي عليها.")
+            NumberWithUnitX("منسوب البداية",startLevel,{startLevel=it;set("startLevel",it)},levelUnit,{levelUnit=it;set("levelUnit",it)})
+            if(mode=="معايا الميل"){
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                    NumberFieldX("الميل",slope,{slope=it;set("slope",it)},slopeUnit,
+                        "1% = 1 سم فرق منسوب لكل متر أفقي.",Modifier.weight(1f))
+                    ChoiceFieldX("وحدة الميل",slopeUnit,listOf("%","سم/م"),{slopeUnit=it;set("slopeUnit",it)},modifier=Modifier.weight(1f))
+                }
+                ChoiceFieldX("الاتجاه",direction,listOf("نازل","طالع"),{direction=it})
+            }else{
+                NumberWithUnitX("منسوب النهاية",endLevel,{endLevel=it;set("endLevel",it)},levelUnit,{levelUnit=it;set("levelUnit",it)})
+            }
+            if(slopePercent>10 && mode=="معايا الميل")LogicWarning("الميل كبير. راجع القيمة والوحدة.")
         }
         if(l>0){
-            val finalSlope=if(mode=="معايا الميل")n(slope) else calculatedSlope
-            val finalEnd=if(mode=="معايا الميل")calculatedEnd else n(endLevel)
+            val finalSlope=if(mode=="معايا الميل")slopePercent else calculatedSlope
+            val finalEnd=if(mode=="معايا الميل")calculatedEnd else endM
             ToolResultCard(
                 rows=listOf(
                     "فرق المنسوب" to "${fmt(diff)} م = ${fmt(diff*100)} سم",
@@ -56,10 +72,10 @@ fun SlopeLevelsScreen(repository:ProjectRepository,onBack:()->Unit){
                     "منسوب النهاية" to "${fmt(finalEnd)} م"
                 ),
                 explanation=if(mode=="معايا الميل")
-                    "فرق المنسوب = طول المسار × الميل ÷ 100 = ${fmt(l)} × ${fmt(n(slope))}% = ${fmt(diff)} م."
+                    "فرق المنسوب = طول المسار × الميل ÷ 100 = ${fmt(diff)} م. 1% يساوي 1 سم لكل متر."
                 else
-                    "فرق المنسوب = الفرق بين منسوب البداية والنهاية = ${fmt(diff)} م. الميل = فرق المنسوب ÷ طول المسار × 100 = ${fmt(calculatedSlope)}%.",
-                copyText="طول ${fmt(l)} م — فرق منسوب ${fmt(diff*100)} سم — ميل ${fmt(finalSlope)}% — نهاية ${fmt(finalEnd)} م"
+                    "فرق المنسوب = الفرق بين منسوب البداية والنهاية. الميل = فرق المنسوب ÷ طول المسار × 100.",
+                copyText="طول ${fmt(l)} م — فرق منسوب ${fmt(diff*100)} سم — ميل ${fmt(finalSlope)}%"
             )
         }
     }
@@ -74,10 +90,15 @@ private data class AreaPart(
 )
 
 @Composable
-fun IrregularAreaScreen(onBack:()->Unit){
+fun IrregularAreaScreen(repository:ProjectRepository,onBack:()->Unit){
+    val toolId="irregular_area"
     val parts=remember{mutableStateListOf(AreaPart())}
+    var dimUnit by remember{mutableStateOf(repository.getToolValue("$toolId.dimUnit","م"))}
+    fun set(k:String,v:String){repository.setToolValue("$toolId.$k",v)}
     val values=parts.map{p->
-        val raw=if(p.type=="مثلث")n(p.a)*n(p.b)/2.0 else n(p.a)*n(p.b)
+        val aa=lengthToMeters(p.a,dimUnit)
+        val bb=lengthToMeters(p.b,dimUnit)
+        val raw=if(p.type=="مثلث")aa*bb/2.0 else aa*bb
         if(p.sign=="خصم")-raw else raw
     }
     val total=values.sum()
@@ -90,26 +111,26 @@ fun IrregularAreaScreen(onBack:()->Unit){
         ){
             item{
                 CardBox{
-                    SectionTitle("الأجزاء","ضيف مستطيلات أو مثلثات، واعمل خصم لأي فراغ أو عمود.")
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
+                        Text("الأجزاء",style=MaterialTheme.typography.titleSmall)
+                        ChoiceFieldX("الوحدة",dimUnit,listOf("م","سم","مم"),{dimUnit=it;set("dimUnit",it)},modifier=Modifier.width(112.dp))
+                    }
+                    Text("قسم المكان لمستطيلات أو مثلثات، واعمل خصم لأي جزء مش منفذ.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     parts.forEachIndexed{index,p->
-                        Surface(
-                            shape=RoundedCornerShape(13.dp),
-                            color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.35f),
-                            border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)
-                        ){
+                        Surface(shape=RoundedCornerShape(13.dp),color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.28f)){
                             Column(Modifier.padding(8.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
                                 Row(verticalAlignment=Alignment.CenterVertically){
                                     Text("جزء ${index+1}",Modifier.weight(1f),style=MaterialTheme.typography.labelLarge)
-                                    Text("${fmt(abs(values[index]))} م²",style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.primary)
-                                    if(parts.size>1)IconButton(onClick={parts.removeAt(index)},modifier=Modifier.size(48.dp)){Icon(Icons.Rounded.Delete,"حذف")}
+                                    Text("${fmt(kotlin.math.abs(values[index]))} م²",style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.primary)
+                                    if(parts.size>1)IconButton(onClick={parts.removeAt(index)},modifier=Modifier.size(40.dp)){Icon(Icons.Rounded.Delete,"حذف")}
                                 }
-                                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
                                     ChoiceFieldX("الشكل",p.type,listOf("مستطيل","مثلث"),{v->parts[index]=p.copy(type=v)},modifier=Modifier.weight(1f))
                                     ChoiceFieldX("يتحسب",p.sign,listOf("إضافة","خصم"),{v->parts[index]=p.copy(sign=v)},modifier=Modifier.weight(1f))
                                 }
-                                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                                    NumberFieldX(if(p.type=="مثلث")"القاعدة" else "الطول",p.a,{v->parts[index]=p.copy(a=v)},"م",modifier=Modifier.weight(1f))
-                                    NumberFieldX(if(p.type=="مثلث")"الارتفاع" else "العرض",p.b,{v->parts[index]=p.copy(b=v)},"م",modifier=Modifier.weight(1f))
+                                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                                    NumberFieldX(if(p.type=="مثلث")"القاعدة" else "الطول",p.a,{v->parts[index]=p.copy(a=v)},dimUnit,modifier=Modifier.weight(1f))
+                                    NumberFieldX(if(p.type=="مثلث")"الارتفاع" else "العرض",p.b,{v->parts[index]=p.copy(b=v)},dimUnit,modifier=Modifier.weight(1f))
                                 }
                             }
                         }
@@ -122,7 +143,7 @@ fun IrregularAreaScreen(onBack:()->Unit){
             item{
                 ToolResultCard(
                     rows=listOf("المساحة الصافية" to "${fmt(total.coerceAtLeast(0.0))} م²"),
-                    explanation="المستطيل = الطول × العرض، والمثلث = القاعدة × الارتفاع ÷ 2. الأجزاء اللي اخترت لها «خصم» اتخصمت من الإجمالي.",
+                    explanation="المستطيل = الطول × العرض، والمثلث = القاعدة × الارتفاع ÷ 2. البرنامج بيحوّل الوحدة لمتر قبل الحساب.",
                     copyText="المساحة غير المنتظمة = ${fmt(total.coerceAtLeast(0.0))} م²"
                 )
             }
