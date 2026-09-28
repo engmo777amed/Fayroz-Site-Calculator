@@ -140,6 +140,37 @@ object MaterialEngine {
         )
     }
 
+    fun aggregate(summary:List<SummaryLine>):List<MaterialResult>{
+        val out=mutableListOf<MaterialResult>()
+        fun qty(vararg names:String)=summary.filter{it.name in names}.sumOf{it.quantity}
+
+        val plasterQty=qty("محارة الحوائط","محارة السقف")
+        if(plasterQty>0)out+=mortar("plaster","خامات المحارة",plasterQty,plasterPresets.first())
+
+        val masonryQty=qty("مباني")
+        if(masonryQty>0)out+=masonry(masonryQty)
+
+        val screedQty=qty("مونة تسوية الأرضيات")
+        if(screedQty>0)out+=mortar("screed","مونة تسوية الأرضيات",screedQty,screedPresets.first())
+
+        val floorQty=qty("الأرضيات")
+        if(floorQty>0)out+=tile(floorQty).copy(title="بلاط الأرضيات")
+
+        val wallTileQty=qty("سيراميك الحوائط")
+        if(wallTileQty>0)out+=tile(wallTileQty).copy(title="سيراميك الحوائط")
+
+        val paintQty=qty("دهان الحوائط","دهان السقف")
+        if(paintQty>0)out+=paint(paintQty).copy(title="دهانات الحوائط والسقف")
+
+        val waterproofQty=qty("عزل الأرضية")
+        if(waterproofQty>0)out+=waterproof(waterproofQty)
+
+        val gypsumQty=qty("سقف جبس بورد")
+        if(gypsumQty>0)out+=gypsum(gypsumQty)
+
+        return out
+    }
+
     fun forSummary(line:SummaryLine):MaterialResult?=when(line.name){
         "محارة الحوائط","محارة السقف" -> mortar("plaster","خامات المحارة",line.quantity,plasterPresets.first())
         "مونة الطرطشة" -> mortar("splash","مونة الطرطشة",line.quantity,splashPresets.first())
