@@ -37,7 +37,7 @@ fun SiteToolCalculatorScreen(
         "gypsum_materials"->GypsumMaterialsScreen(repository,seedArea,onBack)
 
         "slope_levels"->SlopeLevelsScreen(repository,onBack)
-        "irregular_area"->IrregularAreaScreen(onBack)
+        "irregular_area"->IrregularAreaScreen(repository,onBack)
         "repetitions"->RepetitionScreen(repository,onBack)
         "progress_productivity"->ProgressProductivityScreen(repository,onBack)
         "unit_conversion"->UnitConversionScreen(repository,onBack)
