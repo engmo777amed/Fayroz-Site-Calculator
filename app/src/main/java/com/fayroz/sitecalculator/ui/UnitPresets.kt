@@ -28,6 +28,9 @@ fun metersToUnit(value:Double,unit:String):String {
     return fmt(value/factor)
 }
 
+fun convertLengthText(value:String,fromUnit:String,toUnit:String):String =
+    if(value.isBlank()) "" else metersToUnit(lengthToMeters(value,fromUnit),toUnit)
+
 @Composable
 fun NumberWithUnitX(
     label:String,
