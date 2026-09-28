@@ -40,6 +40,7 @@ fun SiteToolCalculatorScreen(
         "irregular_area"->IrregularAreaScreen(onBack)
         "repetitions"->RepetitionScreen(repository,onBack)
         "progress_productivity"->ProgressProductivityScreen(repository,onBack)
+        "unit_conversion"->UnitConversionScreen(repository,onBack)
         else->SimpleUnknownToolScreen(onBack)
     }
 }
