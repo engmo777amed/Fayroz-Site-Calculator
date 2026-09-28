@@ -78,6 +78,25 @@ fun CompactBrandHeader(
     }
 }
 
+
+@Composable
+fun ScreenHeader(
+    title:String,
+    subtitle:String?=null,
+    action: (@Composable () -> Unit)? = null
+){
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal=2.dp,vertical=2.dp),
+        verticalAlignment=Alignment.CenterVertically
+    ){
+        Column(Modifier.weight(1f)){
+            Text(title,style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Black)
+            if(subtitle!=null)Text(subtitle,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        action?.invoke()
+    }
+}
+
 @Composable
 fun DashboardCard(
     title:String,subtitle:String,icon:ImageVector,onClick:()->Unit,
