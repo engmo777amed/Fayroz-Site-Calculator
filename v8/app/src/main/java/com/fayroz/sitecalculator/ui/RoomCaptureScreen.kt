@@ -41,9 +41,21 @@ fun RoomCaptureScreen(
     var repeat by remember{mutableStateOf((restored?.repeatCount ?: 1).toString())}
     var note by remember{mutableStateOf(restored?.note ?: "")}
     var status by remember{mutableStateOf(restored?.status ?: WorkStatus.IN_PROGRESS)}
-    var advanced by remember{mutableStateOf(restored?.walls?.isNotEmpty()==true)}
+    var geometryMode by remember{
+        mutableStateOf(
+            when{
+                restored?.walls?.isNotEmpty()==true -> "أكتر من حائط ورا بعض"
+                restored?.floorSurfaces?.isNotEmpty()==true -> "قسم المساحة لكذا جزء"
+                else -> "مستطيل بسيط"
+            }
+        )
+    }
+    var ceilingDetails by remember{mutableStateOf(restored?.ceilingSurfaces?.isNotEmpty()==true)}
+    var editIndex by remember{mutableStateOf<Int?>(null)}
 
     val walls=remember{mutableStateListOf<WallPart>().apply{addAll(restored?.walls ?: emptyList())}}
+    val floors=remember{mutableStateListOf<SurfacePart>().apply{addAll(restored?.floorSurfaces ?: emptyList())}}
+    val ceilings=remember{mutableStateListOf<SurfacePart>().apply{addAll(restored?.ceilingSurfaces ?: emptyList())}}
     val openings=remember{mutableStateListOf<Opening>().apply{addAll(restored?.openings ?: emptyList())}}
     val takeoffs=remember{
         mutableStateListOf<Takeoff>().apply{
@@ -60,17 +72,19 @@ fun RoomCaptureScreen(
         width=lengthMeters(width,dimUnit),
         height=lengthMeters(height,dimUnit).takeIf{it>0}?:3.0,
         repeatCount=n(repeat).toInt().coerceAtLeast(1),
-        walls=if(advanced)walls.toList() else emptyList(),
+        walls=if(geometryMode=="أكتر من حائط ورا بعض")walls.toList() else emptyList(),
         openings=openings.toList(),
         takeoffs=takeoffs.toList(),
         note=note.trim(),
         status=status,
-        updatedAt=System.currentTimeMillis()
+        updatedAt=System.currentTimeMillis(),
+        floorSurfaces=if(geometryMode=="قسم المساحة لكذا جزء")floors.toList() else emptyList(),
+        ceilingSurfaces=if(ceilingDetails)ceilings.toList() else emptyList()
     )
 
     LaunchedEffect(
-        name,type,dimUnit,length,width,height,repeat,note,status,advanced,
-        walls.toList(),openings.toList(),takeoffs.toList()
+        name,type,dimUnit,length,width,height,repeat,note,status,geometryMode,ceilingDetails,
+        walls.toList(),floors.toList(),ceilings.toList(),openings.toList(),takeoffs.toList()
     ){
         repository.saveDraft(draftKey,current())
     }
@@ -150,25 +164,23 @@ fun RoomCaptureScreen(
                         TextFieldX("ملاحظة",note,{note=it},placeholder="اختياري")
 
                         HorizontalDivider()
-                        Row(verticalAlignment=Alignment.CenterVertically){
-                            Column(Modifier.weight(1f)){
-                                Text("المكان مش مستطيل؟",fontWeight=FontWeight.Black)
-                                Text("فعّلها بس لو محتاج تدخل الحوائط واحد واحد.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            Switch(checked=advanced,onCheckedChange={
-                                advanced=it
-                                if(it&&walls.isEmpty())walls.add(WallPart(name="حائط 1",height=lengthMeters(height,dimUnit).takeIf{x->x>0}?:3.0))
-                            })
-                        }
+                        ChoiceFieldX(
+                            "هتحسب المكان إزاي؟",
+                            geometryMode,
+                            listOf("مستطيل بسيط","أكتر من حائط ورا بعض","قسم المساحة لكذا جزء"),
+                            {geometryMode=it},
+                            help="للصالة أو الشكل غير المنتظم استخدم الحوائط المتتالية أو قسم المساحة لأجزاء."
+                        )
 
-                        if(advanced){
+                        if(geometryMode=="أكتر من حائط ورا بعض"){
+                            if(walls.isEmpty())walls.add(WallPart(name="حائط 1",height=lengthMeters(height,dimUnit).takeIf{it>0}?:3.0))
                             walls.forEachIndexed{i,w->
-                                var wl by remember(w.id,dimUnit){mutableStateOf(fmt(w.length/(lengthUnits.first{it.label==dimUnit}.meters)))}
+                                var wl by remember(w.id,dimUnit){mutableStateOf(if(w.length>0)fmt(w.length/(lengthUnits.first{it.label==dimUnit}.meters)) else "")}
                                 var wh by remember(w.id,dimUnit){mutableStateOf(fmt(w.height/(lengthUnits.first{it.label==dimUnit}.meters)))}
                                 Surface(shape=RoundedCornerShape(12.dp),color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.35f)){
                                     Column(Modifier.padding(8.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
                                         Row(verticalAlignment=Alignment.CenterVertically){
-                                            Text("حائط ${i+1}",Modifier.weight(1f),fontWeight=FontWeight.Black)
+                                            Text(w.name,Modifier.weight(1f),fontWeight=FontWeight.Black)
                                             if(walls.size>1)IconButton(onClick={walls.removeAt(i)},modifier=Modifier.size(40.dp)){Icon(Icons.Rounded.Delete,"حذف")}
                                         }
                                         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
@@ -182,6 +194,34 @@ fun RoomCaptureScreen(
                                 onClick={walls.add(WallPart(name="حائط ${walls.size+1}",height=lengthMeters(height,dimUnit).takeIf{it>0}?:3.0))},
                                 modifier=Modifier.fillMaxWidth()
                             ){Icon(Icons.Rounded.Add,null);Spacer(Modifier.width(4.dp));Text("ضيف حائط")}
+                        }
+
+                        if(geometryMode=="قسم المساحة لكذا جزء"){
+                            if(floors.isEmpty())floors.add(SurfacePart(name="مسطح 1"))
+                            Text("مسطحات الأرضية",fontWeight=FontWeight.Black)
+                            floors.forEachIndexed{i,s->
+                                SurfacePartRow(i,s,dimUnit,{floors[i]=it},{if(floors.size>1)floors.removeAt(i)})
+                            }
+                            OutlinedButton(onClick={floors.add(SurfacePart(name="مسطح ${floors.size+1}"))},modifier=Modifier.fillMaxWidth()){
+                                Text("ضيف مسطح أرضية")
+                            }
+                        }
+
+                        Row(verticalAlignment=Alignment.CenterVertically){
+                            Column(Modifier.weight(1f)){
+                                Text("السقف مختلف عن الأرضية؟",fontWeight=FontWeight.Black)
+                                Text("فعّلها لو السقف متقسم أو فيه خصومات مختلفة.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Switch(ceilingDetails,{ceilingDetails=it})
+                        }
+                        if(ceilingDetails){
+                            if(ceilings.isEmpty())ceilings.add(SurfacePart(name="سقف 1"))
+                            ceilings.forEachIndexed{i,s->
+                                SurfacePartRow(i,s,dimUnit,{ceilings[i]=it},{if(ceilings.size>1)ceilings.removeAt(i)})
+                            }
+                            OutlinedButton(onClick={ceilings.add(SurfacePart(name="سقف ${ceilings.size+1}"))},modifier=Modifier.fillMaxWidth()){
+                                Text("ضيف مسطح سقف")
+                            }
                         }
                     }
                 }
