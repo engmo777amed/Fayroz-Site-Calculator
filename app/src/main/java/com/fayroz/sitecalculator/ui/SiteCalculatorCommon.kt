@@ -52,7 +52,7 @@ fun ToolPage(
     repository:ProjectRepository,
     toolId:String,
     onBack:()->Unit,
-    content:@Composable ColumnScope.()->Unit
+    content: @Composable ColumnScope.() -> Unit
 ){
     var favorite by remember{mutableStateOf(toolId in repository.getToolFavorites())}
     Scaffold(
@@ -92,7 +92,7 @@ fun ToolResultCard(
     rows:List<Pair<String,String>>,
     explanation:String,
     copyText:String,
-    links:List<Pair<String,()->Unit>> = emptyList()
+    links:List<Pair<String, () -> Unit>> = emptyList()
 ){
     var explain by remember{mutableStateOf(false)}
     val clipboard=LocalClipboardManager.current
