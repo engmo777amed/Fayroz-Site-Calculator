@@ -41,6 +41,7 @@ fun RoomEditorScreen(
     val seed=restored
     val stableSpaceId=remember(draftKey,initial?.id){initial?.id ?: seed?.id ?: UUID.randomUUID().toString()}
 
+    val stepNames=listOf("بيانات المكان","شكل المكان","الفتحات","البنود","صور وملاحظات","راجع الحساب")
     var page by remember{mutableIntStateOf(0)}
     var type by remember{mutableStateOf(seed?.type ?: "غرفة نوم")}
     var autoName by remember{mutableStateOf(seed==null)}
@@ -107,19 +108,19 @@ fun RoomEditorScreen(
 
     val space=currentSpace()
     val warnings=buildList{
-        if(space.height<=0)add("ارتفاع الفراغ غير صحيح.")
-        if(geometryMode=="مستطيل بسيط" && (space.length<=0||space.width<=0))add("أدخل طول وعرض الفراغ.")
-        if(geometryMode=="أكتر من حائط ورا بعض" && walls.none{it.length>0})add("أضف أطوال الحوائط.")
-        if(geometryMode=="قسم المساحة لكذا جزء" && floors.none{it.length>0&&it.width>0})add("أضف مسطح أرضية واحد على الأقل.")
+        if(space.height<=0)add("ارتفاع المكان غير صحيح.")
+        if(geometryMode=="مستطيل بسيط" && (space.length<=0||space.width<=0))add("دخل طول وعرض المكان.")
+        if(geometryMode=="أكتر من حائط ورا بعض" && walls.none{it.length>0})add("ضيف أطوال الحوائط.")
+        if(geometryMode=="قسم المساحة لكذا جزء" && floors.none{it.length>0&&it.width>0})add("ضيف جزء واحد للأرضية على الأقل.")
         openings.forEachIndexed{i,o->
             if(o.width<=0||o.height<=0)add("مقاس الفتحة ${i+1} غير مكتمل.")
             if(o.type==OpeningType.WINDOW && o.sillHeight<0)add("جلسة الشباك ${i+1} غير صحيحة.")
         }
-        if(takeoffs.isEmpty())add("لم يتم اختيار أي بند حصر.")
+        if(takeoffs.isEmpty())add("لسه ما اخترتش أي بند حصر.")
     }
 
     Scaffold(
-        topBar={AppBarX(title,"${page+1} من 6 • حفظ تلقائي",onBack)},
+        topBar={AppBarX(title,stepNames[page]+" • "+(page+1)+"/6 • بيتحفظ تلقائيًا",onBack)},
         bottomBar={
             Surface(tonalElevation=4.dp){
                 Row(
@@ -129,7 +130,7 @@ fun RoomEditorScreen(
                     if(page>0)OutlinedButton(onClick={page--},modifier=Modifier.weight(1f).heightIn(min=48.dp)){Text("السابق")}
                     if(page<5){
                         Button(onClick={page++},modifier=Modifier.weight(1f).heightIn(min=48.dp)){
-                            Text(listOf("الهندسة","الفتحات","البنود","مراجع","النتيجة")[page])
+                            Text(stepNames[page+1])
                             Spacer(Modifier.width(4.dp));Icon(Icons.Rounded.ChevronLeft,null)
                         }
                     }else{
@@ -339,8 +340,8 @@ private fun GeometryCard(
             }
         }
         HorizontalDivider()
-        Text("مسطحات سقف خاصة - اختياري",style=MaterialTheme.typography.labelLarge)
-        Text("اتركها فارغة لو السقف مطابق للأرضية. أضفها للجبس الساقط أو تقسيمات السقف.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("السقف مختلف عن الأرضية؟ - اختياري",style=MaterialTheme.typography.labelLarge)
+        Text("سيبها فاضية لو السقف نفس مساحة الأرضية. استخدمها لو السقف متقسم أو فيه أجزاء مختلفة.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         SurfacesEditor(ceilings,"سقف")
         OutlinedButton(onClick={ceilings.add(SurfaceSegment(name="سقف ${ceilings.size+1}"))},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("إضافة مسطح سقف")}
     }
@@ -409,7 +410,7 @@ private fun OpeningEditorRow(index:Int,o:Opening,walls:List<WallSegment>,onChang
     var sill by remember(o.id){mutableStateOf(fmt(o.sillHeight))}
     var reveal by remember(o.id){mutableStateOf(if(o.revealDepth==0.0)"" else fmt(o.revealDepth))}
     var count by remember(o.id){mutableStateOf(o.count.toString())}
-    Surface(shape=RoundedCornerShape(13.dp),color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.35f),border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)){
+    Surface(shape=RoundedCornerShape(13.dp),color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.28f)){
         Column(Modifier.padding(8.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
             Row(verticalAlignment=Alignment.CenterVertically){
                 Text("${o.type.label} ${index+1}",Modifier.weight(1f),style=MaterialTheme.typography.labelLarge,fontWeight=FontWeight.Black)
@@ -425,11 +426,11 @@ private fun OpeningEditorRow(index:Int,o:Opening,walls:List<WallSegment>,onChang
                 NumberFieldX("العرض",width,{width=it;onChange(o.copy(width=n(it)))},"م",modifier=Modifier.weight(1f))
                 NumberFieldX("الارتفاع",height,{height=it;onChange(o.copy(height=n(it)))},"م",modifier=Modifier.weight(1f))
             }
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                NumberFieldX("جلسة",sill,{sill=it;onChange(o.copy(sillHeight=n(it)))},"م","من الأرض حتى أسفل الفتحة.",Modifier.weight(1f))
-                NumberFieldX("عمق الجنب",reveal,{reveal=it;onChange(o.copy(revealDepth=n(it)))},"م","لحساب جوانب الفتحات.",Modifier.weight(1f))
-                NumberFieldX("العدد",count,{count=it;onChange(o.copy(count=n(it).toInt().coerceAtLeast(1)))},"",modifier=Modifier.weight(.8f))
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                NumberFieldX("جلسة",sill,{sill=it;onChange(o.copy(sillHeight=n(it)))},"م","من الأرض لأسفل الفتحة.",Modifier.weight(1f))
+                NumberFieldX("عمق الجنب",reveal,{reveal=it;onChange(o.copy(revealDepth=n(it)))},"م","لو هتحسب جوانب الفتحة.",Modifier.weight(1f))
             }
+            NumberFieldX("العدد",count,{count=it;onChange(o.copy(count=n(it).toInt().coerceAtLeast(1)))},"عدد")
         }
     }
 }
