@@ -9,7 +9,7 @@ import com.fayroz.sitecalculator.data.ProjectRepository
 import kotlin.math.ceil
 
 @Composable
-fun TilePurchaseScreen(repository:ProjectRepository,seedArea:Double?,onBack:()->Unit){
+fun TilePurchaseScreen(repository:ProjectRepository,seedArea:Double?,onBack:()->Unit,onOpenTool:(String,Double?)->Unit){
     val toolId="tile_purchase"
     var area by remember(seedArea){mutableStateOf(seedArea?.let(::fmt) ?: repository.getToolValue("$toolId.area",""))}
     var tileW by remember{mutableStateOf(repository.getToolValue("$toolId.tileW","60"))}
@@ -46,14 +46,15 @@ fun TilePurchaseScreen(repository:ProjectRepository,seedArea:Double?,onBack:()->
                     "مساحة البلاطة" to "${fmt(pieceArea)} م²"
                 ),
                 explanation="مساحة الشراء = ${fmt(a)} × (1 + ${fmt(n(waste))}%) = ${fmt(purchaseArea)} م².\nمساحة البلاطة = ${fmt(pieceArea)} م²، وعدد البلاطات = مساحة الشراء ÷ مساحة البلاطة ثم تقريب العدد لأعلى.",
-                copyText="بلاط ${fmt(a)} م² — شراء ${fmt(purchaseArea)} م² — $pieces بلاطة"+if(boxCount>0)" — $boxes كرتونة" else ""
+                copyText="بلاط ${fmt(a)} م² — شراء ${fmt(purchaseArea)} م² — $pieces بلاطة"+if(boxCount>0)" — $boxes كرتونة" else "",
+                links=listOf("احسب لاصق لنفس المساحة" to {onOpenTool("tile_adhesive",a)})
             )
         }
     }
 }
 
 @Composable
-fun TileAdhesiveScreen(repository:ProjectRepository,seedArea:Double?,onBack:()->Unit){
+fun TileAdhesiveScreen(repository:ProjectRepository,seedArea:Double?,onBack:()->Unit,onOpenTool:(String,Double?)->Unit){
     val toolId="tile_adhesive"
     var area by remember(seedArea){mutableStateOf(seedArea?.let(::fmt) ?: repository.getToolValue("$toolId.area",""))}
     var rate by remember{mutableStateOf(repository.getToolValue("$toolId.rate","5"))}
@@ -83,7 +84,8 @@ fun TileAdhesiveScreen(repository:ProjectRepository,seedArea:Double?,onBack:()->
                     "اللاصق" to "${fmt(kg)} كجم"
                 ),
                 explanation="اللاصق = المساحة × معدل الاستهلاك × الهالك = ${fmt(a)} × ${fmt(n(rate))} × (1 + ${fmt(n(waste))}%).\nعدد الشكاير اتقرب لأعلى حسب وزن الشيكارة ${fmt(n(bagWeight))} كجم.",
-                copyText="لاصق سيراميك — مساحة ${fmt(a)} م² — ${fmt(kg)} كجم ≈ $bags شيكارة"
+                copyText="لاصق سيراميك — مساحة ${fmt(a)} م² — ${fmt(kg)} كجم ≈ $bags شيكارة",
+                links=listOf("احسب البلاط والكراتين لنفس المساحة" to {onOpenTool("tile_purchase",a)})
             )
         }
     }
