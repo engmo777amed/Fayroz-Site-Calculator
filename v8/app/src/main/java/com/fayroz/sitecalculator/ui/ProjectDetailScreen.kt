@@ -40,7 +40,7 @@ fun ProjectDetailScreen(
                     Text(project.name,fontWeight=FontWeight.Black)
                     Text(project.type,style=MaterialTheme.typography.labelSmall)
                 }},
-                navigationIcon={IconButton(onClick=onBack){Icon(Icons.Rounded.ArrowBack,"رجوع")}},
+                navigationIcon={IconButton(onClick=onBack){Icon(Icons.Rounded.ArrowForward,"رجوع")}},
                 actions={
                     IconButton(onClick=onShare){Icon(Icons.Rounded.Share,"مشاركة")}
                 }
