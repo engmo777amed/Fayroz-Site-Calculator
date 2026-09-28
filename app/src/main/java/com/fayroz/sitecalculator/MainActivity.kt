@@ -19,7 +19,7 @@ import com.fayroz.sitecalculator.ui.*
 import java.util.UUID
 
 private enum class RootTab { HOME,PROJECTS,TODAY,TOOLS,SETTINGS }
-private enum class Route { ROOT,NEW_PROJECT,PROJECT,SECTION,ADD_ROOM,EDIT_ROOM,ADD_ITEM,QUICK_ROOM,QUICK_ITEM,QUICK_STAIR }
+private enum class Route { ROOT,NEW_PROJECT,PROJECT,SECTION,ADD_ROOM,EDIT_ROOM,ADD_ITEM,QUICK_ROOM,QUICK_ITEM,QUICK_STAIR,QUICK_TOOL }
 
 class MainActivity:ComponentActivity(){
     override fun onCreate(savedInstanceState:Bundle?){
@@ -48,6 +48,8 @@ class MainActivity:ComponentActivity(){
                 var sectionId by remember{mutableStateOf<String?>(null)}
                 var roomId by remember{mutableStateOf<String?>(null)}
                 var quickSession by remember{mutableIntStateOf(1)}
+                var selectedToolId by remember{mutableStateOf<String?>(null)}
+                var toolSeedArea by remember{mutableStateOf<Double?>(null)}
 
                 fun reload(){projects=repository.loadProjects()}
                 fun persist(reason:String){
@@ -66,7 +68,7 @@ class MainActivity:ComponentActivity(){
                         Route.PROJECT->Route.ROOT
                         Route.SECTION->Route.PROJECT
                         Route.ADD_ROOM,Route.EDIT_ROOM,Route.ADD_ITEM->Route.SECTION
-                        Route.QUICK_ROOM,Route.QUICK_ITEM,Route.QUICK_STAIR->Route.ROOT
+                        Route.QUICK_ROOM,Route.QUICK_ITEM,Route.QUICK_STAIR,Route.QUICK_TOOL->Route.ROOT
                         Route.ROOT->Route.ROOT
                     }
                     if(route==Route.ROOT && tab==RootTab.HOME)tab=RootTab.PROJECTS
@@ -128,10 +130,16 @@ class MainActivity:ComponentActivity(){
                                     onQuickItem={route=Route.QUICK_ITEM}
                                 )
 
-                                RootTab.TOOLS->ToolsScreen(
+                                RootTab.TOOLS->CalculatorHubScreen(
+                                    repository=repository,
                                     onRoom={route=Route.QUICK_ROOM},
                                     onItem={route=Route.QUICK_ITEM},
-                                    onStair={route=Route.QUICK_STAIR}
+                                    onStair={route=Route.QUICK_STAIR},
+                                    onTool={id->
+                                        selectedToolId=id
+                                        toolSeedArea=null
+                                        route=Route.QUICK_TOOL
+                                    }
                                 )
 
                                 RootTab.SETTINGS->SettingsScreen(
@@ -312,6 +320,23 @@ class MainActivity:ComponentActivity(){
 
                         Route.QUICK_ITEM->QuickItemScreen(onBack={route=Route.ROOT})
                         Route.QUICK_STAIR->StairCalculatorScreen(onBack={route=Route.ROOT})
+                        Route.QUICK_TOOL->{
+                            val id=selectedToolId
+                            if(id==null){
+                                route=Route.ROOT
+                                tab=RootTab.TOOLS
+                            }else SiteToolCalculatorScreen(
+                                toolId=id,
+                                repository=repository,
+                                seedArea=toolSeedArea,
+                                onBack={route=Route.ROOT;tab=RootTab.TOOLS},
+                                onOpenTool={nextId,area->
+                                    repository.recordToolUse(nextId)
+                                    selectedToolId=nextId
+                                    toolSeedArea=area
+                                }
+                            )
+                        }
                         Route.ROOT->Unit
                     }
                 }
