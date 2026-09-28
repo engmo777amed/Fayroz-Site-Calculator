@@ -1,4 +1,4 @@
-name: Build Fayroz Site Calculator V7
+name: Build Fayroz Site Calculator V7.1
 on:
   push:
     branches: [ main, "rebuild/**" ]
@@ -6,7 +6,7 @@ on:
     branches: [ main ]
   workflow_dispatch:
 concurrency:
-  group: fayroz-site-v7-${{ github.ref }}
+  group: fayroz-site-v71-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   build-apk:
@@ -26,10 +26,10 @@ jobs:
       - name: Build APK
         run: gradle :app:assembleDebug --stacktrace
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Fayroz-Site-Calculator-V7.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk Fayroz-Site-Calculator-V7.1.apk
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Fayroz-Site-Calculator-V7
-          path: Fayroz-Site-Calculator-V7.apk
+          name: Fayroz-Site-Calculator-V7.1
+          path: Fayroz-Site-Calculator-V7.1.apk
           if-no-files-found: error
