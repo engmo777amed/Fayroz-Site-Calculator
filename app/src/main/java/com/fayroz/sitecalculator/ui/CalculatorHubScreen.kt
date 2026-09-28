@@ -99,7 +99,7 @@ fun CalculatorHubScreen(
             }
             item{CompactToolCard("حساب سلم","نوايم + قوائم + بسطات + وزرات",Icons.Rounded.Stairs,onStair,Modifier.fillMaxWidth())}
 
-            val favoriteTools=siteTools.filter{it.id in favorites}.take(3)
+            val favoriteTools=siteTools.filter{it.id in favorites}.take(2)
             if(favoriteTools.isNotEmpty()){
                 item{
                     Column(verticalArrangement=Arrangement.spacedBy(4.dp)){
@@ -119,7 +119,7 @@ fun CalculatorHubScreen(
                 }
             }
 
-            val recentTools=recent.mapNotNull(::toolMeta).filter{it.id !in favoriteTools.map{x->x.id}}.take(3)
+            val recentTools=recent.mapNotNull(::toolMeta).filter{it.id !in favoriteTools.map{x->x.id}}.take(2)
             if(recentTools.isNotEmpty()){
                 item{
                     Column(verticalArrangement=Arrangement.spacedBy(4.dp)){
@@ -152,7 +152,7 @@ fun CalculatorHubScreen(
             if(tools.isNotEmpty()){
                 item{
                     Surface(
-                        onClick={if(q.isBlank()){{expanded[category]=!(expanded[category]?:false)}}else({})},
+                        onClick={if(q.isBlank())expanded[category]=!(expanded[category]?:false)},
                         shape=RoundedCornerShape(14.dp),
                         color=MaterialTheme.colorScheme.surface,
                         tonalElevation=1.dp
