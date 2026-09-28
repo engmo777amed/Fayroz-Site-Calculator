@@ -21,11 +21,18 @@ fun SettingsScreen(
     appearance:String,
     onAppearance:(String)->Unit,
     onBack:()->Unit,
-    onShareBackup:(String)->Unit,
     onReload:()->Unit
 ){
     val context=LocalContext.current
     var importMessage by remember{mutableStateOf<String?>(null)}
+    val saveLauncher=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")){uri->
+        if(uri!=null){
+            runCatching{
+                context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use{it.write(repository.exportBackup())}
+            }
+            importMessage="النسخة اتحفظت."
+        }
+    }
     val launcher=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri->
         if(uri!=null){
             val raw=runCatching{
@@ -82,7 +89,7 @@ fun SettingsScreen(
                     Text("احفظ المشروعات والحصر والحسابات في ملف، أو رجّع نسخة محفوظة.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                         OutlinedButton(
-                            onClick={onShareBackup(repository.exportBackup())},
+                            onClick={saveLauncher.launch("Fayroz-Site-V8-Backup.json")},
                             modifier=Modifier.weight(1f).heightIn(min=48.dp)
                         ){
                             Icon(Icons.Rounded.Share,null);Spacer(Modifier.width(4.dp));Text("احفظ نسخة")
