@@ -11,6 +11,8 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.platform.LocalLayoutDirection
 import com.fayroz.sitecalculator.core.*
 import com.fayroz.sitecalculator.data.V8Repository
 import com.fayroz.sitecalculator.domain.QuantityEngine
@@ -120,6 +122,7 @@ class MainActivity:ComponentActivity(){
             }
 
             FayrozTheme(appearance){
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl){
                 BackHandler(enabled=route !is Route.Root){
                     route=when(val r=route){
                         is Route.Settings->Route.Root
@@ -331,6 +334,7 @@ class MainActivity:ComponentActivity(){
                             )
                         }
                     }
+                }
                 }
             }
         }
