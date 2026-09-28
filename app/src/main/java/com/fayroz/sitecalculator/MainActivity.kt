@@ -90,15 +90,11 @@ class MainActivity:ComponentActivity(){
                                 )
                                 NavigationBarItem(
                                     selected=tab==RootTab.TODAY,onClick={tab=RootTab.TODAY},
-                                    icon={Icon(Icons.Rounded.Today,null)},label={Text("اليوم")}
+                                    icon={Icon(Icons.Rounded.Today,null)},label={Text("شغل اليوم")}
                                 )
                                 NavigationBarItem(
                                     selected=tab==RootTab.TOOLS,onClick={tab=RootTab.TOOLS},
                                     icon={Icon(Icons.Rounded.Calculate,null)},label={Text("الحاسبات")}
-                                )
-                                NavigationBarItem(
-                                    selected=tab==RootTab.SETTINGS,onClick={tab=RootTab.SETTINGS},
-                                    icon={Icon(Icons.Rounded.Settings,null)},label={Text("الإعدادات")}
                                 )
                             }
                         }
@@ -106,13 +102,22 @@ class MainActivity:ComponentActivity(){
                         Box(Modifier.padding(padding)){
                             when(tab){
                                 RootTab.HOME->HomeScreen(
-                                    projects,
+                                    projects=projects,
+                                    repository=repository,
                                     onNewProject={route=Route.NEW_PROJECT},
                                     onProjects={tab=RootTab.PROJECTS},
                                     onQuickRoom={route=Route.QUICK_ROOM},
-                                    onQuickItem={route=Route.QUICK_ITEM},
                                     onToday={tab=RootTab.TODAY},
-                                    onOpenLast={id->projectId=id;route=Route.PROJECT}
+                                    onTools={tab=RootTab.TOOLS},
+                                    onSettings={tab=RootTab.SETTINGS},
+                                    onOpenLast={id->projectId=id;route=Route.PROJECT},
+                                    onTool={id->
+                                        repository.recordToolUse(id)
+                                        selectedToolId=id
+                                        toolSeedArea=null
+                                        toolBackRoute=Route.ROOT
+                                        route=Route.QUICK_TOOL
+                                    }
                                 )
 
                                 RootTab.PROJECTS->ProjectsScreen(
