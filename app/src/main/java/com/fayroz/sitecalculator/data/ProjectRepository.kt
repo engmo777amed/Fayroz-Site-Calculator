@@ -98,6 +98,37 @@ class ProjectRepository(context:Context){
         return raw.split("|").filter{it.isNotBlank()}.take(6)
     }
 
+    fun recordToolResult(id:String,title:String,summary:String){
+        if(summary.isBlank())return
+        val old=JSONArray(appPrefs.getString("tool_results","[]") ?: "[]")
+        val next=JSONArray()
+        next.put(JSONObject().apply{
+            put("id",id);put("title",title);put("summary",summary);put("time",System.currentTimeMillis())
+        })
+        var kept=0
+        for(i in 0 until old.length()){
+            val x=old.optJSONObject(i) ?: continue
+            if(x.optString("id")==id)continue
+            if(kept>=4)break
+            next.put(x);kept++
+        }
+        appPrefs.edit().putString("tool_results",next.toString()).apply()
+    }
+
+    fun getToolResults():List<Triple<String,String,String>>{
+        val arr=JSONArray(appPrefs.getString("tool_results","[]") ?: "[]")
+        return buildList{
+            for(i in 0 until arr.length()){
+                val x=arr.optJSONObject(i) ?: continue
+                val id=x.optString("id")
+                val title=x.optString("title")
+                val summary=x.optString("summary")
+                if(id.isNotBlank()&&summary.isNotBlank())add(Triple(id,title,summary))
+            }
+        }.take(5)
+    }
+
+
     fun recordToolUse(id:String){
         val next=(listOf(id)+getRecentTools().filter{it!=id}).take(6)
         appPrefs.edit().putString("recent_tools",next.joinToString("|")).apply()
