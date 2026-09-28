@@ -58,6 +58,7 @@ fun CalculatorHubScreen(
     var favorites by remember{mutableStateOf(repository.getToolFavorites())}
     var recentTick by remember{mutableIntStateOf(0)}
     val recent=remember(favorites,recentTick){repository.getRecentTools()}
+    val todayResults=repository.getToolResults()
     var query by remember{mutableStateOf("")}
     val q=query.trim()
     val expanded=remember{mutableStateMapOf(
@@ -98,6 +99,32 @@ fun CalculatorHubScreen(
                 }
             }
             item{CompactToolCard("حساب سلم","نوايم + قوائم + بسطات + وزرات",Icons.Rounded.Stairs,onStair,Modifier.fillMaxWidth())}
+
+            if(todayResults.isNotEmpty()){
+                item{
+                    Column(verticalArrangement=Arrangement.spacedBy(6.dp)){
+                        Text("حسابات اليوم",style=MaterialTheme.typography.labelLarge,fontWeight=FontWeight.Black)
+                        todayResults.take(3).forEach{(id,title,summary)->
+                            Surface(
+                                onClick={onTool(id)},
+                                shape=RoundedCornerShape(12.dp),
+                                color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.32f)
+                            ){
+                                Row(Modifier.fillMaxWidth().padding(horizontal=9.dp,vertical=7.dp),verticalAlignment=Alignment.CenterVertically){
+                                    val icon=toolMeta(id)?.icon ?: Icons.Rounded.Calculate
+                                    Icon(icon,null,Modifier.size(18.dp),tint=MaterialTheme.colorScheme.primary)
+                                    Spacer(Modifier.width(7.dp))
+                                    Column(Modifier.weight(1f)){
+                                        Text(title,style=MaterialTheme.typography.labelLarge,fontWeight=FontWeight.Black,maxLines=1)
+                                        Text(summary,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=2,overflow=TextOverflow.Ellipsis)
+                                    }
+                                    Icon(Icons.Rounded.ChevronLeft,null,Modifier.size(18.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             val favoriteTools=siteTools.filter{it.id in favorites}.take(2)
             if(favoriteTools.isNotEmpty()){
