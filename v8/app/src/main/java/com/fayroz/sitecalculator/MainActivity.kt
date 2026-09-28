@@ -271,6 +271,27 @@ class MainActivity:ComponentActivity(){
                                 route=Route.RoomEdit(p.id,s.id,spid)
                             },
                             onSetActiveRoom={spid->setActive(ActiveLocation(p.id,s.id,spid))},
+                            onDuplicateRoom={spid->
+                                val source=s.spaces.firstOrNull{it.id==spid}?:return@SectionScreen
+                                val copy=source.copy(
+                                    id=UUID.randomUUID().toString(),
+                                    name=source.name+" - نسخة",
+                                    updatedAt=System.currentTimeMillis()
+                                )
+                                val updatedSection=s.copy(spaces=s.spaces+copy)
+                                replaceProject(p.copy(
+                                    sections=p.sections.map{if(it.id==s.id)updatedSection else it},
+                                    updatedAt=System.currentTimeMillis()
+                                ))
+                            },
+                            onDeleteRoom={spid->
+                                val updatedSection=s.copy(spaces=s.spaces.filterNot{it.id==spid})
+                                replaceProject(p.copy(
+                                    sections=p.sections.map{if(it.id==s.id)updatedSection else it},
+                                    updatedAt=System.currentTimeMillis()
+                                ))
+                                if(active?.spaceId==spid)setActive(ActiveLocation(p.id,s.id))
+                            },
                             onDetachCopy={spid->
                                 val source=s.spaces.firstOrNull{it.id==spid}?:return@SectionScreen
                                 if(source.repeatCount>1){
