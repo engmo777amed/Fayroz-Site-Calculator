@@ -25,11 +25,14 @@ fun SectionScreen(
     onAddRoom:()->Unit,
     onEditRoom:(String)->Unit,
     onSetActiveRoom:(String)->Unit,
-    onDetachCopy:(String)->Unit
+    onDetachCopy:(String)->Unit,
+    onDuplicateRoom:(String)->Unit,
+    onDeleteRoom:(String)->Unit
 ){
     val summary=QuantityEngine.summarize(section)
     val materials=MaterialEngine.aggregate(summary)
     var materialsOpen by remember{mutableStateOf(false)}
+    var deleteTarget by remember{mutableStateOf<Space?>(null)}
 
     Scaffold(
         topBar={
@@ -38,7 +41,7 @@ fun SectionScreen(
                     Text(section.name,fontWeight=FontWeight.Black)
                     Text(project.name,style=MaterialTheme.typography.labelSmall)
                 }},
-                navigationIcon={IconButton(onClick=onBack){Icon(Icons.Rounded.ArrowBack,"رجوع")}},
+                navigationIcon={IconButton(onClick=onBack){Icon(Icons.Rounded.ArrowForward,"رجوع")}},
                 actions={
                     IconButton(onClick=onAddRoom){Icon(Icons.Rounded.Add,"ضيف غرفة")}
                 }
@@ -112,13 +115,22 @@ fun SectionScreen(
                                     label={Text(if(isActive)"المكان النشط" else "كمّل من هنا")},
                                     leadingIcon={Icon(if(isActive)Icons.Rounded.Check else Icons.Rounded.PlayArrow,null,Modifier.size(16.dp))}
                                 )
+                                AssistChip(
+                                    onClick={onDuplicateRoom(space.id)},
+                                    label={Text("نسخ")},
+                                    leadingIcon={Icon(Icons.Rounded.ContentCopy,null,Modifier.size(16.dp))}
+                                )
                                 if(space.repeatCount>1){
                                     AssistChip(
                                         onClick={onDetachCopy(space.id)},
-                                        label={Text("فصل نسخة مختلفة")},
+                                        label={Text("فصل نسخة")},
                                         leadingIcon={Icon(Icons.Rounded.CallSplit,null,Modifier.size(16.dp))}
                                     )
                                 }
+                            }
+                            Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                                TextButton(onClick={onEditRoom(space.id)}){Text("تعديل")}
+                                TextButton(onClick={deleteTarget=space}){Text("حذف",color=MaterialTheme.colorScheme.error)}
                             }
                         }
                     }
@@ -126,6 +138,20 @@ fun SectionScreen(
             }
         }
     }
+    deleteTarget?.let{space->
+        AlertDialog(
+            onDismissRequest={deleteTarget=null},
+            title={Text("حذف ${space.name}؟",fontWeight=FontWeight.Black)},
+            text={Text("هيتم حذف المكان وبنود الحصر الخاصة بيه من المشروع.")},
+            confirmButton={
+                TextButton(onClick={onDeleteRoom(space.id);deleteTarget=null}){
+                    Text("حذف",color=MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton={TextButton(onClick={deleteTarget=null}){Text("إلغاء")}}
+        )
+    }
+
     if(materialsOpen){
         AlertDialog(
             onDismissRequest={materialsOpen=false},
