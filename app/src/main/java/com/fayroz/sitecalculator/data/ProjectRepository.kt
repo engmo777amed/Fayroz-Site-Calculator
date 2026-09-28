@@ -100,7 +100,9 @@ class ProjectRepository(context:Context){
 
     fun recordToolResult(id:String,title:String,summary:String){
         if(summary.isBlank())return
-        val old=JSONArray(appPrefs.getString("tool_results","[]") ?: "[]")
+        val today=java.time.LocalDate.now().toString()
+        val storedDay=appPrefs.getString("tool_results_day","")
+        val old=if(storedDay==today)JSONArray(appPrefs.getString("tool_results","[]") ?: "[]") else JSONArray()
         val next=JSONArray()
         next.put(JSONObject().apply{
             put("id",id);put("title",title);put("summary",summary);put("time",System.currentTimeMillis())
@@ -112,10 +114,12 @@ class ProjectRepository(context:Context){
             if(kept>=4)break
             next.put(x);kept++
         }
-        appPrefs.edit().putString("tool_results",next.toString()).apply()
+        appPrefs.edit().putString("tool_results_day",today).putString("tool_results",next.toString()).apply()
     }
 
     fun getToolResults():List<Triple<String,String,String>>{
+        val today=java.time.LocalDate.now().toString()
+        if(appPrefs.getString("tool_results_day","")!=today)return emptyList()
         val arr=JSONArray(appPrefs.getString("tool_results","[]") ?: "[]")
         return buildList{
             for(i in 0 until arr.length()){
