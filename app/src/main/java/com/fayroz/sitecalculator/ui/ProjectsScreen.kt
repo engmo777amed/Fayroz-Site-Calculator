@@ -135,7 +135,8 @@ fun ProjectDetailScreen(
     onDeleteProject:()->Unit,
     onShare:()->Unit,
     onExportCsv:()->Unit,
-    onExportPdf:()->Unit
+    onExportPdf:()->Unit,
+    onOpenMaterialTool:(String,Double)->Unit
 ){
     var add by remember{mutableStateOf(false)}
     var addName by remember{mutableStateOf("")}
@@ -270,6 +271,17 @@ fun ProjectDetailScreen(
                 }
             }
         }
+        val materialTool=when(key.first){
+            "محارة الحوائط","محارة السقف"->"plaster_materials"
+            "مباني"->"masonry_materials"
+            "الأرضيات","سيراميك الحوائط"->"tile_purchase"
+            "دهان الحوائط","دهان السقف"->"paint_materials"
+            "عزل الأرضية"->"waterproof_materials"
+            "سقف جبس بورد","جبس بورد جوانب ساقطة"->"gypsum_materials"
+            "سكريد / مونة تسوية"->"screed_materials"
+            else->null
+        }
+        val totalForKey=contributions.sumOf{it.third}
         AlertDialog(
             onDismissRequest={drillKey=null},
             title={Text(key.first,fontWeight=FontWeight.Black)},
@@ -293,7 +305,17 @@ fun ProjectDetailScreen(
                     }
                 }
             },
-            confirmButton={TextButton(onClick={drillKey=null}){Text("إغلاق")}}
+            confirmButton={
+                Row{
+                    if(materialTool!=null && totalForKey>0 && key.second==MeasureUnit.AREA){
+                        TextButton(onClick={
+                            drillKey=null
+                            onOpenMaterialTool(materialTool,totalForKey)
+                        }){Text("احسب الخامات")}
+                    }
+                    TextButton(onClick={drillKey=null}){Text("إغلاق")}
+                }
+            }
         )
     }
 
