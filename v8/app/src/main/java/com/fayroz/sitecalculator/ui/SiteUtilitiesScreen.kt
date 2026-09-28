@@ -42,7 +42,7 @@ private fun SlopeUtility(onBack:()->Unit){
                 ChoiceFieldX("معاك إيه؟",mode,listOf("معايا الميل","معايا المنسوبين"),{mode=it})
                 NumberUnitField("طول المسار",length,{length=it},lengthUnit,{lengthUnit=it},help="المسافة الأفقية اللي الميل ماشي عليها.")
                 NumberUnitField("منسوب البداية",start,{start=it},levelUnit,{levelUnit=it})
-                if(mode=="معايا الميل") NumberFieldX("الميل",slope,{slope=it},"%","1% = 1 سم لكل متر.")
+                if(mode=="معايا الميل") NumberFieldX("الميل",slope,{slope=it},"%",help="1% = 1 سم لكل متر.")
                 else NumberUnitField("منسوب النهاية",end,{end=it},levelUnit,{levelUnit=it})
             }}
             if(l>0)item{BoxCard{
