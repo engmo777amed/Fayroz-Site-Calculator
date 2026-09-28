@@ -71,6 +71,37 @@ fun MaterialCalculatorScreen(
         pref("$toolId.preset",presetName);pref("$toolId.cement",cement);pref("$toolId.sand",sand)
         pref("$toolId.thickness",thickness);pref("$toolId.thicknessUnit",thicknessUnit);pref("$toolId.waste",waste)
     }
+    fun resetDefaults(){
+        when(toolId){
+            "plaster","splash","screed"->mortarOptions.firstOrNull()?.let(::applyPreset)
+            "masonry"->{
+                wallThickness="12";wallUnit="سم";brickL="25";brickW="12";brickH="6";brickUnit="سم";joint="10";jointUnit="مم";waste="5"
+                pref("masonry.wall",wallThickness);pref("masonry.wallUnit",wallUnit)
+                pref("masonry.brickL",brickL);pref("masonry.brickW",brickW);pref("masonry.brickH",brickH);pref("masonry.brickUnit",brickUnit)
+                pref("masonry.joint",joint);pref("masonry.jointUnit",jointUnit);pref("$toolId.waste",waste)
+            }
+            "tile"->{
+                tileW="60";tileH="60";tileUnit="سم";waste="7"
+                pref("tile.w",tileW);pref("tile.h",tileH);pref("tile.unit",tileUnit);pref("$toolId.waste",waste)
+            }
+            "adhesive"->{
+                rate="5";bag="20";waste="5"
+                pref("$toolId.rate",rate);pref("adhesive.bag",bag);pref("$toolId.waste",waste)
+            }
+            "paint"->{
+                coverage="10";coats="2";waste="5"
+                pref("paint.coverage",coverage);pref("$toolId.coats",coats);pref("$toolId.waste",waste)
+            }
+            "waterproof"->{
+                rate="1.5";coats="2";waste="5"
+                pref("$toolId.rate",rate);pref("$toolId.coats",coats);pref("$toolId.waste",waste)
+            }
+            "gypsum"->{
+                waste="10";pref("$toolId.waste",waste)
+            }
+        }
+    }
+
 
     val source=n(area)
     val result:MaterialResult?=if(source<=0)null else when(toolId){
@@ -139,6 +170,14 @@ fun MaterialCalculatorScreen(
 
             item{
                 BoxCard{
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
+                        Text("دخل البيانات",style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Black)
+                        TextButton(onClick=::resetDefaults){
+                            Icon(Icons.Rounded.RestartAlt,null,Modifier.size(17.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("رجّع القيم الأصلية")
+                        }
+                    }
                     NumberFieldX("المساحة",area,{area=it;pref("$toolId.area",it)},"م²",help="اكتب صافي مساحة البند بعد الخصومات، أو افتح الحاسبة من ملخص المشروع عشان تتعبى تلقائيًا.")
 
                     if(toolId in listOf("plaster","splash","screed")){
