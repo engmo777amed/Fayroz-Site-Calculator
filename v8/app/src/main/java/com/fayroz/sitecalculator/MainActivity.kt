@@ -27,6 +27,7 @@ private sealed interface Route{
     data class ProjectDetail(val projectId:String):Route
     data class SectionDetail(val projectId:String,val sectionId:String):Route
     data class RoomEdit(val projectId:String,val sectionId:String,val spaceId:String?):Route
+    data class DirectItem(val projectId:String):Route
     data class Tool(val toolId:String,val seed:MaterialResult?=null,val projectId:String?=null):Route
 }
 
@@ -129,6 +130,7 @@ class MainActivity:ComponentActivity(){
                         is Route.ProjectDetail->Route.Root
                         is Route.SectionDetail->Route.ProjectDetail(r.projectId)
                         is Route.RoomEdit->Route.SectionDetail(r.projectId,r.sectionId)
+                        is Route.DirectItem->Route.Root
                         is Route.Tool->if(r.projectId!=null)Route.ProjectDetail(r.projectId) else Route.Root
                         Route.Root->Route.Root
                     }
@@ -169,6 +171,11 @@ class MainActivity:ComponentActivity(){
                                         onToday={tab=RootTab.TODAY},
                                         onTools={tab=RootTab.TOOLS},
                                         onNewRoom=::openNewRoomFromActive,
+                                        onDirectItem={
+                                            val p=activeProject()
+                                            if(p==null){tab=RootTab.PROJECTS}
+                                            else route=Route.DirectItem(p.id)
+                                        },
                                         onSettings={route=Route.Settings}
                                     )
 
@@ -309,6 +316,26 @@ class MainActivity:ComponentActivity(){
                                 ))
                                 setActive(ActiveLocation(p.id,s.id,space.id))
                                 route=Route.SectionDetail(p.id,s.id)
+                            }
+                        )
+                    }
+
+                    is Route.DirectItem->{
+                        val p=projects.firstOrNull{it.id==r.projectId}
+                        if(p==null||p.sections.isEmpty())route=Route.ProjectDetail(r.projectId)
+                        else DirectItemScreen(
+                            project=p,
+                            initialSectionId=active?.sectionId,
+                            onBack={route=Route.Root},
+                            onSave={sectionId,space->
+                                val section=p.sections.firstOrNull{it.id==sectionId} ?: return@DirectItemScreen
+                                val updatedSection=section.copy(spaces=section.spaces+space)
+                                replaceProject(p.copy(
+                                    sections=p.sections.map{if(it.id==sectionId)updatedSection else it},
+                                    updatedAt=System.currentTimeMillis()
+                                ))
+                                setActive(ActiveLocation(p.id,sectionId,space.id))
+                                route=Route.SectionDetail(p.id,sectionId)
                             }
                         )
                     }
