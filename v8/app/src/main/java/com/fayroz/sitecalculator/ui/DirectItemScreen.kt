@@ -90,7 +90,7 @@ fun DirectItemScreen(
                 }
                 item{
                     Button(
-                        onClick={if(sectionId.isNotBlank()){{ onSave(sectionId,space) }} else {{}}},
+                        onClick={ if(sectionId.isNotBlank()) onSave(sectionId,space) },
                         enabled=sectionId.isNotBlank(),
                         modifier=Modifier.fillMaxWidth().heightIn(min=50.dp)
                     ){
