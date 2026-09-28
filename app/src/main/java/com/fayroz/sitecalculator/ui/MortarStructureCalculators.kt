@@ -10,7 +10,7 @@ import kotlin.math.ceil
 import kotlin.math.max
 
 @Composable
-private fun LogicWarning(text:String){
+fun LogicWarning(text:String){
     Surface(shape=MaterialTheme.shapes.small,color=MaterialTheme.colorScheme.errorContainer.copy(alpha=.55f)){
         Text(text,Modifier.fillMaxWidth().padding(8.dp),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onErrorContainer)
     }
