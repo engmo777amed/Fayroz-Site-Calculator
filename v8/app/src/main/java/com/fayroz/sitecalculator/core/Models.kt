@@ -17,14 +17,27 @@ data class Opening(
     val width:Double=0.0,
     val height:Double=0.0,
     val sill:Double=0.0,
-    val count:Int=1
+    val count:Int=1,
+    val wallId:String?=null,
+    val revealDepth:Double=0.0,
+    val note:String=""
 )
 
 data class WallPart(
     val id:String=UUID.randomUUID().toString(),
     val name:String="حائط",
     val length:Double=0.0,
-    val height:Double=3.0
+    val height:Double=3.0,
+    val note:String=""
+)
+
+data class SurfacePart(
+    val id:String=UUID.randomUUID().toString(),
+    val name:String="مسطح",
+    val length:Double=0.0,
+    val width:Double=0.0,
+    val deductionArea:Double=0.0,
+    val note:String=""
 )
 
 data class Adjustment(
@@ -45,7 +58,14 @@ data class Takeoff(
     val layerThickness:Double=0.0,
     val directValue:Double=0.0,
     val manualValue:Double?=null,
-    val adjustments:List<Adjustment> = emptyList()
+    val adjustments:List<Adjustment> = emptyList(),
+    val includeOpeningReveals:Boolean=false,
+    val wallIds:List<String> = emptyList(),
+    val pieceWidth:Double=0.0,
+    val pieceHeight:Double=0.0,
+    val piecesPerPack:Int=0,
+    val overrideReason:String="",
+    val note:String=""
 )
 
 data class Space(
@@ -61,7 +81,10 @@ data class Space(
     val takeoffs:List<Takeoff> = emptyList(),
     val note:String="",
     val status:WorkStatus=WorkStatus.IN_PROGRESS,
-    val updatedAt:Long=System.currentTimeMillis()
+    val updatedAt:Long=System.currentTimeMillis(),
+    val floorSurfaces:List<SurfacePart> = emptyList(),
+    val ceilingSurfaces:List<SurfacePart> = emptyList(),
+    val photoUris:List<String> = emptyList()
 )
 
 data class Section(
@@ -117,4 +140,10 @@ data class MaterialResult(
     val sourceUnit:String,
     val lines:List<MaterialLine>,
     val explanation:String
+)
+
+data class PurchaseInfo(
+    val pieceArea:Double,
+    val pieces:Int,
+    val packs:Int?
 )
