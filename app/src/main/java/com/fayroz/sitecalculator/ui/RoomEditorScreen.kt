@@ -504,6 +504,7 @@ private fun CustomItemDialog(onDismiss:()->Unit,onAdd:(TakeoffItem)->Unit){
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TakeoffEditorDialog(item:TakeoffItem,walls:List<WallSegment>,onDismiss:()->Unit,onSave:(TakeoffItem)->Unit){
     var waste by remember{mutableStateOf(fmt(item.wastePercent))}
@@ -523,98 +524,142 @@ private fun TakeoffEditorDialog(item:TakeoffItem,walls:List<WallSegment>,onDismi
     var newAdjValue by remember{mutableStateOf("")}
     var newAdjNote by remember{mutableStateOf("")}
     var newAdjType by remember{mutableStateOf(AdjustmentType.ADD)}
+    val sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true)
 
-    AlertDialog(
-        onDismissRequest=onDismiss,title={Text(item.name)},
-        text={
-            LazyColumn(verticalArrangement=Arrangement.spacedBy(7.dp)){
-                item{MetricRow("الوحدة",item.unit.label)}
-                if(item.method in listOf(CalcMethod.DIRECT_AREA,CalcMethod.DIRECT_LENGTH,CalcMethod.DIRECT_VOLUME,CalcMethod.DIRECT_COUNT)){
-                    item{NumberFieldX("الكمية",direct,{direct=it},item.unit.label,"كمية مباشرة.")}
+    fun save(){
+        onSave(item.copy(
+            wastePercent=n(waste),tileHeight=n(tileHeight),waterproofUpstand=n(upstand),
+            layerThickness=n(layerThickness),directValue=n(direct),includeOpeningReveals=reveals,
+            wallIds=wallIds.toList(),
+            pieceWidth=n(pieceWidth),pieceHeight=n(pieceHeight),
+            piecesPerPack=n(piecesPerPack).toInt().coerceAtLeast(0),
+            manualOverride=if(overrideEnabled)n(overrideValue) else null,
+            overrideReason=if(overrideEnabled)overrideReason.trim() else "",
+            adjustments=adjustments
+        ))
+    }
+
+    ModalBottomSheet(
+        onDismissRequest=onDismiss,
+        sheetState=sheetState
+    ){
+        Column(
+            Modifier.fillMaxWidth().fillMaxHeight(.92f).imePadding().padding(horizontal=12.dp),
+            verticalArrangement=Arrangement.spacedBy(8.dp)
+        ){
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+                Column(Modifier.weight(1f)){
+                    Text(item.name,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Black)
+                    Text("إعدادات البند",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                if(item.method==CalcMethod.WALL_TILES)item{NumberFieldX("ارتفاع الكسوة",tileHeight,{tileHeight=it},"م","الخصم من الشباك يتم حسب جلسة الشباك.")}
-                if(item.method==CalcMethod.WATERPROOFING)item{NumberFieldX("رجوع العزل",upstand,{upstand=it},"م","ارتفاع رجوع العزل على الحائط.")}
-                if(item.method==CalcMethod.FLOOR_LAYER_VOLUME)item{NumberFieldX("متوسط السمك",layerThickness,{layerThickness=it},"م","مثال 5 سم = 0.05 م.")}
-                item{NumberFieldX("الهالك",waste,{waste=it},"%","خاص بهذا البند فقط.")}
+                Text(item.unit.label,style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.primary)
+            }
+
+            LazyColumn(
+                Modifier.weight(1f),
+                contentPadding=PaddingValues(bottom=12.dp),
+                verticalArrangement=Arrangement.spacedBy(8.dp)
+            ){
+                if(item.method in listOf(CalcMethod.DIRECT_AREA,CalcMethod.DIRECT_LENGTH,CalcMethod.DIRECT_VOLUME,CalcMethod.DIRECT_COUNT)){
+                    item{NumberFieldX("الكمية",direct,{direct=it},item.unit.label,"كمية كتبتها مباشرة.")}
+                }
+                if(item.method==CalcMethod.WALL_TILES)item{NumberFieldX("ارتفاع السيراميك",tileHeight,{tileHeight=it},"م","خصم الشباك بيتحسب حسب ارتفاع الجلسة.")}
+                if(item.method==CalcMethod.WATERPROOFING)item{NumberFieldX("رجوع العزل على الحائط",upstand,{upstand=it},"م","ارتفاع العزل فوق منسوب الأرضية.")}
+                if(item.method==CalcMethod.FLOOR_LAYER_VOLUME)item{NumberFieldX("متوسط السمك",layerThickness,{layerThickness=it},"م","مثال: 5 سم = 0.05 م.")}
+                item{NumberFieldX("الهالك",waste,{waste=it},"%","خاص بالبند ده فقط.")}
+
                 if(item.unit==MeasureUnit.AREA){
                     item{
-                        HorizontalDivider()
-                        Text("مقاس البلاطة أو القطعة - لو محتاج العدد",style=MaterialTheme.typography.labelLarge)
-                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                            NumberFieldX("عرض القطعة",pieceWidth,{pieceWidth=it},"م",modifier=Modifier.weight(1f))
-                            NumberFieldX("طول القطعة",pieceHeight,{pieceHeight=it},"م",modifier=Modifier.weight(1f))
+                        CardBox{
+                            Text("مقاس البلاطة أو القطعة - اختياري",style=MaterialTheme.typography.labelLarge)
+                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                                NumberFieldX("العرض",pieceWidth,{pieceWidth=it},"م",modifier=Modifier.weight(1f))
+                                NumberFieldX("الطول",pieceHeight,{pieceHeight=it},"م",modifier=Modifier.weight(1f))
+                            }
+                            NumberFieldX("قطع في الكرتونة",piecesPerPack,{piecesPerPack=it},"قطعة","لو معروف، البرنامج يطلع عدد الكراتين التقريبي.")
                         }
-                        NumberFieldX("عدد القطع/كرتونة",piecesPerPack,{piecesPerPack=it},"قطعة","لو معروف سيظهر عدد الكراتين التقريبي.")
                     }
                 }
+
                 if(item.method in listOf(CalcMethod.ROOM_WALLS,CalcMethod.WALL_SEGMENTS,CalcMethod.WALL_TILES)){
                     item{
-                        Row(verticalAlignment=Alignment.CenterVertically){
-                            Text("احسب جوانب الباب أو الشباك",Modifier.weight(1f));Switch(checked=reveals,onCheckedChange={reveals=it})
-                        }
-                        if(walls.isNotEmpty()){
-                            Text("احسب البند على حوائط معينة. لو ما اخترتش حاجة، هيتحسب على كل الحوائط.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                            walls.forEach{wall->
-                                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
-                                    Checkbox(
-                                        checked=wall.id in wallIds,
-                                        onCheckedChange={checked->wallIds=if(checked)wallIds+wall.id else wallIds-wall.id}
-                                    )
-                                    Text(wall.name,style=MaterialTheme.typography.bodyMedium)
+                        CardBox{
+                            Row(verticalAlignment=Alignment.CenterVertically){
+                                Text("احسب جوانب الباب أو الشباك",Modifier.weight(1f))
+                                Switch(checked=reveals,onCheckedChange={reveals=it})
+                            }
+                            if(walls.isNotEmpty()){
+                                Text("اختار حوائط معينة، أو سيب كله فاضي عشان يتحسب على كل الحوائط.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                walls.forEach{wall->
+                                    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+                                        Checkbox(
+                                            checked=wall.id in wallIds,
+                                            onCheckedChange={checked->wallIds=if(checked)wallIds+wall.id else wallIds-wall.id}
+                                        )
+                                        Text(wall.name,style=MaterialTheme.typography.bodyMedium)
+                                    }
                                 }
                             }
                         }
                     }
                 }
-                item{HorizontalDivider();Text("إضافات وخصومات يدوية",style=MaterialTheme.typography.labelLarge)}
+
                 item{
-                    Column{
+                    CardBox{
+                        Text("إضافة أو خصم",style=MaterialTheme.typography.labelLarge)
                         adjustments.forEachIndexed{i,a->
                             Row(verticalAlignment=Alignment.CenterVertically){
-                                Text((if(a.type==AdjustmentType.ADD)"+ " else "- ")+fmt(a.amount)+" "+item.unit.label,Modifier.weight(1f),color=if(a.type==AdjustmentType.ADD)MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error)
-                                Text(a.note,Modifier.weight(1.4f),style=MaterialTheme.typography.bodySmall)
-                                IconButton(onClick={adjustments=adjustments.filterIndexed{idx,_->idx!=i}},modifier=Modifier.size(48.dp)){Icon(Icons.Rounded.Delete,"حذف")}
+                                Text(
+                                    (if(a.type==AdjustmentType.ADD)"+ " else "- ")+fmt(a.amount)+" "+item.unit.label,
+                                    Modifier.weight(1f),
+                                    color=if(a.type==AdjustmentType.ADD)MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
+                                )
+                                Text(a.note,Modifier.weight(1.3f),style=MaterialTheme.typography.bodySmall)
+                                IconButton(onClick={adjustments=adjustments.filterIndexed{idx,_->idx!=i}},modifier=Modifier.size(40.dp)){
+                                    Icon(Icons.Rounded.Delete,"حذف",Modifier.size(18.dp))
+                                }
                             }
                         }
-                    }
-                }
-                item{
-                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                        ChoiceFieldX("النوع",if(newAdjType==AdjustmentType.ADD)"إضافة" else "خصم",listOf("إضافة","خصم"),{newAdjType=if(it=="إضافة")AdjustmentType.ADD else AdjustmentType.DEDUCT},modifier=Modifier.weight(1f))
-                        NumberFieldX("الكمية",newAdjValue,{newAdjValue=it},item.unit.label,modifier=Modifier.weight(1f))
-                    }
-                    TextFieldX("السبب",newAdjNote,{newAdjNote=it},placeholder="مثال: استبعاد خلف الدولاب")
-                    OutlinedButton(onClick={
-                        if(n(newAdjValue)>0){
-                            adjustments=adjustments+Adjustment(type=newAdjType,amount=n(newAdjValue),note=newAdjNote.trim())
-                            newAdjValue="";newAdjNote=""
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                            ChoiceFieldX("النوع",if(newAdjType==AdjustmentType.ADD)"إضافة" else "خصم",listOf("إضافة","خصم"),{newAdjType=if(it=="إضافة")AdjustmentType.ADD else AdjustmentType.DEDUCT},modifier=Modifier.weight(1f))
+                            NumberFieldX("الكمية",newAdjValue,{newAdjValue=it},item.unit.label,modifier=Modifier.weight(1f))
                         }
-                    },modifier=Modifier.fillMaxWidth()){Text("إضافة التعديل")}
-                }
-                item{
-                    HorizontalDivider()
-                    Row(verticalAlignment=Alignment.CenterVertically){
-                        Text("استخدم كمية فعلية بدل المحسوبة",Modifier.weight(1f));Switch(checked=overrideEnabled,onCheckedChange={overrideEnabled=it})
+                        TextFieldX("السبب",newAdjNote,{newAdjNote=it},placeholder="مثال: استبعاد خلف الدولاب")
+                        OutlinedButton(onClick={
+                            if(n(newAdjValue)>0){
+                                adjustments=adjustments+Adjustment(type=newAdjType,amount=n(newAdjValue),note=newAdjNote.trim())
+                                newAdjValue="";newAdjNote=""
+                            }
+                        },modifier=Modifier.fillMaxWidth().heightIn(min=46.dp)){Text("ضيف التعديل")}
                     }
-                    if(overrideEnabled){
-                        NumberFieldX("الكمية الفعلية",overrideValue,{overrideValue=it},item.unit.label,"يظل الرقم النظري محفوظًا للمقارنة.")
-                        TextFieldX("سبب الاعتماد",overrideReason,{overrideReason=it},placeholder="مثال: حصر فعلي من الموقع")
+                }
+
+                item{
+                    CardBox{
+                        Row(verticalAlignment=Alignment.CenterVertically){
+                            Column(Modifier.weight(1f)){
+                                Text("عندي كمية فعلية من الموقع",style=MaterialTheme.typography.labelLarge)
+                                Text("استخدمها بدل الكمية المحسوبة، مع الاحتفاظ بالحساب للمراجعة.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Switch(checked=overrideEnabled,onCheckedChange={overrideEnabled=it})
+                        }
+                        if(overrideEnabled){
+                            NumberFieldX("الكمية الفعلية",overrideValue,{overrideValue=it},item.unit.label)
+                            TextFieldX("سبب الاعتماد",overrideReason,{overrideReason=it},placeholder="مثال: حصر فعلي من الموقع")
+                        }
                     }
                 }
             }
-        },
-        confirmButton={TextButton(onClick={
-            onSave(item.copy(
-                wastePercent=n(waste),tileHeight=n(tileHeight),waterproofUpstand=n(upstand),
-                layerThickness=n(layerThickness),directValue=n(direct),includeOpeningReveals=reveals,
-                wallIds=wallIds.toList(),
-                pieceWidth=n(pieceWidth),pieceHeight=n(pieceHeight),
-                piecesPerPack=n(piecesPerPack).toInt().coerceAtLeast(0),
-                manualOverride=if(overrideEnabled)n(overrideValue) else null,
-                overrideReason=if(overrideEnabled)overrideReason.trim() else "",
-                adjustments=adjustments
-            ))
-        }){Text("حفظ")}},
-        dismissButton={TextButton(onClick=onDismiss){Text("إلغاء")}}
-    )
+
+            Row(
+                Modifier.fillMaxWidth().padding(bottom=10.dp),
+                horizontalArrangement=Arrangement.spacedBy(8.dp)
+            ){
+                OutlinedButton(onClick=onDismiss,modifier=Modifier.weight(1f).heightIn(min=48.dp)){Text("إلغاء")}
+                Button(onClick=::save,modifier=Modifier.weight(1f).heightIn(min=48.dp)){
+                    Icon(Icons.Rounded.Save,null,Modifier.size(18.dp));Spacer(Modifier.width(4.dp));Text("حفظ")
+                }
+            }
+        }
+    }
 }
