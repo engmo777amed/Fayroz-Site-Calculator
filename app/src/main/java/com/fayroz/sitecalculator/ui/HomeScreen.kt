@@ -33,7 +33,7 @@ fun HomeScreen(
     onTool:(String)->Unit
 ){
     val last=projects.maxByOrNull{it.updatedAt}
-    val favorites=repository.getToolFavorites().mapNotNull(::toolMeta).take(3)
+    val favorites=repository.getToolFavorites().mapNotNull(::toolMeta).take(2)
 
     androidx.compose.foundation.lazy.LazyColumn(
         Modifier.fillMaxSize(),
@@ -123,13 +123,17 @@ fun HomeScreen(
         if(favorites.isNotEmpty()){
             item{SectionTitle("الحاسبات المفضلة","افتح أكتر أدواتك استخدامًا مباشرة.")}
             item{
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
                     favorites.forEach{tool->
-                        AssistChip(
+                        OutlinedButton(
                             onClick={onTool(tool.id)},
-                            label={Text(tool.title,maxLines=1)},
-                            leadingIcon={Icon(tool.icon,null,Modifier.size(17.dp))}
-                        )
+                            modifier=Modifier.weight(1f).heightIn(min=48.dp),
+                            contentPadding=PaddingValues(horizontal=8.dp,vertical=7.dp)
+                        ){
+                            Icon(tool.icon,null,Modifier.size(17.dp))
+                            Spacer(Modifier.width(5.dp))
+                            Text(tool.title,maxLines=1)
+                        }
                     }
                 }
             }
