@@ -59,7 +59,7 @@ fun NumberWithUnitX(
                         Icon(Icons.Rounded.ExpandMore,null,Modifier.size(16.dp))
                     }
                 },
-                trailingIcon={if(help!=null){{CompactHelpIcon(label,help)}}else null}
+                trailingIcon=if(help!=null){{ CompactHelpIcon(label,help) }}else null
             )
             DropdownMenu(expanded=unitOpen,onDismissRequest={unitOpen=false}){
                 units.forEach{u->
