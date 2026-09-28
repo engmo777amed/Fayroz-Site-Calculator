@@ -50,8 +50,26 @@ fun QuickItemScreen(
     var waste by remember{mutableStateOf("0")}
     var addValue by remember{mutableStateOf("")}
     var deductValue by remember{mutableStateOf("")}
-    var layerThickness by remember{mutableStateOf("0.05")}
+    var layerThickness by remember{mutableStateOf("5")}
+    var layerUnit by remember{mutableStateOf("سم")}
+    var dimUnit by remember{mutableStateOf("م")}
     val walls=remember{mutableStateListOf(QuickWall())}
+
+    fun changeDimUnit(newUnit:String){
+        if(newUnit==dimUnit)return
+        val old=dimUnit
+        length=convertLengthText(length,old,newUnit)
+        width=convertLengthText(width,old,newUnit)
+        height=convertLengthText(height,old,newUnit)
+        walls.indices.forEach{i->
+            val w=walls[i]
+            walls[i]=w.copy(
+                length=convertLengthText(w.length,old,newUnit),
+                height=convertLengthText(w.height,old,newUnit)
+            )
+        }
+        dimUnit=newUnit
+    }
 
     val methods=CalcMethod.entries.filter{m->
         when(unit){
@@ -67,14 +85,14 @@ fun QuickItemScreen(
         WallSegment(
             id=w.id,
             name="حائط ${index+1}",
-            length=n(w.length),
-            height=n(w.height).takeIf{it>0}?:3.0
+            length=lengthToMeters(w.length,dimUnit),
+            height=lengthToMeters(w.height,dimUnit).takeIf{it>0}?:3.0
         )
     }
     val scratch=SpaceEntry(
         name=name.ifBlank{"حصر بند مباشر"},
         type="حصر بند مباشر",
-        length=n(length),width=n(width),height=n(height),
+        length=lengthToMeters(length,dimUnit),width=lengthToMeters(width,dimUnit),height=lengthToMeters(height,dimUnit),
         repeatCount=n(count).toInt().coerceAtLeast(1),
         walls=if(method==CalcMethod.WALL_SEGMENTS)wallModels else emptyList(),
         status=CaptureStatus.DONE
@@ -86,7 +104,7 @@ fun QuickItemScreen(
     val item=TakeoffItem(
         name=name.ifBlank{"بند سريع"},category="سريع",unit=unit,method=method,
         wastePercent=n(waste),directValue=n(value),
-        layerThickness=n(layerThickness),adjustments=adjustments
+        layerThickness=lengthToMeters(layerThickness,layerUnit),adjustments=adjustments
     )
     val result=QuantityEngine.calculate(scratch,item)
 
@@ -101,6 +119,9 @@ fun QuickItemScreen(
                     TextFieldX("اسم البند",name,{name=it},placeholder="مثال: خرسانة قاعدة جهاز")
                     ChoiceFieldX("الوحدة",unit.label,MeasureUnit.entries.map{it.label},{label->unit=MeasureUnit.entries.first{it.label==label}})
                     ChoiceFieldX("هتحسب البند إزاي؟",method.label,methods.map{it.label},{label->method=methods.first{it.label==label}})
+                    if(method !in listOf(CalcMethod.DIRECT_AREA,CalcMethod.DIRECT_LENGTH,CalcMethod.DIRECT_VOLUME,CalcMethod.DIRECT_COUNT)){
+                        ChoiceFieldX("وحدة الأبعاد",dimUnit,listOf("م","سم","مم"),{changeDimUnit(it)},"البرنامج بيحوّل القيمة تلقائيًا لما تغير الوحدة.")
+                    }
                     when{
                         method in listOf(CalcMethod.DIRECT_AREA,CalcMethod.DIRECT_LENGTH,CalcMethod.DIRECT_VOLUME,CalcMethod.DIRECT_COUNT) ->
                             NumberFieldX("الكمية",value,{value=it},unit.label)
@@ -115,8 +136,8 @@ fun QuickItemScreen(
                                             if(walls.size>1)IconButton(onClick={walls.removeAt(index)},modifier=Modifier.size(48.dp)){Icon(Icons.Rounded.Delete,"حذف")}
                                         }
                                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                                            NumberFieldX("الطول",wall.length,{v->walls[index]=wall.copy(length=v)},"م",modifier=Modifier.weight(1f))
-                                            NumberFieldX("الارتفاع",wall.height,{v->walls[index]=wall.copy(height=v)},"م",modifier=Modifier.weight(1f))
+                                            NumberFieldX("الطول",wall.length,{v->walls[index]=wall.copy(length=v)},dimUnit,modifier=Modifier.weight(1f))
+                                            NumberFieldX("الارتفاع",wall.height,{v->walls[index]=wall.copy(height=v)},dimUnit,modifier=Modifier.weight(1f))
                                         }
                                     }
                                 }
@@ -128,11 +149,18 @@ fun QuickItemScreen(
 
                         else -> {
                             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                                NumberFieldX("الطول",length,{length=it},"م",modifier=Modifier.weight(1f))
-                                NumberFieldX("العرض",width,{width=it},"م",modifier=Modifier.weight(1f))
+                                NumberFieldX("الطول",length,{length=it},dimUnit,modifier=Modifier.weight(1f))
+                                NumberFieldX("العرض",width,{width=it},dimUnit,modifier=Modifier.weight(1f))
                             }
-                            if(method==CalcMethod.ROOM_WALLS)NumberFieldX("الارتفاع",height,{height=it},"م")
-                            if(method==CalcMethod.FLOOR_LAYER_VOLUME)NumberFieldX("متوسط السمك",layerThickness,{layerThickness=it},"م","مثال: 5 سم = 0.05 م.")
+                            if(method==CalcMethod.ROOM_WALLS)NumberFieldX("الارتفاع",height,{height=it},dimUnit)
+                            if(method==CalcMethod.FLOOR_LAYER_VOLUME)NumberWithUnitX(
+                                "متوسط السمك",layerThickness,{layerThickness=it},
+                                layerUnit,{newUnit->
+                                    layerThickness=convertLengthText(layerThickness,layerUnit,newUnit)
+                                    layerUnit=newUnit
+                                },
+                                help="مثال: 5 سم أو 50 مم أو 0.05 م."
+                            )
                             NumberFieldX("التكرار",count,{count=it},"عدد")
                         }
                     }
@@ -209,15 +237,15 @@ fun StairCalculatorScreen(onBack:()->Unit){
                 CardBox{
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
                         NumberFieldX("عدد الدرجات",steps,{steps=it},"درجة",modifier=Modifier.weight(1f))
-                        NumberFieldX("عرض السلم",width,{width=it},"م",modifier=Modifier.weight(1f))
+                        NumberFieldX("عرض السلم",width,{width=it},dimUnit,modifier=Modifier.weight(1f))
                     }
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                        NumberFieldX("النائمة",tread,{tread=it},"م",modifier=Modifier.weight(1f))
-                        NumberFieldX("القائمة",riser,{riser=it},"م",modifier=Modifier.weight(1f))
+                        NumberFieldX("النائمة",tread,{tread=it},dimUnit,modifier=Modifier.weight(1f))
+                        NumberFieldX("القائمة",riser,{riser=it},dimUnit,modifier=Modifier.weight(1f))
                     }
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                        NumberFieldX("طول البسطة",landingLength,{landingLength=it},"م",modifier=Modifier.weight(1f))
-                        NumberFieldX("عرض البسطة",landingWidth,{landingWidth=it},"م",modifier=Modifier.weight(1f))
+                        NumberFieldX("طول البسطة",landingLength,{landingLength=it},dimUnit,modifier=Modifier.weight(1f))
+                        NumberFieldX("عرض البسطة",landingWidth,{landingWidth=it},dimUnit,modifier=Modifier.weight(1f))
                     }
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
                         NumberFieldX("عدد البسطات",landings,{landings=it},"عدد",modifier=Modifier.weight(1f))
