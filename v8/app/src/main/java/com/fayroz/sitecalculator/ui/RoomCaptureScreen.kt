@@ -2,6 +2,9 @@
 
 package com.fayroz.sitecalculator.ui
 
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.fayroz.sitecalculator.core.*
@@ -57,6 +61,7 @@ fun RoomCaptureScreen(
     val floors=remember{mutableStateListOf<SurfacePart>().apply{addAll(restored?.floorSurfaces ?: emptyList())}}
     val ceilings=remember{mutableStateListOf<SurfacePart>().apply{addAll(restored?.ceilingSurfaces ?: emptyList())}}
     val openings=remember{mutableStateListOf<Opening>().apply{addAll(restored?.openings ?: emptyList())}}
+    val photos=remember{mutableStateListOf<String>().apply{addAll(restored?.photoUris ?: emptyList())}}
     val takeoffs=remember{
         mutableStateListOf<Takeoff>().apply{
             if(restored!=null)addAll(restored.takeoffs)
@@ -79,14 +84,23 @@ fun RoomCaptureScreen(
         status=status,
         updatedAt=System.currentTimeMillis(),
         floorSurfaces=if(geometryMode=="قسم المساحة لكذا جزء")floors.toList() else emptyList(),
-        ceilingSurfaces=if(ceilingDetails)ceilings.toList() else emptyList()
+        ceilingSurfaces=if(ceilingDetails)ceilings.toList() else emptyList(),
+        photoUris=photos.toList()
     )
 
     LaunchedEffect(
         name,type,dimUnit,length,width,height,repeat,note,status,geometryMode,ceilingDetails,
-        walls.toList(),floors.toList(),ceilings.toList(),openings.toList(),takeoffs.toList()
+        walls.toList(),floors.toList(),ceilings.toList(),openings.toList(),takeoffs.toList(),photos.toList()
     ){
         repository.saveDraft(draftKey,current())
+    }
+
+    val context=LocalContext.current
+    val photoPicker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri->
+        if(uri!=null){
+            runCatching{context.contentResolver.takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION)}
+            if(uri.toString() !in photos)photos.add(uri.toString())
+        }
     }
 
     Scaffold(
@@ -162,6 +176,28 @@ fun RoomCaptureScreen(
                             status=WorkStatus.entries.first{it.label==label}
                         })
                         TextFieldX("ملاحظة",note,{note=it},placeholder="اختياري")
+                        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                            OutlinedButton(
+                                onClick={photoPicker.launch(arrayOf("image/*"))},
+                                modifier=Modifier.weight(1f).heightIn(min=48.dp)
+                            ){
+                                Icon(Icons.Rounded.AddAPhoto,null)
+                                Spacer(Modifier.width(4.dp))
+                                Text("إضافة صورة")
+                            }
+                            Surface(
+                                modifier=Modifier.weight(1f),
+                                shape=RoundedCornerShape(11.dp),
+                                color=MaterialTheme.colorScheme.surfaceVariant
+                            ){
+                                Box(Modifier.fillMaxWidth().padding(12.dp),contentAlignment=Alignment.Center){
+                                    Text("${photos.size} صورة")
+                                }
+                            }
+                        }
+                        if(photos.isNotEmpty()){
+                            TextButton(onClick={photos.clear()}){Text("إزالة كل الصور",color=MaterialTheme.colorScheme.error)}
+                        }
 
                         HorizontalDivider()
                         ChoiceFieldX(
