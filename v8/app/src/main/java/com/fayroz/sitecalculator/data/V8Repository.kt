@@ -8,7 +8,7 @@ class V8Repository(context:Context){
     private val prefs=context.getSharedPreferences("fayroz_site_v8",Context.MODE_PRIVATE)
     private val legacy=context.getSharedPreferences("fayroz_site_projects",Context.MODE_PRIVATE)
 
-    init { migrateOnce() }
+    init { migrateOnce(); migrateV81Once() }
 
     private fun migrateOnce(){
         if(prefs.getBoolean("migration_done",false))return
@@ -20,6 +20,75 @@ class V8Repository(context:Context){
             }
         }
         prefs.edit().putBoolean("migration_done",true).apply()
+    }
+
+    private fun migrateV81Once(){
+        if(prefs.getBoolean("migration_v81_done",false))return
+        val legacyProjects=LegacyMigration.fromV7(legacy.getString("projects","[]")?:"[]")
+        if(legacyProjects.isNotEmpty()){
+            val current=V8Codec.decodeProjects(prefs.getString("projects","[]")?:"[]")
+            val merged=current.toMutableList()
+            legacyProjects.forEach{old->
+                val index=merged.indexOfFirst{it.id==old.id}
+                if(index<0)merged+=old
+                else merged[index]=mergeProject(merged[index],old)
+            }
+            prefs.edit().putString("projects",V8Codec.encodeProjects(merged)).apply()
+        }
+        prefs.edit().putBoolean("migration_v81_done",true).apply()
+    }
+
+    private fun mergeProject(current:Project,legacyProject:Project):Project{
+        val sections=current.sections.toMutableList()
+        legacyProject.sections.forEach{oldSection->
+            val si=sections.indexOfFirst{it.id==oldSection.id}
+            if(si<0)sections+=oldSection
+            else{
+                val cur=sections[si]
+                val spaces=cur.spaces.toMutableList()
+                oldSection.spaces.forEach{oldSpace->
+                    val spi=spaces.indexOfFirst{it.id==oldSpace.id}
+                    if(spi<0)spaces+=oldSpace
+                    else spaces[spi]=mergeSpace(spaces[spi],oldSpace)
+                }
+                sections[si]=cur.copy(spaces=spaces)
+            }
+        }
+        return current.copy(sections=sections,updatedAt=maxOf(current.updatedAt,legacyProject.updatedAt))
+    }
+
+    private fun mergeSpace(current:Space,old:Space):Space{
+        val oldOpenings=old.openings.associateBy{it.id}
+        val openings=current.openings.map{o->
+            val x=oldOpenings[o.id]
+            if(x==null)o else o.copy(
+                wallId=o.wallId ?: x.wallId,
+                revealDepth=if(o.revealDepth>0)o.revealDepth else x.revealDepth,
+                note=if(o.note.isNotBlank())o.note else x.note
+            )
+        }
+        val oldTakeoffs=old.takeoffs.associateBy{it.id}
+        val takeoffs=current.takeoffs.map{t->
+            val x=oldTakeoffs[t.id]
+            if(x==null)t else t.copy(
+                adjustments=if(t.adjustments.isNotEmpty())t.adjustments else x.adjustments,
+                includeOpeningReveals=t.includeOpeningReveals||x.includeOpeningReveals,
+                wallIds=if(t.wallIds.isNotEmpty())t.wallIds else x.wallIds,
+                pieceWidth=if(t.pieceWidth>0)t.pieceWidth else x.pieceWidth,
+                pieceHeight=if(t.pieceHeight>0)t.pieceHeight else x.pieceHeight,
+                piecesPerPack=if(t.piecesPerPack>0)t.piecesPerPack else x.piecesPerPack,
+                overrideReason=if(t.overrideReason.isNotBlank())t.overrideReason else x.overrideReason,
+                note=if(t.note.isNotBlank())t.note else x.note
+            )
+        }
+        return current.copy(
+            walls=if(current.walls.isNotEmpty())current.walls else old.walls,
+            openings=if(current.openings.isNotEmpty())openings else old.openings,
+            takeoffs=if(current.takeoffs.isNotEmpty())takeoffs else old.takeoffs,
+            floorSurfaces=if(current.floorSurfaces.isNotEmpty())current.floorSurfaces else old.floorSurfaces,
+            ceilingSurfaces=if(current.ceilingSurfaces.isNotEmpty())current.ceilingSurfaces else old.ceilingSurfaces,
+            photoUris=(current.photoUris+old.photoUris).distinct()
+        )
     }
 
     fun loadProjects():MutableList<Project> =
