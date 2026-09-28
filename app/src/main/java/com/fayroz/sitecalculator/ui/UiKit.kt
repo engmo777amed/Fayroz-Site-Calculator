@@ -256,16 +256,27 @@ fun AppBarX(title:String,subtitle:String?=null,onBack:(()->Unit)?=null,actions: 
 }
 
 @Composable
-fun EmptyBlock(title:String,subtitle:String,icon:ImageVector=Icons.Rounded.Inbox){
+fun EmptyBlock(
+    title:String,
+    subtitle:String,
+    icon:ImageVector=Icons.Rounded.Inbox,
+    actionLabel:String?=null,
+    onAction:(()->Unit)?=null
+){
     CardBox{
         Row(verticalAlignment=Alignment.CenterVertically){
             Surface(shape=RoundedCornerShape(11.dp),color=MaterialTheme.colorScheme.primaryContainer){
                 Icon(icon,null,Modifier.padding(8.dp).size(20.dp),tint=MaterialTheme.colorScheme.primary)
             }
             Spacer(Modifier.width(8.dp))
-            Column{
+            Column(Modifier.weight(1f)){
                 Text(title,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Black)
                 Text(subtitle,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        if(actionLabel!=null && onAction!=null){
+            FilledTonalButton(onClick=onAction,modifier=Modifier.fillMaxWidth().heightIn(min=46.dp)){
+                Text(actionLabel)
             }
         }
     }
