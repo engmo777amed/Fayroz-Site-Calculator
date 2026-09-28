@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package com.fayroz.sitecalculator.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -111,10 +113,10 @@ fun SettingsScreen(
             item{
                 BoxCard{
                     Text("قواعد V8",fontWeight=FontWeight.Black)
-                    Text("• التكرار بيتطبق مرة واحدة فقط في التجميع.
+                    Text("""• التكرار بيتطبق مرة واحدة فقط في التجميع.
 • خصم الفتحات بيتم من الحوائط تلقائيًا.
 • القيم الافتراضية في الخامات قيم بداية وقابلة للتعديل.
-• مواصفة المشروع أو نشرة المنتج المعتمدة هي المرجع.",style=MaterialTheme.typography.bodySmall)
+• مواصفة المشروع أو نشرة المنتج المعتمدة هي المرجع.""".trimIndent(),style=MaterialTheme.typography.bodySmall)
                 }
             }
         }
