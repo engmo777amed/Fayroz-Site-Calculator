@@ -94,9 +94,9 @@ fun RoomCaptureScreen(
             TopAppBar(
                 title={Column{
                     Text(title,fontWeight=FontWeight.Black)
-                    Text(listOf("المكان والمقاسات","الأبواب والشبابيك","البنود والنتيجة")[step],style=MaterialTheme.typography.labelSmall)
+                    Text(listOf("المكان والمقاسات","الشكل والفتحات","البنود والنتيجة")[step],style=MaterialTheme.typography.labelSmall)
                 }},
-                navigationIcon={IconButton(onClick=onBack){Icon(Icons.Rounded.ArrowBack,"رجوع")}}
+                navigationIcon={IconButton(onClick=onBack){Icon(Icons.Rounded.ArrowForward,"رجوع")}}
             )
         },
         bottomBar={
@@ -242,6 +242,7 @@ fun RoomCaptureScreen(
                             OpeningRow(
                                 index=i,
                                 opening=o,
+                                walls=if(geometryMode=="أكتر من حائط ورا بعض")walls else emptyList(),
                                 onChange={openings[i]=it},
                                 onDelete={openings.removeAt(i)}
                             )
@@ -249,11 +250,11 @@ fun RoomCaptureScreen(
 
                         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                             OutlinedButton(
-                                onClick={openings.add(Opening(kind=OpeningKind.DOOR,width=.90,height=2.10))},
+                                onClick={openings.add(Opening(kind=OpeningKind.DOOR,width=.90,height=2.10,wallId=walls.firstOrNull()?.id))},
                                 modifier=Modifier.weight(1f)
                             ){Icon(Icons.Rounded.DoorFront,null);Spacer(Modifier.width(4.dp));Text("باب")}
                             OutlinedButton(
-                                onClick={openings.add(Opening(kind=OpeningKind.WINDOW,width=1.20,height=1.20,sill=.90))},
+                                onClick={openings.add(Opening(kind=OpeningKind.WINDOW,width=1.20,height=1.20,sill=.90,wallId=walls.firstOrNull()?.id))},
                                 modifier=Modifier.weight(1f)
                             ){Icon(Icons.Rounded.Window,null);Spacer(Modifier.width(4.dp));Text("شباك")}
                         }
@@ -287,18 +288,29 @@ fun RoomCaptureScreen(
                             BoxCard{
                                 takeoffs.forEachIndexed{i,item->
                                     val q=QuantityEngine.calculateOne(space,item)
-                                    Column(verticalArrangement=Arrangement.spacedBy(3.dp)){
-                                        MetricRow(
-                                            item.name,
-                                            if(space.repeatCount>1)"${fmt(q.repeatedFinal)} ${item.unit.label}" else "${fmt(q.oneSpaceFinal)} ${item.unit.label}",
-                                            i==0
-                                        )
-                                        if(space.repeatCount>1){
-                                            Text(
-                                                "المكان الواحد ${fmt(q.oneSpaceFinal)} × ${space.repeatCount}",
-                                                style=MaterialTheme.typography.labelSmall,
-                                                color=MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
+                                    Surface(
+                                        shape=RoundedCornerShape(12.dp),
+                                        color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.28f)
+                                    ){
+                                        Column(Modifier.fillMaxWidth().padding(8.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
+                                            Row(verticalAlignment=Alignment.CenterVertically){
+                                                Column(Modifier.weight(1f)){
+                                                    Text(item.name,fontWeight=FontWeight.Black)
+                                                    Text(item.kind.label+" • هالك "+fmt(item.waste)+"%",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                                }
+                                                Text("${fmt(q.repeatedFinal)} ${item.unit.label}",fontWeight=FontWeight.Black,color=MaterialTheme.colorScheme.primary)
+                                                IconButton(onClick={editIndex=i}){Icon(Icons.Rounded.Tune,"ضبط")}
+                                            }
+                                            if(space.repeatCount>1){
+                                                Text("المكان الواحد ${fmt(q.oneSpaceFinal)} × ${space.repeatCount}",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                            }
+                                            Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                                                TextButton(onClick={editIndex=i}){Text("ضبط / اتحسبت إزاي؟")}
+                                                TextButton(onClick={takeoffs.removeAt(i)}){Text("حذف",color=MaterialTheme.colorScheme.error)}
+                                            }
+                                            QuantityEngine.purchaseInfo(space,item)?.let{purchase->
+                                                Text("شراء تقريبي: ${purchase.pieces} قطعة"+(purchase.packs?.let{" • $it كرتونة"}?:""),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.tertiary)
+                                            }
                                         }
                                     }
                                 }
@@ -309,18 +321,58 @@ fun RoomCaptureScreen(
             }
         }
     }
+
+    editIndex?.let{i->
+        if(i in takeoffs.indices){
+            TakeoffEditorDialog(
+                item=takeoffs[i],
+                walls=if(geometryMode=="أكتر من حائط ورا بعض")walls else emptyList(),
+                space=current(),
+                onDismiss={editIndex=null},
+                onSave={takeoffs[i]=it;editIndex=null}
+            )
+        }
+    }
+}
+
+@Composable
+private fun SurfacePartRow(
+    index:Int,
+    surface:SurfacePart,
+    unit:String,
+    onChange:(SurfacePart)->Unit,
+    onDelete:()->Unit
+){
+    var l by remember(surface.id,unit){mutableStateOf(if(surface.length>0)fmt(surface.length/(lengthUnits.first{it.label==unit}.meters)) else "")}
+    var w by remember(surface.id,unit){mutableStateOf(if(surface.width>0)fmt(surface.width/(lengthUnits.first{it.label==unit}.meters)) else "")}
+    var d by remember(surface.id){mutableStateOf(if(surface.deductionArea>0)fmt(surface.deductionArea) else "")}
+    Surface(shape=RoundedCornerShape(12.dp),color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.35f)){
+        Column(Modifier.padding(8.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
+            Row(verticalAlignment=Alignment.CenterVertically){
+                Text(surface.name,Modifier.weight(1f),fontWeight=FontWeight.Black)
+                IconButton(onClick=onDelete,modifier=Modifier.size(40.dp)){Icon(Icons.Rounded.Delete,"حذف")}
+            }
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                NumberFieldX("الطول",l,{l=it;onChange(surface.copy(length=lengthMeters(it,unit)))},unit,Modifier.weight(1f))
+                NumberFieldX("العرض",w,{w=it;onChange(surface.copy(width=lengthMeters(it,unit)))},unit,Modifier.weight(1f))
+            }
+            NumberFieldX("خصومات المسطح",d,{d=it;onChange(surface.copy(deductionArea=n(it)))},"م²",help="مثال: عمود أو منور أو جزء مش هيتنفذ.")
+        }
+    }
 }
 
 @Composable
 private fun OpeningRow(
     index:Int,
     opening:Opening,
+    walls:List<WallPart>,
     onChange:(Opening)->Unit,
     onDelete:()->Unit
 ){
     var width by remember(opening.id){mutableStateOf(if(opening.width>0)fmt(opening.width) else "")}
     var height by remember(opening.id){mutableStateOf(if(opening.height>0)fmt(opening.height) else "")}
     var sill by remember(opening.id){mutableStateOf(fmt(opening.sill))}
+    var reveal by remember(opening.id){mutableStateOf(if(opening.revealDepth>0)fmt(opening.revealDepth) else "")}
     var count by remember(opening.id){mutableStateOf(opening.count.toString())}
 
     Surface(shape=RoundedCornerShape(13.dp),color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.35f)){
@@ -330,12 +382,22 @@ private fun OpeningRow(
                 Text("${fmt(opening.width*opening.height*opening.count)} م²",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Black)
                 IconButton(onClick=onDelete,modifier=Modifier.size(40.dp)){Icon(Icons.Rounded.Delete,"حذف")}
             }
+            if(walls.isNotEmpty()){
+                ChoiceFieldX(
+                    "الحائط",
+                    walls.firstOrNull{it.id==opening.wallId}?.name ?: walls.first().name,
+                    walls.map{it.name},
+                    {label->onChange(opening.copy(wallId=walls.first{it.name==label}.id))},
+                    help="اربط الفتحة بالحائط الصحيح."
+                )
+            }
             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                 NumberFieldX("العرض",width,{width=it;onChange(opening.copy(width=n(it)))},"م",Modifier.weight(1f))
                 NumberFieldX("الارتفاع",height,{height=it;onChange(opening.copy(height=n(it)))},"م",Modifier.weight(1f))
             }
-            if(opening.kind==OpeningKind.WINDOW){
-                NumberFieldX("جلسة الشباك",sill,{sill=it;onChange(opening.copy(sill=n(it)))},"م",help="من الأرض لأسفل الشباك.")
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                NumberFieldX("جلسة الشباك",sill,{sill=it;onChange(opening.copy(sill=n(it)))},"م",Modifier.weight(1f),help="من الأرض لأسفل الفتحة.")
+                NumberFieldX("عمق الجنب",reveal,{reveal=it;onChange(opening.copy(revealDepth=n(it)))},"م",Modifier.weight(1f),help="لو هتحسب جوانب الباب أو الشباك.")
             }
             NumberFieldX("العدد",count,{count=it;onChange(opening.copy(count=n(it).toInt().coerceAtLeast(1)))},"عدد")
         }
