@@ -15,6 +15,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.fayroz.sitecalculator.data.ProjectRepository
 
+private data class ToolRuntimeContext(
+    val repository:ProjectRepository,
+    val toolId:String,
+    val title:String
+)
+private val LocalToolRuntime=staticCompositionLocalOf<ToolRuntimeContext?>{null}
+
 @Composable
 fun SiteToolCalculatorScreen(
     toolId:String,
@@ -80,7 +87,9 @@ fun ToolPage(
             verticalArrangement=Arrangement.spacedBy(8.dp)
         ){
             item{
-                Column(verticalArrangement=Arrangement.spacedBy(8.dp),content=content)
+                CompositionLocalProvider(LocalToolRuntime provides ToolRuntimeContext(repository,toolId,title)){
+                    Column(verticalArrangement=Arrangement.spacedBy(8.dp),content=content)
+                }
             }
         }
     }
@@ -96,21 +105,22 @@ fun ToolResultCard(
 ){
     var explain by remember{mutableStateOf(false)}
     val clipboard=LocalClipboardManager.current
+    val runtime=LocalToolRuntime.current
+    LaunchedEffect(copyText){
+        if(copyText.isNotBlank())runtime?.repository?.recordToolResult(runtime.toolId,runtime.title,copyText)
+    }
     CardBox{
         SectionTitle(title,"الأرقام تقريبية وبتتغير حسب الخامة والتنفيذ.")
         rows.forEachIndexed{i,(label,value)->MetricRow(label,value,highlight=i==0)}
         HorizontalDivider()
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-            OutlinedButton(onClick={explain=true},modifier=Modifier.weight(1f).heightIn(min=48.dp)){
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
+            TextButton(onClick={explain=true}){
                 Text("اتحسبت إزاي؟")
             }
-            OutlinedButton(
-                onClick={clipboard.setText(AnnotatedString(copyText))},
-                modifier=Modifier.weight(1f).heightIn(min=48.dp)
-            ){
-                Icon(Icons.Rounded.ContentCopy,null,Modifier.size(18.dp))
+            TextButton(onClick={clipboard.setText(AnnotatedString(copyText))}){
+                Icon(Icons.Rounded.ContentCopy,null,Modifier.size(17.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("نسخ النتيجة")
+                Text("نسخ")
             }
         }
         links.forEach{(label,action)->
