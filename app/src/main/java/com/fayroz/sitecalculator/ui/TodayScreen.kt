@@ -47,7 +47,9 @@ fun TodayScreen(
                 EmptyBlock(
                     "مفيش شغل مفتوح",
                     "ابدأ حصر سريع أو افتح مشروع وخلي حالة المكان «شغال عليها».",
-                    Icons.Rounded.Today
+                    Icons.Rounded.Today,
+                    "ابدأ حصر غرفة",
+                    onQuickRoom
                 )
             }
         }else{
