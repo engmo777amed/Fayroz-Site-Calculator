@@ -209,23 +209,37 @@ fun QuickItemScreen(
 @Composable
 fun StairCalculatorScreen(onBack:()->Unit){
     var steps by remember{mutableStateOf("12")}
-    var width by remember{mutableStateOf("1.20")}
-    var tread by remember{mutableStateOf("0.30")}
-    var riser by remember{mutableStateOf("0.17")}
-    var landingLength by remember{mutableStateOf("1.20")}
-    var landingWidth by remember{mutableStateOf("1.20")}
+    var dimUnit by remember{mutableStateOf("سم")}
+    var width by remember{mutableStateOf("120")}
+    var tread by remember{mutableStateOf("30")}
+    var riser by remember{mutableStateOf("17")}
+    var landingLength by remember{mutableStateOf("120")}
+    var landingWidth by remember{mutableStateOf("120")}
     var landings by remember{mutableStateOf("1")}
     var waste by remember{mutableStateOf("7")}
 
+    fun changeUnit(newUnit:String){
+        if(newUnit==dimUnit)return
+        val old=dimUnit
+        width=convertLengthText(width,old,newUnit)
+        tread=convertLengthText(tread,old,newUnit)
+        riser=convertLengthText(riser,old,newUnit)
+        landingLength=convertLengthText(landingLength,old,newUnit)
+        landingWidth=convertLengthText(landingWidth,old,newUnit)
+        dimUnit=newUnit
+    }
+
     val nSteps=n(steps).toInt().coerceAtLeast(0)
-    val stairWidth=n(width)
-    val treadDepth=n(tread)
-    val riserHeight=n(riser)
-    val landingArea=n(landingLength)*n(landingWidth)*n(landings).toInt().coerceAtLeast(0)
+    val stairWidth=lengthToMeters(width,dimUnit)
+    val treadDepth=lengthToMeters(tread,dimUnit)
+    val riserHeight=lengthToMeters(riser,dimUnit)
+    val landingL=lengthToMeters(landingLength,dimUnit)
+    val landingW=lengthToMeters(landingWidth,dimUnit)
+    val landingArea=landingL*landingW*n(landings).toInt().coerceAtLeast(0)
     val treadsArea=nSteps*stairWidth*treadDepth
     val risersArea=nSteps*stairWidth*riserHeight
     val finishArea=(treadsArea+risersArea+landingArea)*(1+n(waste)/100.0)
-    val sideLength=nSteps*(treadDepth+riserHeight)*2 + n(landingLength)*2*n(landings).toInt().coerceAtLeast(0)
+    val sideLength=nSteps*(treadDepth+riserHeight)*2 + landingL*2*n(landings).toInt().coerceAtLeast(0)
 
     Scaffold(topBar={AppBarX("حساب السلم","نوايم وقوائم وبسطات ووزرات",onBack)}){
         LazyColumn(
@@ -235,19 +249,26 @@ fun StairCalculatorScreen(onBack:()->Unit){
         ){
             item{
                 CardBox{
-                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
+                        Text("دخل بيانات السلم",style=MaterialTheme.typography.titleSmall)
+                        ResetDefaultsButton{
+                            dimUnit="سم";steps="12";width="120";tread="30";riser="17";landingLength="120";landingWidth="120";landings="1";waste="7"
+                        }
+                    }
+                    ChoiceFieldX("وحدة الأبعاد",dimUnit,listOf("م","سم","مم"),{changeUnit(it)},"لما تغير الوحدة، البرنامج بيحوّل الأرقام تلقائيًا.")
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
                         NumberFieldX("عدد الدرجات",steps,{steps=it},"درجة",modifier=Modifier.weight(1f))
                         NumberFieldX("عرض السلم",width,{width=it},dimUnit,modifier=Modifier.weight(1f))
                     }
-                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                        NumberFieldX("النائمة",tread,{tread=it},dimUnit,modifier=Modifier.weight(1f))
-                        NumberFieldX("القائمة",riser,{riser=it},dimUnit,modifier=Modifier.weight(1f))
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                        NumberFieldX("النائمة",tread,{tread=it},dimUnit,"عرض الجزء الأفقي من الدرجة.",Modifier.weight(1f))
+                        NumberFieldX("القائمة",riser,{riser=it},dimUnit,"ارتفاع الدرجة.",Modifier.weight(1f))
                     }
-                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
                         NumberFieldX("طول البسطة",landingLength,{landingLength=it},dimUnit,modifier=Modifier.weight(1f))
                         NumberFieldX("عرض البسطة",landingWidth,{landingWidth=it},dimUnit,modifier=Modifier.weight(1f))
                     }
-                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
                         NumberFieldX("عدد البسطات",landings,{landings=it},"عدد",modifier=Modifier.weight(1f))
                         NumberFieldX("الهالك",waste,{waste=it},"%",modifier=Modifier.weight(1f))
                     }
@@ -256,10 +277,10 @@ fun StairCalculatorScreen(onBack:()->Unit){
             item{
                 CardBox{
                     SectionTitle("النتيجة","الكميات الأساسية للسلم.")
+                    MetricRow("إجمالي التشطيب + الهالك","${fmt(finishArea)} م²",true)
                     MetricRow("مسطح النوايم","${fmt(treadsArea)} م²")
                     MetricRow("مسطح القوائم","${fmt(risersArea)} م²")
                     MetricRow("مسطح البسطات","${fmt(landingArea)} م²")
-                    MetricRow("إجمالي تشطيب + هالك","${fmt(finishArea)} م²",true)
                     MetricRow("وزرة جانبي السلم تقريبًا","${fmt(sideLength)} م ط")
                 }
             }
