@@ -100,13 +100,13 @@ fun QuickItemScreen(
                 CardBox{
                     TextFieldX("اسم البند",name,{name=it},placeholder="مثال: خرسانة قاعدة جهاز")
                     ChoiceFieldX("الوحدة",unit.label,MeasureUnit.entries.map{it.label},{label->unit=MeasureUnit.entries.first{it.label==label}})
-                    ChoiceFieldX("طريقة الحصر",method.label,methods.map{it.label},{label->method=methods.first{it.label==label}})
+                    ChoiceFieldX("هتحسب البند إزاي؟",method.label,methods.map{it.label},{label->method=methods.first{it.label==label}})
                     when{
                         method in listOf(CalcMethod.DIRECT_AREA,CalcMethod.DIRECT_LENGTH,CalcMethod.DIRECT_VOLUME,CalcMethod.DIRECT_COUNT) ->
                             NumberFieldX("الكمية",value,{value=it},unit.label)
 
                         method==CalcMethod.WALL_SEGMENTS -> {
-                            Text("أدخل الحوائط المتتابعة؛ يتم جمعها كبند واحد.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("دخل الحوائط ورا بعض؛ البرنامج هيجمعهم كبند واحد.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                             walls.forEachIndexed{index,wall->
                                 Surface(shape=MaterialTheme.shapes.small,color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.35f)){
                                     Column(Modifier.padding(8.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
@@ -145,7 +145,7 @@ fun QuickItemScreen(
             }
             item{
                 CardBox{
-                    SectionTitle("النتيجة","الحساب يتحدث فورًا.")
+                    SectionTitle("النتيجة","النتيجة بتتغير مع أي تعديل.")
                     MetricRow(name.ifBlank{"البند"},"${fmt(result.final)} ${unit.label}",true)
                     MetricRow("قبل الهالك","${fmt(result.calculated-result.waste)} ${unit.label}")
                     if(result.waste>0)MetricRow("الهالك","${fmt(result.waste)} ${unit.label}")
@@ -199,7 +199,7 @@ fun StairCalculatorScreen(onBack:()->Unit){
     val finishArea=(treadsArea+risersArea+landingArea)*(1+n(waste)/100.0)
     val sideLength=nSteps*(treadDepth+riserHeight)*2 + n(landingLength)*2*n(landings).toInt().coerceAtLeast(0)
 
-    Scaffold(topBar={AppBarX("حصر السلم","نوايم وقوائم وبسطات ووزرات",onBack)}){
+    Scaffold(topBar={AppBarX("حساب السلم","نوايم وقوائم وبسطات ووزرات",onBack)}){
         LazyColumn(
             Modifier.fillMaxSize().padding(it).imePadding(),
             contentPadding=PaddingValues(12.dp),
@@ -227,7 +227,7 @@ fun StairCalculatorScreen(onBack:()->Unit){
             }
             item{
                 CardBox{
-                    SectionTitle("النتيجة","الكميات الهندسية الأساسية للسلم.")
+                    SectionTitle("النتيجة","الكميات الأساسية للسلم.")
                     MetricRow("مسطح النوايم","${fmt(treadsArea)} م²")
                     MetricRow("مسطح القوائم","${fmt(risersArea)} م²")
                     MetricRow("مسطح البسطات","${fmt(landingArea)} م²")
