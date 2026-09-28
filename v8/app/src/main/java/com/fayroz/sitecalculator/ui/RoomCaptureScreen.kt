@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package com.fayroz.sitecalculator.ui
 
 import androidx.compose.foundation.layout.*
@@ -232,7 +234,7 @@ fun RoomCaptureScreen(
                                         else takeoffs.add(def.create())
                                     },
                                     label={Text(def.name)},
-                                    leadingIcon={if(selected){{Icon(Icons.Rounded.Check,null,Modifier.size(16.dp))}}else null}
+                                    leadingIcon=if(selected){{ Icon(Icons.Rounded.Check,null,Modifier.size(16.dp)) }}else null
                                 )
                             }
                         }
