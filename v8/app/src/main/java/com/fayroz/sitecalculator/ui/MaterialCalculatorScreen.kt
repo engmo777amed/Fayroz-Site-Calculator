@@ -157,7 +157,7 @@ fun MaterialCalculatorScreen(
         topBar={
             TopAppBar(
                 title={Column{Text(title,fontWeight=FontWeight.Black);Text("القيم الافتراضية واضحة وقابلة للتعديل",style=MaterialTheme.typography.labelSmall)}},
-                navigationIcon={IconButton(onClick=onBack){Icon(Icons.Rounded.ArrowBack,"رجوع")}},
+                navigationIcon={IconButton(onClick=onBack){Icon(Icons.Rounded.ArrowForward,"رجوع")}},
                 actions={IconButton(onClick={helpOpen=true}){Icon(Icons.Rounded.HelpOutline,"شرح")}}
             )
         }
