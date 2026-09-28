@@ -28,6 +28,7 @@ fun HomeScreen(
     onToday:()->Unit,
     onTools:()->Unit,
     onNewRoom:()->Unit,
+    onDirectItem:()->Unit,
     onSettings:()->Unit
 ){
     val project=active?.let{a->projects.firstOrNull{it.id==a.projectId}}
@@ -87,14 +88,21 @@ fun HomeScreen(
         item{PageHeader("ابدأ بسرعة","الحاجات اللي بتستخدمها فعلاً في الموقع")}
         item{
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                HomeAction("حصر حسب الفراغ","غرفة أو صالة أو حمام",Icons.Rounded.MeetingRoom,onNewRoom,Modifier.weight(1f))
+                HomeAction("حصر حسب البند","كمية جاهزة مباشرة",Icons.Rounded.Checklist,onDirectItem,Modifier.weight(1f))
+            }
+        }
+        item{
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
                 HomeAction("شغل اليوم","المفتوح وآخر الحسابات",Icons.Rounded.Today,onToday,Modifier.weight(1f))
                 HomeAction("احسب خامات","من حصر أو مساحة جاهزة",Icons.Rounded.Calculate,onTools,Modifier.weight(1f))
             }
         }
         item{
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                HomeAction("حصر غرفة","داخل المشروع النشط",Icons.Rounded.MeetingRoom,onNewRoom,Modifier.weight(1f))
-                HomeAction("المشروعات","اختار أو غيّر المشروع",Icons.Rounded.FolderOpen,onProjects,Modifier.weight(1f))
+            OutlinedButton(onClick=onProjects,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){
+                Icon(Icons.Rounded.FolderOpen,null)
+                Spacer(Modifier.width(5.dp))
+                Text("المشروعات")
             }
         }
 
