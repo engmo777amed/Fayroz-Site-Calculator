@@ -19,6 +19,12 @@ data class ToolDef(
     val icon:ImageVector
 )
 
+val utilityTools=listOf(
+    ToolDef("slope","الميل والمناسيب","فرق منسوب وميل",Icons.Rounded.TrendingDown),
+    ToolDef("convert","تحويل الوحدات","م / سم / مم / م² / لتر",Icons.Rounded.SwapHoriz),
+    ToolDef("area","مساحة غير منتظمة","إضافة وخصم أجزاء",Icons.Rounded.AspectRatio)
+)
+
 val materialTools=listOf(
     ToolDef("plaster","خامات المحارة","أسمنت + رمل",Icons.Rounded.FormatPaint),
     ToolDef("splash","مونة الطرطشة","قبل المحارة",Icons.Rounded.Grain),
@@ -61,6 +67,18 @@ fun ToolsScreen(
                     Column(Modifier.fillMaxWidth().padding(9.dp)){
                         Text(r.title,fontWeight=FontWeight.Black)
                         Text(r.summary,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=2)
+                    }
+                }
+            }
+        }
+
+        item{PageHeader("أدوات الموقع","3 أدوات سريعة بس")}
+        item{
+            Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
+                utilityTools.chunked(2).forEach{row->
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                        row.forEach{tool->ToolCard(tool,{onOpen(tool.id)},Modifier.weight(1f))}
+                        if(row.size==1)Spacer(Modifier.weight(1f))
                     }
                 }
             }
