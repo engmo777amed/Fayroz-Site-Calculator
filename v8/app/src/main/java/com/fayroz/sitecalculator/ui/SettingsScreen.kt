@@ -50,7 +50,7 @@ fun SettingsScreen(
         topBar={
             TopAppBar(
                 title={Text("الإعدادات",fontWeight=FontWeight.Black)},
-                navigationIcon={IconButton(onClick=onBack){Icon(Icons.Rounded.ArrowBack,"رجوع")}}
+                navigationIcon={IconButton(onClick=onBack){Icon(Icons.Rounded.ArrowForward,"رجوع")}}
             )
         }
     ){padding->
