@@ -1,8 +1,6 @@
 package com.fayroz.sitecalculator.ui
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
@@ -29,48 +27,76 @@ fun TodayScreen(
         }}}
     }.sortedByDescending{it.space.updatedAt}
 
-    LazyColumn(
+    androidx.compose.foundation.lazy.LazyColumn(
         Modifier.fillMaxSize(),
-        contentPadding=PaddingValues(12.dp),
-        verticalArrangement=Arrangement.spacedBy(8.dp)
+        contentPadding=PaddingValues(horizontal=12.dp,vertical=10.dp),
+        verticalArrangement=Arrangement.spacedBy(9.dp)
     ){
-        item{
-            CompactBrandHeader(
-                title="حصر اليوم",
-                subtitle="كمّل العناصر الجاري حصرها أو افتح حصرًا سريعًا.",
-                stats=listOf("جاري" to active.size.toString(),"مشروعات" to projects.size.toString(),"الوضع" to "موقع")
-            )
-        }
+        item{ScreenHeader("شغل اليوم",if(active.isEmpty())"مفيش حاجة شغال عليها دلوقتي" else "${active.size} مكان شغال عليه")}
+
         item{
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                DashboardCard("فراغ سريع","حصر كامل بدون مشروع",Icons.Rounded.MeetingRoom,onQuickRoom,true,Modifier.weight(1f))
-                DashboardCard("بند سريع","كمية مباشرة أو هندسية",Icons.Rounded.Calculate,onQuickItem,false,Modifier.weight(1f))
+                TodayAction("حصر غرفة","من غير مشروع",Icons.Rounded.MeetingRoom,onQuickRoom,Modifier.weight(1f))
+                TodayAction("حصر بند","كمية سريعة",Icons.Rounded.Calculate,onQuickItem,Modifier.weight(1f))
             }
         }
-        item{SectionTitle("الجاري حصره","الغرف بحالة «جاري» تظهر هنا تلقائيًا.")}
-        if(active.isEmpty())item{EmptyBlock("لا يوجد حصر جاري","غيّر حالة أي غرفة إلى «جاري» أو ابدأ حصرًا سريعًا.",Icons.Rounded.Today)}
-        else item{
-            Column(verticalArrangement=Arrangement.spacedBy(6.dp)){
-                active.forEach{ref->
-                    Surface(
-                        onClick={onOpenSpace(ref)},
-                        shape=RoundedCornerShape(15.dp),
-                        color=MaterialTheme.colorScheme.surface,
-                        border=BorderStroke(1.dp,MaterialTheme.colorScheme.secondary.copy(alpha=.30f))
-                    ){
-                        Row(Modifier.fillMaxWidth().padding(10.dp),verticalAlignment=Alignment.CenterVertically){
-                            Surface(shape=RoundedCornerShape(10.dp),color=MaterialTheme.colorScheme.secondaryContainer){
-                                Icon(Icons.Rounded.EditNote,null,Modifier.padding(7.dp).size(18.dp),tint=MaterialTheme.colorScheme.secondary)
-                            }
-                            Spacer(Modifier.width(8.dp))
-                            Column(Modifier.weight(1f)){
-                                Text(ref.space.name,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Black)
-                                Text("${ref.project} ← ${ref.section} • ${ref.space.takeoffs.size} بند",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            Icon(Icons.Rounded.ChevronLeft,null,tint=MaterialTheme.colorScheme.secondary)
+
+        item{SectionTitle("كمّل شغلك","أي مكان حالته «شغال عليها» هيظهر هنا.")}
+        if(active.isEmpty()){
+            item{
+                EmptyBlock(
+                    "مفيش شغل مفتوح",
+                    "ابدأ حصر سريع أو افتح مشروع وخلي حالة المكان «شغال عليها».",
+                    Icons.Rounded.Today
+                )
+            }
+        }else{
+            items(active.size){index->
+                val ref=active[index]
+                Surface(
+                    onClick={onOpenSpace(ref)},
+                    shape=RoundedCornerShape(15.dp),
+                    color=MaterialTheme.colorScheme.surface,
+                    tonalElevation=1.dp
+                ){
+                    Row(Modifier.fillMaxWidth().padding(10.dp),verticalAlignment=Alignment.CenterVertically){
+                        Surface(shape=RoundedCornerShape(10.dp),color=MaterialTheme.colorScheme.secondaryContainer){
+                            Icon(Icons.Rounded.EditNote,null,Modifier.padding(7.dp).size(18.dp),tint=MaterialTheme.colorScheme.secondary)
                         }
+                        Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f)){
+                            Text(ref.space.name,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Black)
+                            Text(
+                                ref.project+" ← "+ref.section+" • "+ref.space.takeoffs.size+" بند",
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Icon(Icons.Rounded.ChevronLeft,null,tint=MaterialTheme.colorScheme.secondary)
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TodayAction(
+    title:String,
+    subtitle:String,
+    icon:androidx.compose.ui.graphics.vector.ImageVector,
+    onClick:()->Unit,
+    modifier:Modifier=Modifier
+){
+    Surface(onClick=onClick,modifier=modifier.heightIn(min=84.dp),shape=RoundedCornerShape(16.dp),tonalElevation=1.dp){
+        Row(Modifier.padding(10.dp),verticalAlignment=Alignment.CenterVertically){
+            Surface(shape=RoundedCornerShape(10.dp),color=MaterialTheme.colorScheme.primaryContainer){
+                Icon(icon,null,Modifier.padding(7.dp).size(19.dp),tint=MaterialTheme.colorScheme.primary)
+            }
+            Spacer(Modifier.width(8.dp))
+            Column{
+                Text(title,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Black)
+                Text(subtitle,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
