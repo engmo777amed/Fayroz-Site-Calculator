@@ -29,7 +29,7 @@ object Catalog {
         ItemDef("الوزرات",UnitType.LENGTH,CalcKind.SKIRTING,5.0),
         ItemDef("عزل الأرضية",UnitType.AREA,CalcKind.WATERPROOF,5.0,upstand=.20),
         ItemDef("سقف جبس بورد",UnitType.AREA,CalcKind.FLOOR,10.0),
-        ItemDef("مونة تسوية الأرضيات",UnitType.VOLUME,CalcKind.SCREED_VOLUME,5.0,layerThickness=.05)
+        ItemDef("مونة تسوية الأرضيات",UnitType.AREA,CalcKind.FLOOR,5.0)
     )
 
     val roomTypes=listOf("غرفة نوم","معيشة","صالة","حمام","مطبخ","بلكونة","ممر","غرفة مخصصة")
