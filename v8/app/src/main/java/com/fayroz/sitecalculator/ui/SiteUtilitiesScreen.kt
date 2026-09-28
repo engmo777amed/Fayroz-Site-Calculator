@@ -36,7 +36,7 @@ private fun SlopeUtility(onBack:()->Unit){
     val diff=if(mode=="معايا الميل")l*n(slope)/100.0 else abs(endM-startM)
     val calculatedSlope=if(l>0)diff/l*100.0 else 0.0
 
-    Scaffold(topBar={TopAppBar(title={Text("الميل والمناسيب",fontWeight=FontWeight.Black)},navigationIcon={IconButton(onClick=onBack){Icon(Icons.Rounded.ArrowBack,"رجوع")}})}){p->
+    Scaffold(topBar={TopAppBar(title={Text("الميل والمناسيب",fontWeight=FontWeight.Black)},navigationIcon={IconButton(onClick=onBack){Icon(Icons.Rounded.ArrowForward,"رجوع")}})}){p->
         androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize().padding(p),contentPadding=PaddingValues(12.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){
             item{BoxCard{
                 ChoiceFieldX("معاك إيه؟",mode,listOf("معايا الميل","معايا المنسوبين"),{mode=it})
@@ -60,7 +60,7 @@ private fun UnitUtility(onBack:()->Unit){
     var type by remember{mutableStateOf("طول")}
     var unit by remember{mutableStateOf("م")}
     val x=n(value)
-    Scaffold(topBar={TopAppBar(title={Text("تحويل الوحدات",fontWeight=FontWeight.Black)},navigationIcon={IconButton(onClick=onBack){Icon(Icons.Rounded.ArrowBack,"رجوع")}})}){p->
+    Scaffold(topBar={TopAppBar(title={Text("تحويل الوحدات",fontWeight=FontWeight.Black)},navigationIcon={IconButton(onClick=onBack){Icon(Icons.Rounded.ArrowForward,"رجوع")}})}){p->
         androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize().padding(p),contentPadding=PaddingValues(12.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){
             item{BoxCard{
                 ChoiceFieldX("نوع التحويل",type,listOf("طول","مساحة","حجم"),{
@@ -100,7 +100,7 @@ private fun IrregularAreaUtility(onBack:()->Unit){
         if(part.deduct)-a else a
     }.coerceAtLeast(0.0)
 
-    Scaffold(topBar={TopAppBar(title={Text("مساحة غير منتظمة",fontWeight=FontWeight.Black)},navigationIcon={IconButton(onClick=onBack){Icon(Icons.Rounded.ArrowBack,"رجوع")}})}){p->
+    Scaffold(topBar={TopAppBar(title={Text("مساحة غير منتظمة",fontWeight=FontWeight.Black)},navigationIcon={IconButton(onClick=onBack){Icon(Icons.Rounded.ArrowForward,"رجوع")}})}){p->
         androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize().padding(p),contentPadding=PaddingValues(12.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){
             item{BoxCard{
                 ChoiceFieldX("وحدة الأبعاد",unit,listOf("م","سم","مم"),{new->
