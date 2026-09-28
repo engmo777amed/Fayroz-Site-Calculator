@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package com.fayroz.sitecalculator.ui
 
 import androidx.compose.foundation.layout.*
@@ -218,7 +220,7 @@ fun MaterialCalculatorScreen(
                             Text("احفظ النتيجة في المشروع",fontWeight=FontWeight.Black)
                             ChoiceFieldX("مكان الحفظ",targetLabel,targets.map{it.label},{targetLabel=it})
                             Button(
-                                onClick={target?.let{{onSave(result,it.sectionId,it.spaceId)}} ?: {}},
+                                onClick={target?.let{onSave(result,it.sectionId,it.spaceId)}},
                                 modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)
                             ){
                                 Icon(Icons.Rounded.Save,null,Modifier.size(18.dp));Spacer(Modifier.width(5.dp));Text("ضيف للمشروع")
