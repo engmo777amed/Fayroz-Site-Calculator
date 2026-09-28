@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.fayroz.sitecalculator.core.*
 import com.fayroz.sitecalculator.domain.QuantityEngine
+import com.fayroz.sitecalculator.domain.MaterialEngine
 
 @Composable
 fun SectionScreen(
@@ -27,6 +28,8 @@ fun SectionScreen(
     onDetachCopy:(String)->Unit
 ){
     val summary=QuantityEngine.summarize(section)
+    val materials=MaterialEngine.aggregate(summary)
+    var materialsOpen by remember{mutableStateOf(false)}
 
     Scaffold(
         topBar={
@@ -53,6 +56,13 @@ fun SectionScreen(
                     BoxCard{
                         summary.take(6).forEachIndexed{i,line->
                             MetricRow(line.name,"${fmt(line.quantity)} ${line.unit.label}",i==0)
+                        }
+                        if(materials.isNotEmpty()){
+                            Button(onClick={materialsOpen=true},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){
+                                Icon(Icons.Rounded.Inventory2,null)
+                                Spacer(Modifier.width(5.dp))
+                                Text("إجمالي خامات الجزء")
+                            }
                         }
                     }
                 }
@@ -116,4 +126,23 @@ fun SectionScreen(
             }
         }
     }
+    if(materialsOpen){
+        AlertDialog(
+            onDismissRequest={materialsOpen=false},
+            title={Text("إجمالي خامات الجزء",fontWeight=FontWeight.Black)},
+            text={
+                androidx.compose.foundation.lazy.LazyColumn(verticalArrangement=Arrangement.spacedBy(9.dp)){
+                    items(materials.size){i->
+                        val m=materials[i]
+                        Column{
+                            Text(m.title,fontWeight=FontWeight.Black,color=MaterialTheme.colorScheme.primary)
+                            m.lines.forEach{line->Text("• ${line.label}: ${line.value}",style=MaterialTheme.typography.bodySmall)}
+                        }
+                    }
+                }
+            },
+            confirmButton={TextButton(onClick={materialsOpen=false}){Text("تمام")}}
+        )
+    }
+
 }
