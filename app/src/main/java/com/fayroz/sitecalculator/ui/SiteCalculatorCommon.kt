@@ -30,8 +30,8 @@ fun SiteToolCalculatorScreen(
         "masonry_materials"->MasonryMaterialsScreen(repository,seedArea,onBack)
         "concrete_materials"->ConcreteMaterialsScreen(repository,onBack)
 
-        "tile_purchase"->TilePurchaseScreen(repository,seedArea,onBack)
-        "tile_adhesive"->TileAdhesiveScreen(repository,seedArea,onBack)
+        "tile_purchase"->TilePurchaseScreen(repository,seedArea,onBack,onOpenTool)
+        "tile_adhesive"->TileAdhesiveScreen(repository,seedArea,onBack,onOpenTool)
         "paint_materials"->PaintMaterialsScreen(repository,seedArea,onBack)
         "waterproof_materials"->WaterproofMaterialsScreen(repository,seedArea,onBack)
         "gypsum_materials"->GypsumMaterialsScreen(repository,seedArea,onBack)
