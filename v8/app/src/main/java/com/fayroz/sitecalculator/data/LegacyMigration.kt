@@ -86,7 +86,9 @@ object LegacyMigration {
     }
 
     private fun takeoff(x:JSONObject):Takeoff{
-        val kind=when(x.optString("method")){
+        val normalizedName=normalize(x.optString("name","بند"))
+        val isLeveling=normalizedName=="مونة تسوية الأرضيات"
+        val kind=if(isLeveling) CalcKind.FLOOR else when(x.optString("method")){
             "ROOM_WALLS","WALL_SEGMENTS"->CalcKind.WALLS
             "CEILING_SURFACES"->CalcKind.CEILING
             "FLOOR_SURFACES"->CalcKind.FLOOR
@@ -98,8 +100,8 @@ object LegacyMigration {
         }
         return Takeoff(
             id=x.optString("id",UUID.randomUUID().toString()),
-            name=normalize(x.optString("name","بند")),
-            unit=runCatching{UnitType.valueOf(x.optString("unit","AREA"))}.getOrDefault(UnitType.AREA),
+            name=normalizedName,
+            unit=if(isLeveling)UnitType.AREA else runCatching{UnitType.valueOf(x.optString("unit","AREA"))}.getOrDefault(UnitType.AREA),
             kind=kind,
             waste=x.optDouble("wastePercent",0.0),
             tileHeight=x.optDouble("tileHeight",2.4),
