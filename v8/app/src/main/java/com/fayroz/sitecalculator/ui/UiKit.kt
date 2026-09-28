@@ -58,7 +58,11 @@ fun BoxCard(content:@Composable ColumnScope.()->Unit){
 fun HelpDot(title:String,text:String){
     var open by remember{mutableStateOf(false)}
     IconButton(onClick={open=true},modifier=Modifier.size(40.dp)){
-        Icon(Icons.Rounded.HelpOutline,"شرح",Modifier.size(19.dp),tint=MaterialTheme.colorScheme.primary)
+        Surface(shape=RoundedCornerShape(999.dp),color=MaterialTheme.colorScheme.primaryContainer){
+            Box(Modifier.size(22.dp),contentAlignment=Alignment.Center){
+                Text("!",fontWeight=FontWeight.Black,color=MaterialTheme.colorScheme.primary,style=MaterialTheme.typography.labelMedium)
+            }
+        }
     }
     if(open){
         AlertDialog(
@@ -69,7 +73,6 @@ fun HelpDot(title:String,text:String){
         )
     }
 }
-
 @Composable
 fun TextFieldX(
     label:String,
