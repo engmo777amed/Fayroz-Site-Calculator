@@ -44,7 +44,13 @@ fun MaterialCalculatorScreen(
     var sand by remember(toolId){mutableStateOf(repository.pref("$toolId.sand",firstPreset?.sand?.let(::fmt)?:"4"))}
     var thickness by remember(toolId){mutableStateOf(repository.pref("$toolId.thickness",firstPreset?.thicknessMm?.let(::fmt)?:"15"))}
     var thicknessUnit by remember(toolId){mutableStateOf(repository.pref("$toolId.thicknessUnit","مم"))}
-    var waste by remember(toolId){mutableStateOf(repository.pref("$toolId.waste",firstPreset?.waste?.let(::fmt)?:"5"))}
+    val defaultWaste=when(toolId){
+        "tile"->"7"
+        "gypsum"->"10"
+        "splash"->"10"
+        else->firstPreset?.waste?.let(::fmt)?:"5"
+    }
+    var waste by remember(toolId){mutableStateOf(repository.pref("$toolId.waste",defaultWaste))}
 
     var wallThickness by remember{mutableStateOf(repository.pref("masonry.wall","12"))}
     var wallUnit by remember{mutableStateOf(repository.pref("masonry.wallUnit","سم"))}
