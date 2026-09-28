@@ -180,7 +180,7 @@ fun TextFieldX(label:String,value:String,onChange:(String)->Unit,help:String?=nu
         OutlinedTextField(
             value=value,onValueChange=onChange,modifier=Modifier.fillMaxWidth(),singleLine=true,
             placeholder={if(placeholder.isNotBlank())Text(placeholder,maxLines=1)},
-            trailingIcon={if(help!=null){{CompactHelpIcon(label,help)}}else null},
+            trailingIcon=if(help!=null){{ CompactHelpIcon(label,help) }}else null,
             shape=RoundedCornerShape(11.dp)
         )
     }
@@ -194,7 +194,7 @@ fun NumberFieldX(label:String,value:String,onChange:(String)->Unit,unit:String,h
             value=value,onValueChange={raw->onChange(raw.filter{it.isDigit()||it=='.'||it==','||it=='٫'})},
             modifier=Modifier.fillMaxWidth(),singleLine=true,
             suffix={Text(unit,style=MaterialTheme.typography.labelSmall)},
-            trailingIcon={if(help!=null){{CompactHelpIcon(label,help)}}else null},
+            trailingIcon=if(help!=null){{ CompactHelpIcon(label,help) }}else null,
             keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
             shape=RoundedCornerShape(11.dp)
         )
