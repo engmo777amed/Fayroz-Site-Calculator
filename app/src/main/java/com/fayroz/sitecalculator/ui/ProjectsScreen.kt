@@ -278,7 +278,7 @@ fun ProjectDetailScreen(
             "دهان الحوائط","دهان السقف"->"paint_materials"
             "عزل الأرضية"->"waterproof_materials"
             "سقف جبس بورد","جبس بورد جوانب ساقطة"->"gypsum_materials"
-            "سكريد / مونة تسوية"->"screed_materials"
+            "سكريد / مونة تسوية","مونة تسوية الأرضيات"->"screed_materials"
             else->null
         }
         val totalForKey=contributions.sumOf{it.third}
