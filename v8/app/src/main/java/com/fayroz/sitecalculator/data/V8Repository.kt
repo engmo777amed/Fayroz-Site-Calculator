@@ -69,6 +69,20 @@ class V8Repository(context:Context){
         return V8Codec.decodeProjects(raw).firstOrNull()?.calculations?:emptyList()
     }
 
+    fun exportBackup():String=JSONObject().apply{
+        put("version",8)
+        put("projects",org.json.JSONArray(prefs.getString("projects","[]")?:"[]"))
+    }.toString()
+
+    fun importBackup(raw:String):Boolean=runCatching{
+        val root=JSONObject(raw)
+        val arr=root.getJSONArray("projects")
+        val parsed=V8Codec.decodeProjects(arr.toString())
+        if(parsed.isEmpty()&&arr.length()>0)error("invalid")
+        prefs.edit().putString("projects",arr.toString()).apply()
+        true
+    }.getOrDefault(false)
+
     fun appearance():String=prefs.getString("appearance","system")?:"system"
     fun setAppearance(value:String)=prefs.edit().putString("appearance",value).apply()
 
