@@ -31,7 +31,7 @@ fun ProjectDetailScreen(
     var materialsOpen by remember{mutableStateOf(false)}
     var drillName by remember{mutableStateOf<String?>(null)}
     val summary=QuantityEngine.summarize(project)
-    val allMaterials=summary.mapNotNull(MaterialEngine::forSummary)
+    val allMaterials=MaterialEngine.aggregate(summary)
 
     Scaffold(
         topBar={
