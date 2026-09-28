@@ -84,6 +84,32 @@ class ProjectRepository(context:Context){
         appPrefs.getStringSet("favorites",setOf("محارة الحوائط","دهان الحوائط","الأرضيات","سيراميك الحوائط")) ?: emptySet()
     fun saveFavorites(items:Set<String>)=appPrefs.edit().putStringSet("favorites",items).apply()
 
+    fun getToolFavorites():Set<String> =
+        appPrefs.getStringSet("tool_favorites",setOf("plaster_materials","splash_materials","tile_purchase","slope_levels")) ?: emptySet()
+
+    fun toggleToolFavorite(id:String){
+        val next=getToolFavorites().toMutableSet()
+        if(id in next) next.remove(id) else next.add(id)
+        appPrefs.edit().putStringSet("tool_favorites",next).apply()
+    }
+
+    fun getRecentTools():List<String>{
+        val raw=appPrefs.getString("recent_tools","") ?: ""
+        return raw.split("|").filter{it.isNotBlank()}.take(6)
+    }
+
+    fun recordToolUse(id:String){
+        val next=(listOf(id)+getRecentTools().filter{it!=id}).take(6)
+        appPrefs.edit().putString("recent_tools",next.joinToString("|")).apply()
+    }
+
+    fun getToolValue(key:String,default:String):String =
+        appPrefs.getString("tool_value_$key",default) ?: default
+
+    fun setToolValue(key:String,value:String){
+        appPrefs.edit().putString("tool_value_$key",value).apply()
+    }
+
     fun exportBackup():String=JSONObject().apply{
         put("version",7);put("projects",JSONArray(projectPrefs.getString("projects","[]")?:"[]"))
         put("defaults",JSONObject().apply{
