@@ -18,7 +18,6 @@ import java.io.ByteArrayOutputStream
 import java.util.zip.ZipInputStream
 import org.junit.Assert.*
 import androidx.compose.ui.test.*
-import androidx.test.espresso.Espresso
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import org.junit.Rule
 import org.junit.Test
@@ -94,7 +93,8 @@ class DeviceTest {
     compose.onAllNodesWithText(text,useUnmergedTree=true).onFirst().assertExists()
  }
  private fun clickText(text:String){
-    Espresso.closeSoftKeyboard()
+    val imePackage=device.executeShellCommand("settings get secure default_input_method").trim().substringBefore("/")
+    if(imePackage.isNotBlank()&&device.hasObject(By.pkg(imePackage))){device.pressBack();device.waitForIdle()}
     compose.waitForIdle()
     val node=compose.onAllNodesWithText(text).onLast()
     runCatching{node.performScrollTo()}
