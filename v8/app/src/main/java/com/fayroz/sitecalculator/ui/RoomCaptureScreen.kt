@@ -372,12 +372,12 @@ fun RoomCaptureScreen(
                                             }
                                             Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
                                                 if(i>0)TextButton(onClick={val previous=takeoffs[i-1];takeoffs[i-1]=takeoffs[i];takeoffs[i]=previous}){Text("↑")}
-                                                TextButton(onClick={
+                                                TextButton(modifier=Modifier.weight(1f),onClick={
                                                     val copy=item.copy(id=UUID.randomUUID().toString(),parts=item.parts.map{it.copy(id=UUID.randomUUID().toString())})
                                                     takeoffs.add(i+1,copy)
                                                 }){Text("نسخ البند")}
-                                                TextButton(onClick={editIndex=i}){Text("ضبط / اتحسبت إزاي؟")}
-                                                TextButton(onClick={takeoffs.removeAt(i)}){Text("حذف",color=MaterialTheme.colorScheme.error)}
+                                                TextButton(modifier=Modifier.weight(1f),onClick={editIndex=i}){Text("ضبط / اتحسبت إزاي؟")}
+                                                IconButton(onClick={takeoffs.removeAt(i)}){Icon(Icons.Rounded.Delete,"حذف",tint=MaterialTheme.colorScheme.error)}
                                             }
                                             QuantityEngine.purchaseInfo(space,item)?.let{purchase->
                                                 Text("شراء تقريبي: ${purchase.pieces} قطعة"+(purchase.packs?.let{" • $it كرتونة"}?:""),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.tertiary)
