@@ -32,7 +32,7 @@ private sealed interface Route{
     data class SectionDetail(val projectId:String,val sectionId:String):Route
     data class RoomEdit(val projectId:String,val sectionId:String,val spaceId:String?,val session:Long=System.nanoTime()):Route
     data class DirectItem(val projectId:String):Route
-    data class Tool(val toolId:String,val seed:MaterialResult?=null,val projectId:String?=null):Route
+    data class Tool(val toolId:String,val seed:MaterialResult?=null,val projectId:String?=null,val returnToProject:Boolean=false):Route
 }
 
 class MainActivity:ComponentActivity(){
@@ -115,6 +115,11 @@ class MainActivity:ComponentActivity(){
                 ))
             }
 
+            fun openSaved(calc:SavedCalculation){
+                val pid=projects.firstOrNull{p->p.calculations.any{it.id==calc.id}}?.id
+                route=Route.Tool(calc.toolId,MaterialResult(calc.toolId,calc.title,calc.sourceQuantity,calc.unit,emptyList(),calc.explanation,calc.inputs,calc.cost),pid)
+            }
+
             fun shareProject(p:Project){
                 val summary=QuantityEngine.summarize(p)
                 val text=buildString{
@@ -139,7 +144,7 @@ class MainActivity:ComponentActivity(){
                         is Route.SectionDetail->Route.ProjectDetail(r.projectId)
                         is Route.RoomEdit->Route.SectionDetail(r.projectId,r.sectionId)
                         is Route.DirectItem->Route.Root
-                        is Route.Tool->if(r.projectId!=null)Route.ProjectDetail(r.projectId) else Route.Root
+                        is Route.Tool->if(r.returnToProject&&r.projectId!=null)Route.ProjectDetail(r.projectId) else Route.Root
                         Route.Root->Route.Root
                     }
                 }
@@ -186,7 +191,7 @@ class MainActivity:ComponentActivity(){
                                         },
                                         onSettings={route=Route.Settings},
                                         onSaved={tab=RootTab.SAVED},onPrices={route=Route.Prices},
-                                        onOpenSaved={calc->route=Route.Tool(calc.toolId,MaterialResult(calc.toolId,calc.title,calc.sourceQuantity,calc.unit,emptyList(),calc.explanation,calc.inputs,calc.cost),active?.projectId)}
+                                        onOpenSaved=::openSaved
                                     )
 
                                     RootTab.PROJECTS->ProjectsScreen(
@@ -233,7 +238,7 @@ class MainActivity:ComponentActivity(){
                                         hasActiveProject=activeProject()!=null,
                                         onOpen={id->route=Route.Tool(id)},
                                         repository=repository,
-                                        onOpenSaved={calc->route=Route.Tool(calc.toolId,MaterialResult(calc.toolId,calc.title,calc.sourceQuantity,calc.unit,emptyList(),calc.explanation,calc.inputs,calc.cost),active?.projectId)}
+                                        onOpenSaved=::openSaved
                                     )
                                 }}
                             }
@@ -272,12 +277,12 @@ class MainActivity:ComponentActivity(){
                                 if(active?.projectId==p.id)setActive(ActiveLocation(p.id,s.id))
                             },
                             onOpenMaterials={material->
-                                route=Route.Tool(material.toolId,material,p.id)
+                                route=Route.Tool(material.toolId,material,p.id,true)
                             },
                             onShare={shareProject(p)},
                             onUpdate={replaceProject(it)},
                             onEditSource={sid,spid,itemId->route=Route.RoomEdit(p.id,sid,spid)},
-                            onOpenCalc={calc->route=Route.Tool(calc.toolId,MaterialResult(calc.toolId,calc.title,calc.sourceQuantity,calc.unit,emptyList(),calc.explanation,calc.inputs,calc.cost),p.id)}
+                            onOpenCalc={calc->route=Route.Tool(calc.toolId,MaterialResult(calc.toolId,calc.title,calc.sourceQuantity,calc.unit,emptyList(),calc.explanation,calc.inputs,calc.cost),p.id,true)}
                         )
                     }
 
@@ -386,7 +391,7 @@ class MainActivity:ComponentActivity(){
 
                     is Route.Tool->{
                         val back={
-                            route=if(r.projectId!=null)Route.ProjectDetail(r.projectId) else Route.Root
+                            route=if(r.returnToProject&&r.projectId!=null)Route.ProjectDetail(r.projectId) else Route.Root
                         }
                         if(r.toolId in setOf("convert","area")){
                             SiteUtilityScreen(r.toolId,onBack=back,repository=repository,seed=r.seed)
