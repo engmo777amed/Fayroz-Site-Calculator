@@ -106,9 +106,9 @@ class DeviceTest {
     val imePackage=device.executeShellCommand("settings get secure default_input_method").trim().substringBefore("/")
     if(imePackage.isNotBlank()&&device.hasObject(By.pkg(imePackage))){device.pressBack();device.waitForIdle()}
     compose.waitForIdle()
-    val node=compose.onAllNodesWithText(text).onLast()
+    val node=compose.onAllNodes(hasText(text) and hasClickAction()).onLast()
     runCatching{node.performScrollTo()}
-    node.performClick();compose.waitForIdle()
+    node.performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick){assertTrue(it())};compose.waitForIdle()
  }
  @Test fun calculatorComputesSavesAndReopensDecimalInputs(){
     val intent=Intent(context,MainActivity::class.java).putExtra("calculator","plaster")
