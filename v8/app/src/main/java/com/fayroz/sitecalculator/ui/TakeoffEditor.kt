@@ -103,7 +103,7 @@ fun TakeoffEditorDialog(
             }}}
         ){padding->Column(Modifier.fillMaxSize().padding(padding)){
             StageNavigation(stage,listOf("الكمية","المواد","النتيجة"),::go)
-            Text("${space.name} / ${item.name} • صافي ${fmt(q.repeatedFinal)} ${item.unit.label}",Modifier.padding(horizontal=16.dp,vertical=8.dp),style=MaterialTheme.typography.bodySmall)
+            Text("صافي التنفيذ: ${fmt(q.repeatedFinal)} ${item.unit.label}",Modifier.padding(horizontal=16.dp,vertical=8.dp),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
             val listState=rememberLazyListState()
             LaunchedEffect(stage){listState.scrollToItem(0)}
             androidx.compose.foundation.lazy.LazyColumn(state=listState,contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.fillMaxSize()){
@@ -129,9 +129,10 @@ fun TakeoffEditorDialog(
                 if(kind==CalcKind.SCREED_VOLUME)item{
                     NumberFieldX("متوسط السمك",layerThickness,{layerThickness=it},"م")
                 }
-                item{NumberFieldX("هالك شراء البند",waste,{waste=it},"%",help="لا يضاف لصافي الأعمال. خامات المونة لها هالك مستقل.")}
+                item{ExpandableSection("هالك شراء البند"){NumberFieldX("هالك شراء البند",waste,{waste=it},"%",help="لا يضاف لصافي الأعمال. خامات المونة لها هالك مستقل.")}}
                 item{
                     BoxCard{
+                        ExpandableSection("أجزاء مستقلة",parts.isNotEmpty()){
                         Text("نطاق التنفيذ",fontWeight=FontWeight.Black)
                         Text("اترك الأجزاء فارغة لحساب المسطح المختار كله؛ أو أضف أجزاء مستقلة. الخصومات لكل جزء تُدخل هنا.",style=MaterialTheme.typography.bodySmall)
                         parts.forEach{p->
@@ -155,6 +156,7 @@ fun TakeoffEditorDialog(
                             }
                         }
                         OutlinedButton(onClick={parts=parts+WorkPart(name="جزء ${parts.size+1}")},modifier=Modifier.fillMaxWidth()){Text("إضافة جزء مستقل")}
+                        }
                     }
                 }
                 if(parts.isEmpty()&&kind in listOf(CalcKind.CEILING,CalcKind.FLOOR)){
@@ -259,7 +261,7 @@ fun TakeoffEditorDialog(
                     }
                 }
 
-                item{TextFieldX("ملاحظة البند",note,{note=it},placeholder="اختياري")}
+                item{ExpandableSection("ملاحظة البند"){TextFieldX("ملاحظة البند",note,{note=it},placeholder="اختياري")}}
 
                 }
                 if(stage==1||stage==2){
@@ -274,7 +276,7 @@ fun TakeoffEditorDialog(
                 if(stage==1){
                     if(selectedPart!=null&&(material!=null||recipeDef!=null))item{BoxCard{
                         val custom=if(material!=null)selectedPart.material!=null else selectedPart.calculatorInputs.isNotEmpty()
-                        Row(verticalAlignment=Alignment.CenterVertically){Text("إعدادات خاصة لهذا الجزء",Modifier.weight(1f));Switch(custom,{enabled->parts=parts.map{p->if(p.id!=selectedPart.id)p else if(material!=null)p.copy(material=if(enabled)material else null)else p.copy(calculatorInputs=if(enabled)recipe else emptyMap())}})}
+                        Row(verticalAlignment=Alignment.CenterVertically){Text("خلطة خاصة لهذا الجزء",Modifier.weight(1f));Switch(custom,{enabled->parts=parts.map{p->if(p.id!=selectedPart.id)p else if(material!=null)p.copy(material=if(enabled)material else null)else p.copy(calculatorInputs=if(enabled)recipe else emptyMap())}})}
                         Text(if(custom)"هذا الجزء له مواصفاته وأسعاره." else "يستخدم مواصفات وأسعار البند. عدّل كامل البند أو فعّل إعدادات خاصة.",style=MaterialTheme.typography.bodySmall)
                     }}
                     material?.let{m->
@@ -298,3 +300,4 @@ private fun allowedKinds(unit:UnitType):List<CalcKind> = when(unit){
     UnitType.VOLUME->listOf(CalcKind.SCREED_VOLUME,CalcKind.DIRECT)
     UnitType.COUNT->listOf(CalcKind.DIRECT)
 }
+

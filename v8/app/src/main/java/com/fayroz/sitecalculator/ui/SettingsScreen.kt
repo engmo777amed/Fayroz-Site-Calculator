@@ -117,14 +117,17 @@ fun SettingsScreen(
             item{PageHeader("عن الحسابات")}
             item{
                 BoxCard{
-                    Text("Fayroz Site Calculator 9.1.0",fontWeight=FontWeight.Black)
+                    Text("Fayroz Site Calculator 9.2.0",fontWeight=FontWeight.Black)
+                    ExpandableSection("ملاحظات الحسابات"){
                     Text("""• التكرار بيتطبق مرة واحدة فقط في التجميع.
 • صافي الحصر منفصل عن هالك الخامات والشراء.
 • خصم الفتحات بيتم من الحوائط تلقائيًا.
 • القيم الافتراضية في الخامات قيم بداية وقابلة للتعديل.
 • مواصفة المشروع أو نشرة المنتج المعتمدة هي المرجع.""".trimIndent(),style=MaterialTheme.typography.bodySmall)
+                    }
                 }
             }
         }
     }
 }
+

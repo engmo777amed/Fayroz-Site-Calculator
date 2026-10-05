@@ -56,23 +56,6 @@ fun SectionScreen(
             contentPadding=PaddingValues(12.dp),
             verticalArrangement=Arrangement.spacedBy(9.dp)
         ){
-            if(summary.isNotEmpty()){
-                item{PageHeader("ملخص الجزء","التكرار داخل كل مكان محسوب مرة واحدة")}
-                item{
-                    BoxCard{
-                        summary.take(6).forEachIndexed{i,line->
-                            MetricRow(line.name,"${fmt(line.quantity)} ${line.unit.label}",i==0)
-                        }
-                        if(materials.isNotEmpty()){
-                            Button(onClick={materialsOpen=true},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){
-                                Icon(Icons.Rounded.Inventory2,null)
-                                Spacer(Modifier.width(5.dp))
-                                Text("خامات المونة وتكلفة الجزء")
-                            }
-                        }
-                    }
-                }
-            }
 
             item{
                 PageHeader("الغرف والأماكن","اختار المكان وكمل الحصر"){
@@ -112,34 +95,26 @@ fun SectionScreen(
                                 else Icon(Icons.Rounded.ChevronLeft,null)
                             }
 
-                            Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                                AssistChip(
-                                    onClick={onSetActiveRoom(space.id)},
-                                    label={Text(if(isActive)"المكان النشط" else "كمّل من هنا")},
-                                    leadingIcon={Icon(if(isActive)Icons.Rounded.Check else Icons.Rounded.PlayArrow,null,Modifier.size(16.dp))}
-                                )
-                                AssistChip(
-                                    onClick={onDuplicateRoom(space.id)},
-                                    label={Text("نسخ")},
-                                    leadingIcon={Icon(Icons.Rounded.ContentCopy,null,Modifier.size(16.dp))}
-                                )
-                                if(space.repeatCount>1){
-                                    AssistChip(
-                                        onClick={onDetachCopy(space.id)},
-                                        label={Text("فصل نسخة")},
-                                        leadingIcon={Icon(Icons.Rounded.CallSplit,null,Modifier.size(16.dp))}
-                                    )
-                                }
-                            }
-                            Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                                if(index>0)TextButton(onClick={val list=section.spaces.toMutableList();list[index]=list[index-1].also{list[index-1]=list[index]};onUpdateSection(section.copy(spaces=list))}){Text("↑")}
-                                TextButton(onClick={onEditRoom(space.id)}){Text("تعديل")}
-                                TextButton(onClick={deleteTarget=space}){Text("حذف",color=MaterialTheme.colorScheme.error)}
+                            Row{
+                                Text(space.status.label,Modifier.weight(1f),style=MaterialTheme.typography.bodySmall)
+                                ActionMenu(buildList{
+                                    add("تعيين مكان نشط" to {onSetActiveRoom(space.id)})
+                                    add("نسخ المكان" to {onDuplicateRoom(space.id)})
+                                    if(space.repeatCount>1)add("فصل نسخة" to {onDetachCopy(space.id)})
+                                    add("تعديل" to {onEditRoom(space.id)})
+                                    add("حذف" to {deleteTarget=space})
+                                    if(index>0)add("تحريك لأعلى" to {val list=section.spaces.toMutableList();list[index]=list[index-1].also{list[index-1]=list[index]};onUpdateSection(section.copy(spaces=list))})
+                                })
                             }
                         }
                     }
                 }
             }
+            if(summary.isNotEmpty())item{BoxCard{ExpandableSection("حصر الدور وطلب خاماته"){
+                summary.forEach{MetricRow(it.name,"${fmt(it.quantity)} ${it.unit.label}")}
+                PurchaseCards(purchase,costRows.flatMap{com.fayroz.sitecalculator.domain.MaterialReview.missing(it)}.isEmpty())
+            }}}
+
         }
     }
     deleteTarget?.let{space->
@@ -175,3 +150,4 @@ fun SectionScreen(
     }
 
 }
+

@@ -54,7 +54,7 @@ fun HomeScreen(
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)){
                             Text("FAYROZ SITE CALCULATOR",color=Color.White,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Black)
-                            Text("V9.1 • الحصر والخامات والتكلفة",color=FayrozTurquoise,style=MaterialTheme.typography.bodySmall)
+                            Text("V9.2 • الحصر والخامات والتكلفة",color=FayrozTurquoise,style=MaterialTheme.typography.bodySmall)
                         }
                         IconButton(onClick=onSettings){Icon(Icons.Rounded.Settings,"الإعدادات",tint=Color.White)}
                     }
@@ -97,7 +97,11 @@ fun HomeScreen(
             HomeAction("الحسابات المحفوظة","نتائجك ومدخلاتك السابقة",Icons.Rounded.History,onSaved,Modifier.weight(1f))
             HomeAction("أسعار الخامات","أسعار كل مشروع",Icons.Rounded.Payments,onPrices,Modifier.weight(1f))
         }}
-        if(project!=null)item{OutlinedButton(onClick=onNewRoom,modifier=Modifier.fillMaxWidth()){Text("إضافة مكان للمشروع النشط")}}
+        if(project!=null)item{BoxCard{
+            Text("إضافة حصر إلى ${project.name}",fontWeight=FontWeight.Bold)
+            Button(onClick=onDirectItem,modifier=Modifier.fillMaxWidth()){Text("إضافة كمية جاهزة")}
+            OutlinedButton(onClick=onNewRoom,modifier=Modifier.fillMaxWidth()){Text("إضافة مكان بالمقاسات")}
+        }}
         item{TextButton(onClick=onToday){Text("شغل اليوم")}}
 
         if(recentCalcs.isNotEmpty()){
@@ -107,7 +111,7 @@ fun HomeScreen(
                 Surface(onClick={onOpenSaved(calc)},shape=RoundedCornerShape(14.dp),tonalElevation=1.dp){
                     Column(Modifier.fillMaxWidth().padding(10.dp)){
                         Text(calc.title,fontWeight=FontWeight.Black)
-                        Text(calc.summary,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=2)
+                        Text(calc.summary.substringBefore(" • "),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=2)
                     }
                 }
             }
@@ -133,3 +137,4 @@ private fun HomeAction(
         }
     }
 }
+

@@ -23,8 +23,8 @@ object ReportExport {
         val date=SimpleDateFormat("yyyy-MM-dd HH:mm",Locale.US).format(Date())
         val out=mutableListOf(listOf("FAYROZ SITE CALCULATOR",p.name,kind,date))
         if(kind=="شراء الخامات"){
-            out+=listOf("المادة","الوحدة","الكمية الفعلية","عبوات شراء","سعر العبوة / الوحدة","تكلفة الشراء")
-            CostEngine.purchase(rows).forEach{out+=listOf(it.material,it.unit,it.amount.toString(),it.packages?.toString()?:"",it.price.toString(),it.cost.toString())}
+            out+=listOf("المادة","الوحدة","الكمية الفعلية","كمية الشراء","سعر العبوة / الوحدة","تكلفة الشراء")
+            CostEngine.purchase(rows).forEach{out+=listOf(it.material,it.unit,it.amount.toString(),it.packages?.let{n->"$n ${it.packageUnit}"}?:"",it.price.toString(),it.cost.toString())}
         }else if(kind=="ملخص الكميات"){
             out+=listOf("البند","الوحدة","صافي الكمية")
             QuantityEngine.summarize(p).forEach{out+=listOf(it.name,it.unit.label,it.quantity.toString())}
@@ -35,7 +35,7 @@ object ReportExport {
         }
         val missing=rows.flatMap{MaterialReview.missing(it)}.distinct()
         if(missing.isNotEmpty())out+=listOf("التكلفة غير مكتملة — المبالغ جزئية","أسعار ناقصة: "+missing.joinToString("، "))
-        if(p.calculations.isNotEmpty()){
+        if(p.calculations.isNotEmpty()&&kind=="حصر وتكلفة تفصيلي"){
             out+=listOf("حسابات محفوظة بأسعار تاريخ الحفظ")
             p.calculations.forEach{c->out+=listOf(c.title,c.summary,c.cost.toString(),c.explanation,c.inputs.entries.joinToString(" • "){"${it.key}=${it.value}"})}
         }
@@ -73,3 +73,4 @@ object ReportExport {
         web.loadDataWithBaseURL(null,html,"text/html","UTF-8",null)
     }
 }
+

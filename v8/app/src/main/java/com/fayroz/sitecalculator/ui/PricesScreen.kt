@@ -26,11 +26,12 @@ fun PricesScreen(projects:List<Project>,activeId:String?,onBack:()->Unit,onSave:
         if(project==null)item{EmptyState("أنشئ مشروعًا أولًا","تُحفظ الأسعار لكل مشروع بشكل مستقل.")}
         else{
             item{ChoiceFieldX("المشروع",project.name,projects.map{it.name},{name->projectId=projects.first{it.name==name}.id;saved=false})}
-            item{Text("الأسعار تُستخدم للمدخلات الجديدة. الحسابات والأجزاء ذات الأسعار الخاصة تحتفظ بقيمها.")}
-            item{BoxCard{NumberFieldX("سعر شيكارة الأسمنت 50 كجم",values["cementPrice"]?:"0",{values=values+("cementPrice" to it);saved=false},"جنيه");NumberFieldX("سعر متر الرمل",values["sandPrice"]?:"0",{values=values+("sandPrice" to it);saved=false},"جنيه/م³")}}
+            item{Text("أسعار عامة للمشروع. يمكن تخصيص سعر لبند عند الحاجة.",style=MaterialTheme.typography.bodySmall)}
+            item{BoxCard{NumberFieldX("سعر شيكارة الأسمنت 50 كجم",values["cementPrice"]?:"0",{values=values.filterKeys{!it.endsWith(".cementPrice")}+("cementPrice" to it);saved=false},"جنيه");NumberFieldX("سعر متر الرمل",values["sandPrice"]?:"0",{values=values.filterKeys{!it.endsWith(".sandPrice")}+("sandPrice" to it);saved=false},"جنيه/م³")}}
             item{ChoiceFieldX("أسعار حاسبة",def.title,priced.map{it.title},{name->groupId=CalculatorLibrary.all.first{it.title==name}.id})}
-            item{BoxCard{def.fields.filter{it.key.contains("price",true)}.forEach{f->val k="recipe.${def.id}.${f.key}";NumberFieldX(f.label,values[k]?:values[f.key]?.takeIf{f.key in setOf("cementPrice","sandPrice")}?:"0",{values=values+(k to it);saved=false},f.unit)}}}
+            item{BoxCard{def.fields.filter{it.key.contains("price",true)&&it.key !in setOf("cementPrice","sandPrice")}.forEach{f->val k="recipe.${def.id}.${f.key}";NumberFieldX(f.label,values[k]?:values[f.key]?.takeIf{f.key in setOf("cementPrice","sandPrice")}?:"0",{values=values+(k to it);saved=false},f.unit)}}}
             if(saved)item{Text("تم حفظ الأسعار ✓",color=MaterialTheme.colorScheme.primary)}
         }
     }}
 }
+

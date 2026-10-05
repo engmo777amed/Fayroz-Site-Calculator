@@ -9,7 +9,7 @@ import com.fayroz.sitecalculator.domain.*
 fun RecipeFields(def:CalcDef,quantity:Double,inputs:Map<String,String>,onChange:(Map<String,String>)->Unit){
     Text(def.title,style=MaterialTheme.typography.titleMedium)
     MetricRow("كمية من الحصر",fmt(quantity))
-    var prices by remember{mutableStateOf(true)}
+    var prices by remember{mutableStateOf(false)}
     var more by remember{mutableStateOf(false)}
     var latestInputs by remember{mutableStateOf(inputs)}
     SideEffect{latestInputs=inputs}
@@ -18,13 +18,13 @@ fun RecipeFields(def:CalcDef,quantity:Double,inputs:Map<String,String>,onChange:
         latestInputs=updated
         onChange(updated)
     }
-    val normal=def.fields.filter{it.key !in setOf("area","length","count")&&!it.key.contains("price",true)&&it.key !in setOf("dry","density","extraRate")}
+    val normal=def.fields.filter{it.key !in setOf("area","length","count")&&!it.key.contains("price",true)&&it.key !in setOf("dry","density","extraRate","cement","sand","bag","waste")}
     normal.forEach{f->CalcInputField(f,inputs[f.key]?:f.default,{update(f.key,it)},inputs["_unit.${f.key}"],{update("_unit.${f.key}",it)})}
     TextButton(onClick={prices=!prices}){Text("الأسعار — اختيارية")}
     if(prices)def.fields.filter{it.key.contains("price",true)}.forEach{f->CalcInputField(f,inputs[f.key]?:f.default,{update(f.key,it)},inputs["_unit.${f.key}"],{update("_unit.${f.key}",it)})}
     TextButton(onClick={more=!more}){Text("إعدادات إضافية ومصنعية")}
     if(more){
-        def.fields.filter{it.key in setOf("dry","density","extraRate")}.forEach{f->CalcInputField(f,inputs[f.key]?:f.default,{update(f.key,it)},inputs["_unit.${f.key}"],{update("_unit.${f.key}",it)})}
+        def.fields.filter{it.key in setOf("dry","density","extraRate","cement","sand","bag","waste")}.forEach{f->CalcInputField(f,inputs[f.key]?:f.default,{update(f.key,it)},inputs["_unit.${f.key}"],{update("_unit.${f.key}",it)})}
         listOf("_laborRate" to "المصنعية للوحدة","_transportRate" to "النقل للوحدة","_equipmentRate" to "المعدات للوحدة").forEach{(key,label)->NumberFieldX(label,inputs[key]?:"0",{update(key,it)},"جنيه")}
     }
 
@@ -42,3 +42,4 @@ fun CalcInputField(field:CalcField,value:String,onChange:(String)->Unit,unitPref
         NumberUnitField(field.label,displayValue,{raw->displayValue=raw;onChange(if(raw.isBlank())"" else convertLength(raw,displayUnit,field.unit))},displayUnit,{unit->displayUnit=unit;onUnitChange(unit)},help="الوحدة المختارة واضحة بجوار الرقم؛ التحويل يحافظ على القيمة.")
     }else NumberFieldX(field.label,value,onChange,field.unit)
 }
+

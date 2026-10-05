@@ -53,7 +53,7 @@ fun SiteUtilityScreen(toolId:String,onBack:()->Unit,repository:V8Repository?=nul
         StageNavigation(stage,listOf("إدخال البيانات","النتيجة")){if(it==0)stage=0 else calculate()}
         key(stage){LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             if(stage==0){
-                item{TextFieldX("اسم الحساب",label,{label=it})}
+                item{ExpandableSection("اسم الحساب — اختياري"){TextFieldX("اسم الحساب",label,{label=it})}}
                 if(toolId=="convert")item{BoxCard{
                     ChoiceFieldX("نوع التحويل",type,listOf("طول","مساحة","حجم","وزن"),{type=it;unit=when(it){"طول"->"م";"مساحة"->"م²";"وزن"->"كجم";else->"م³"}})
                     ChoiceFieldX("الوحدة",unit,when(type){"طول"->listOf("م","سم","مم");"مساحة"->listOf("م²","سم²");"وزن"->listOf("كجم","طن","جرام");else->listOf("م³","لتر")},{unit=it})
@@ -61,8 +61,10 @@ fun SiteUtilityScreen(toolId:String,onBack:()->Unit,repository:V8Repository?=nul
                 }}else{
                     item{ChoiceFieldX("وحدة الأبعاد",unit,listOf("م","سم","مم"),{next->parts.indices.forEach{i->val p=parts[i];parts[i]=p.copy(length=convertLength(p.length,unit,next),width=convertLength(p.width,unit,next))};unit=next})}
                     items(parts.size){i->val part=parts[i];BoxCard{
-                        NumberFieldX("طول ${i+1}",part.length,{parts[i]=part.copy(length=it);error=null},unit)
-                        NumberFieldX("عرض ${i+1}",part.width,{parts[i]=part.copy(width=it);error=null},unit)
+                        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                        NumberFieldX("طول ${i+1}",part.length,{parts[i]=part.copy(length=it);error=null},unit,Modifier.weight(1f))
+                        NumberFieldX("عرض ${i+1}",part.width,{parts[i]=part.copy(width=it);error=null},unit,Modifier.weight(1f))
+                        }
                         Row{Checkbox(part.deduct,{parts[i]=part.copy(deduct=it)});Text("خصم هذا الجزء",Modifier.weight(1f).padding(top=12.dp));TextButton(onClick={parts.removeAt(i)}){Text("حذف")}}
                     }}
                     item{OutlinedButton(onClick={parts.add(AreaPart())},modifier=Modifier.fillMaxWidth()){Text("إضافة جزء")}}
@@ -75,3 +77,4 @@ fun SiteUtilityScreen(toolId:String,onBack:()->Unit,repository:V8Repository?=nul
         }}
     }}
 }
+

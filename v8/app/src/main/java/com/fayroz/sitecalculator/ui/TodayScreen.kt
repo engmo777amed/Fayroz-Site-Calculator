@@ -112,10 +112,11 @@ fun TodayScreen(
                 ){
                     Column(Modifier.fillMaxWidth().padding(9.dp)){
                         Text(calc.title,fontWeight=FontWeight.Black)
-                        Text(calc.summary,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=2)
+                        Text(calc.summary.substringBefore(" • "),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=2)
                     }
                 }
             }
         }
     }
 }
+

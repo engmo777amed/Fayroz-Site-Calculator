@@ -11,8 +11,8 @@ android {
         minSdk = 26
         targetSdk = 35
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 12
-        versionName = "9.1.0"
+        versionCode = 13
+        versionName = "9.2.0"
         manifestPlaceholders["appLabel"] = "Fayroz Site Calculator"
     }
     buildTypes {
@@ -48,3 +48,4 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
+

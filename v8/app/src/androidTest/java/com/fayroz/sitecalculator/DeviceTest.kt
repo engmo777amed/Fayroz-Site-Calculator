@@ -43,14 +43,15 @@ class DeviceTest {
        assertText("الرئيسية");shot("home")
        clickText("الحاسبات")
        assertText("أقسام الحاسبات");shot("calculators")
-       clickText("المونة والتشطيبات")
-       clickText("محارة حوائط / أسقف / واجهات")
-       assertText("اسم الحساب");shot("mortar-calculator")
+       clickText("المونة والمحارة")
+       clickText("مونة المحارة")
+       assertText("البيانات المطلوبة");shot("mortar-calculator")
        device.pressBack();device.pressBack()
        clickText("المشروعات")
        assertText("اختبار الحصر")
        clickText("اختبار الحصر")
-       assertText("الدور الأول");shot("project")
+       assertText("الأدوار والأماكن");shot("project");clickText("الأدوار والأماكن")
+       assertText("الدور الأول")
        clickText("الدور الأول")
        assertText("غرفة الاختبار");shot("section")
        clickText("غرفة الاختبار")
@@ -60,10 +61,10 @@ class DeviceTest {
        device.findObject(By.desc("فتح البند")).click();device.waitForIdle();shot("part-editor");assertText("التالي: المواد")
        clickText("التالي: المواد");device.waitForIdle();shot("item-materials")
        clickText("كامل البند");clickText("جزء السقف (1)");device.waitForIdle()
-       assertText("إعدادات خاصة لهذا الجزء")
+       assertText("خلطة خاصة لهذا الجزء")
        compose.onNode(isToggleable()).assertIsOff().performClick().assertIsOn();compose.waitForIdle()
        type("متوسط السمك","20.5")
-       type("سعر شيكارة الأسمنت","250")
+       clickText("الأسعار — اختيارية");type("سعر شيكارة الأسمنت","250")
        clickText("احسب واعرض النتيجة");assertText("حفظ البند");shot("item-result")
        assertText("6 م²")
        clickText("حفظ البند")
@@ -114,17 +115,17 @@ class DeviceTest {
  @Test fun calculatorComputesSavesAndReopensDecimalInputs(){
     val intent=Intent(context,MainActivity::class.java).putExtra("calculator","plaster")
     ActivityScenario.launch<MainActivity>(intent).use{
-       assertText("اسم الحساب")
-       type("اسم الحساب","اختبار محارة 12.5")
+       assertText("البيانات المطلوبة")
        type("المساحة الصافية","12.5")
        type("متوسط السمك","15.5")
        clickText("مم");clickText("سم")
        field("متوسط السمك").assertTextEquals("1.55")
-       type("سعر شيكارة الأسمنت","200")
+       clickText("الأسعار — اختيارية");type("سعر شيكارة الأسمنت","200")
        type("سعر متر الرمل","300")
        shot("calculator-filled")
        clickText("احسب واعرض النتيجة");device.waitForIdle();shot("calculator-result")
        assertText("12.5 م²")
+       clickText("اسم الحساب ومكان الحفظ");type("اسم الحساب","اختبار محارة 12.5")
        clickText("حفظ النتيجة")
        val saved=V8Repository(context).recentCalcs().first()
        assertEquals("12.5",saved.inputs["area"]);assertEquals("15.5",saved.inputs["thickness"]);assertTrue(saved.cost>0)
@@ -142,9 +143,9 @@ class DeviceTest {
  @Test fun quantitiesWorkWithoutPricesAndErrorsAreVisible(){
     V8Repository(context).setPref("calc.paint.area","10")
     ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java).putExtra("calculator","paint")).use{
-       assertText("اسم الحساب")
+       assertText("البيانات المطلوبة")
        clickText("احسب واعرض النتيجة")
-       assertText("10 م²")
+       assertText("10 م²");clickText("التكلفة")
        var found=false
        repeat(6){if(device.findObject(By.text("التكلفة غير مكتملة"))!=null)found=true else device.swipe(device.displayWidth/2,device.displayHeight*3/4,device.displayWidth/2,device.displayHeight/3,20)}
        assertTrue(found);shot("incomplete-prices")
@@ -157,7 +158,7 @@ class DeviceTest {
  }
  @Test fun utilityComputesAndSavesResult(){
     ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java).putExtra("calculator","convert")).use{
-       assertText("اسم الحساب")
+       assertText("نوع التحويل")
        type("القيمة","1.25")
        clickText("احسب واعرض النتيجة")
        assertText("125 سم");shot("unit-result")
@@ -176,8 +177,31 @@ class DeviceTest {
  @Test fun everyCalculatorOpensOnDevice(){
     CalculatorLibrary.all.forEach{def->
         ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java).putExtra("calculator",def.id)).use{
-            assertTrue(def.id,device.wait(Until.hasObject(By.text("اسم الحساب")),10000))
+            assertTrue(def.id,device.wait(Until.hasObject(By.text("البيانات المطلوبة")),10000))
         }
+    }
+ }
+ @Test fun mortarVolumeModesShowPracticalResultsAndPersist(){
+    ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java).putExtra("calculator","plaster")).use{
+        clickText("خامات لمساحة");clickText("مكونات ١ م³ مونة")
+        type("متوسط السمك","20")
+        clickText("احسب واعرض النتيجة")
+        assertText("1 م³");assertText("50 م²");shot("mortar-one-cubic-meter")
+        clickText("حفظ النتيجة")
+        assertEquals("unit",V8Repository(context).recentCalcs().first().inputs["_mortarMode"])
+        clickText("تعديل المدخلات")
+        clickText("مكونات ١ م³ مونة");clickText("المونة المتاحة تفرد كام؟")
+        type("حجم المونة","2")
+        clickText("احسب واعرض النتيجة");assertText("100 م²");shot("mortar-coverage")
+    }
+ }
+ @Test fun projectShoppingShowsBagsAndKeepsCostSeparate(){
+    V8Repository(context).saveProjects(listOf(sample()))
+    ActivityScenario.launch(MainActivity::class.java).use{
+        clickText("المشروعات");clickText("اختبار الحصر");clickText("طلب الخامات")
+        assertText("طلب الخامات");assertText("1 شيكارة");shot("project-shopping")
+        clickText("رجوع لملخص المشروع");clickText("التكلفة")
+        assertText("تكلفة الاستهلاك");shot("project-cost")
     }
  }
  @Test fun backupIncludesPhotosAndRestoresSpecs(){
@@ -206,3 +230,4 @@ class DeviceTest {
     assertTrue(entries.containsKey("[Content_Types].xml"));assertTrue(entries["xl/worksheets/sheet1.xml"]!!.contains("جزء السقف"));assertTrue(entries["xl/worksheets/sheet1.xml"]!!.contains("rightToLeft=\"1\""))
  }
 }
+

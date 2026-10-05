@@ -44,7 +44,7 @@ fun DirectItemScreen(
         topBar={
             TopAppBar(
                 title={Column{
-                    Text("حصر حسب البند",fontWeight=FontWeight.Black)
+                    Text("إضافة كمية جاهزة",fontWeight=FontWeight.Black)
                     Text(project.name,style=MaterialTheme.typography.labelSmall)
                 }},
                 navigationIcon={IconButton(onClick=onBack){Icon(Icons.Rounded.ArrowForward,"رجوع")}}
@@ -74,18 +74,20 @@ fun DirectItemScreen(
                         )
                     }
                     NumberFieldX("الكمية الجاهزة",quantity,{quantity=it},def.unit.label,help="اكتب الكمية اللي معاك من الموقع مباشرة.")
+                    ExpandableSection("الهالك والملاحظات — اختياري"){
                     NumberFieldX("الهالك",waste,{waste=it},"%",help="خاص بالبند ده فقط.")
                     TextFieldX("ملاحظة",note,{note=it},placeholder="مثال: حصر واجهة الدور الأول")
+                    }
                 }
             }
 
             if(n(quantity)>0){
                 item{
                     BoxCard{
-                        MetricRow("قبل الهالك","${fmt(result.base)} ${def.unit.label}")
+                        MetricRow("صافي التنفيذ","${fmt(result.repeatedFinal)} ${def.unit.label}",true)
                         if(result.waste>0)MetricRow("الهالك","${fmt(result.waste)} ${def.unit.label}")
-                        MetricRow("الإجمالي","${fmt(result.repeatedFinal)} ${def.unit.label}",true)
-                        Text(result.explanation,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        MetricRow("كمية البند بعد الهالك","${fmt(result.repeatedFinal+result.waste)} ${def.unit.label}")
+                        Text("الهالك للشراء فقط؛ صافي التنفيذ لا يتغير. خامات المونة تُحسب من خلطتها.",style=MaterialTheme.typography.bodySmall)
                     }
                 }
                 item{
@@ -103,3 +105,4 @@ fun DirectItemScreen(
         }
     }
 }
+

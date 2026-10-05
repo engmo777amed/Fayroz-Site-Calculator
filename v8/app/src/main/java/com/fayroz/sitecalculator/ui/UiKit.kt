@@ -54,7 +54,7 @@ fun BoxCard(content:@Composable ColumnScope.()->Unit){
         shape=RoundedCornerShape(18.dp),
         tonalElevation=1.dp
     ){
-        Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(9.dp),content=content)
+        Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(7.dp),content=content)
     }
 }
 
@@ -236,6 +236,29 @@ fun EmptyState(
         Text(subtitle,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         if(actionLabel!=null&&onAction!=null){
             FilledTonalButton(onClick=onAction,modifier=Modifier.fillMaxWidth()){Text(actionLabel)}
+        }
+    }
+}
+
+
+@Composable
+fun ExpandableSection(title:String,initiallyExpanded:Boolean=false,content:@Composable ColumnScope.()->Unit){
+    var expanded by remember{mutableStateOf(initiallyExpanded)}
+    Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(7.dp)){
+        TextButton(onClick={expanded=!expanded},modifier=Modifier.fillMaxWidth()){
+            Text(title,Modifier.weight(1f),textAlign=androidx.compose.ui.text.style.TextAlign.Start)
+            Text(if(expanded)"−" else "+")
+        }
+        if(expanded)content()
+    }
+}
+@Composable
+fun ActionMenu(actions:List<Pair<String,()->Unit>>){
+    var open by remember{mutableStateOf(false)}
+    Box{
+        TextButton(onClick={open=true},contentPadding=PaddingValues(4.dp)){Text("⋮",style=MaterialTheme.typography.titleLarge)}
+        DropdownMenu(expanded=open,onDismissRequest={open=false}){
+            actions.forEach{(label,action)->DropdownMenuItem(text={Text(label)},onClick={open=false;action()})}
         }
     }
 }

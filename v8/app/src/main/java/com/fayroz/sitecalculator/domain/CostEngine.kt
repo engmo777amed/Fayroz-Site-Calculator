@@ -53,20 +53,17 @@ object CostEngine {
             }
         }}}
     }
-    data class Purchase(val material:String,val unit:String,val amount:Double,val packages:Int?,val price:Double,val cost:Double)
+    data class Purchase(val material:String,val unit:String,val amount:Double,val packages:Int?,val price:Double,val cost:Double,val packageUnit:String="عبوة")
     fun purchase(rows:List<Row>):List<Purchase> = buildList {
         // Different package sizes/prices remain separate, quantities rounded only after aggregation.
         rows.filter{it.calculatorId!=null}.groupBy{r->r.calculatorId to r.calculatorInputs.filterKeys{k->k !in setOf("area","length","count")&&CalculatorLibrary.all.first{it.id==r.calculatorId}.fields.any{it.key==k}}}.forEach{(key,group)->
             val def=CalculatorLibrary.all.first{it.id==key.first}
             val raw=CalculatorLibrary.recipe(def,key.second,group.sumOf{it.quantity})
             val answer=runCatching{CalculatorLibrary.evaluate(def,raw)}.getOrNull()
-            if(answer!=null)answer.outputs.filter{it.unit !in setOf("جنيه","جنيه/م²")}.forEach{line->
-                add(Purchase("${def.title} — ${line.label}",line.unit,line.value,null,0.0,0.0))
-            }
-            if(answer!=null)add(Purchase("${def.title} — إجمالي شراء","جنيه",answer.cost,null,0.0,answer.cost))
+            if(answer!=null)addAll(calculatorPurchases(def,raw,answer))
         }
         rows.filter{it.spec!=null}.groupBy{Triple(it.spec!!.bagKg,it.spec.cementPrice,"أسمنت")}.forEach{(key,group)->
-            val kg=group.sumOf{it.cementKg};if(kg>0){val bags=ceil(kg/key.first).toInt();add(Purchase("أسمنت (${key.first} كجم)","كجم",kg,bags,key.second,bags*key.second))}
+            val kg=group.sumOf{it.cementKg};if(kg>0){val bags=ceil(kg/key.first).toInt();add(Purchase("أسمنت (${key.first} كجم)","كجم",kg,bags,key.second,bags*key.second,"شيكارة"))}
         }
         rows.filter{it.spec!=null}.groupBy{it.spec!!.sandPrice}.forEach{(price,group)->
             val amount=group.sumOf{it.sandM3};if(amount>0)add(Purchase("رمل","م³",amount,null,price,amount*price))
@@ -75,4 +72,32 @@ object CostEngine {
             val amount=group.sumOf{it.extra};add(Purchase(key.first,"وحدة",amount,null,key.second,amount*key.second))
         }
     }
+    fun calculatorPurchases(def:CalcDef,raw:Map<String,String>,answer:CalcAnswer):List<Purchase> {
+        fun v(k:String)=numeric(raw[k])?:0.0
+        fun out(label:String)=answer.outputs.firstOrNull{it.label==label}?.value?:0.0
+        fun packageRow(name:String,amount:Double,unit:String,packs:Double,price:Double,packUnit:String="عبوة")=
+            Purchase(name,unit,amount,packs.toInt(),price,packs*price,packUnit)
+        if(def.id in CalculatorLibrary.mortarIds){
+            val kg=out("أسمنت فعلي");val bags=out("شراء أسمنت");val sand=out("رمل")
+            return buildList{
+                add(packageRow("أسمنت (${v("bag")} كجم)",kg,"كجم",bags,v("cementPrice"),"شيكارة"))
+                add(Purchase("رمل","م³",sand,null,v("sandPrice"),sand*v("sandPrice")))
+                if(out("مادة إضافية")>0)add(Purchase("مادة إضافية","وحدة",out("مادة إضافية"),null,v("extraPrice"),out("مادة إضافية")*v("extraPrice")))
+            }
+        }
+        return when(def.id){
+            "tile"->listOf(packageRow("بلاط / رخام / جرانيت",out("بعد الهالك"),"م²",out("عبوات الشراء"),v("price"),"كرتونة"))
+            "skirting"->listOf(packageRow("وزرات",v("length")*(1+v("waste")/100),"م ط",out("عبوات"),v("price")))
+            "paint"->listOf(packageRow("دهان",out("استهلاك دهان"),"لتر",out("عبوات"),v("price")))
+            "adhesive","putty","primer","woodpaint","waterproof","block_adhesive","tack","marking"->listOf(packageRow(def.title,out("كمية فعلية"),answer.outputs.firstOrNull{it.label=="كمية فعلية"}?.unit?:"وحدة",out("عبوات كاملة"),v("price")))
+            "gypsum"->listOf(packageRow("ألواح جبس",out("مساحة تغطية بالهالك"),"م²",out("ألواح"),v("price"),"لوح"))
+            "masonry","blocks"->listOf(
+                Purchase(if(def.id=="masonry")"طوب" else "بلوك","وحدة",out("وحدات شراء"),null,v("brickPrice")/1000,out("وحدات شراء")/1000*v("brickPrice")),
+                packageRow("أسمنت (50 كجم)",out("أسمنت")*50,"كجم",out("أسمنت"),v("cementPrice"),"شيكارة"),
+                Purchase("رمل","م³",out("رمل"),null,v("sandPrice"),out("رمل")*v("sandPrice")))
+            else->emptyList()
+        }.filter{it.amount>0||it.packages?.let{n->n>0}==true}
+    }
+
 }
+

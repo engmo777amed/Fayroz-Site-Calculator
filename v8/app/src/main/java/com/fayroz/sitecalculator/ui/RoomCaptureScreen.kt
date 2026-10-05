@@ -66,6 +66,7 @@ fun RoomCaptureScreen(
     var ceilingDetails by remember{mutableStateOf(restored?.ceilingSurfaces?.isNotEmpty()==true)}
     var editIndex by remember{mutableStateOf<Int?>(null)}
     var showCatalog by remember{mutableStateOf(false)}
+    var selectedGroup by remember{mutableStateOf("كل البنود")}
 
     val walls=remember{mutableStateListOf<WallPart>().apply{addAll(restored?.walls ?: emptyList())}}
     val floors=remember{mutableStateListOf<SurfacePart>().apply{addAll(restored?.floorSurfaces ?: emptyList())}}
@@ -129,7 +130,7 @@ fun RoomCaptureScreen(
                     LinearProgressIndicator(progress={(step+1)/3f},modifier=Modifier.fillMaxWidth())
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                         if(step>0)OutlinedButton(onClick={step--},modifier=Modifier.weight(1f).heightIn(min=48.dp)){Text("السابق")}
-                        if(step<2)Button(onClick={step++},modifier=Modifier.weight(1f).heightIn(min=48.dp)){Text("التالي")}
+                        if(step<2)Button(onClick={error=if(step==0&&geometryMode=="مستطيل بسيط"&&(lengthMeters(length,dimUnit)<=0||lengthMeters(width,dimUnit)<=0||lengthMeters(height,dimUnit)<=0))"أدخل طولًا وعرضًا وارتفاعًا أكبر من صفر." else null;if(error==null)step++},modifier=Modifier.weight(1f).heightIn(min=48.dp)){Text("التالي")}
                         else Button(
                             onClick={
                                 val value=current()
@@ -161,6 +162,7 @@ fun RoomCaptureScreen(
                 0->item{
                     BoxCard{
                         TextFieldX("اسم المكان",name,{name=it},placeholder="مثال: حمام رئيسي")
+                        ExpandableSection("نوع المكان والوحدة"){
                         ChoiceFieldX("نوع المكان",type,Catalog.roomTypes,{newType->
                             val oldSuggested=Catalog.suggested(type)
                             val userChanged=takeoffs.any{it.name !in oldSuggested}
@@ -181,15 +183,17 @@ fun RoomCaptureScreen(
                             },
                             help="لما تغير الوحدة، البرنامج بيحوّل الأرقام تلقائيًا."
                         )
+                        }
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
                             NumberFieldX("الطول",length,{length=it},dimUnit,Modifier.weight(1f))
                             NumberFieldX("العرض",width,{width=it},dimUnit,Modifier.weight(1f))
                         }
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
                             NumberFieldX("الارتفاع",height,{height=it},dimUnit,Modifier.weight(1f))
-                            NumberFieldX("عدد التكرارات",repeat,{repeat=it},"مرة",Modifier.weight(1f),
-                                help="لو نفس المكان متكرر 12 مرة، اكتب 12. التكرار بيتحسب مرة واحدة فقط في ملخص المشروع.")
+
                         }
+                        ExpandableSection("التكرار والمتابعة والصور — اختياري"){
+                        NumberFieldX("عدد التكرارات",repeat,{repeat=it},"مرة")
                         ChoiceFieldX("وصلت لفين؟",status.label,WorkStatus.entries.map{it.label},{label->
                             status=WorkStatus.entries.first{it.label==label}
                         })
@@ -222,7 +226,8 @@ fun RoomCaptureScreen(
                             }
                         }
 
-                        HorizontalDivider()
+                        }
+                        ExpandableSection("مكان غير منتظم أو مسطحات مستقلة",geometryMode!="مستطيل بسيط"||ceilingDetails){
                         ChoiceFieldX(
                             "هتحسب المكان إزاي؟",
                             geometryMode,
@@ -281,6 +286,7 @@ fun RoomCaptureScreen(
                             OutlinedButton(onClick={ceilings.add(SurfacePart(name="سقف ${ceilings.size+1}"))},modifier=Modifier.fillMaxWidth()){
                                 Text("ضيف مسطح سقف")
                             }
+                        }
                         }
                     }
                 }
@@ -363,16 +369,14 @@ fun RoomCaptureScreen(
                                             if(space.repeatCount>1){
                                                 Text("المكان الواحد ${fmt(q.oneSpaceFinal)} × ${space.repeatCount}",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                                             }
-                                            item.parts.forEach{part->Text("${part.name}: ${fmt(QuantityEngine.partValue(part,item.unit)*space.repeatCount)} ${item.unit.label}",style=MaterialTheme.typography.bodySmall)}
-                                            Text("افتح البند لاختيار الأجزاء وحساب المواد والتكلفة.",style=MaterialTheme.typography.bodySmall)
                                             Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                                                if(i>0)TextButton(onClick={val previous=takeoffs[i-1];takeoffs[i-1]=takeoffs[i];takeoffs[i]=previous}){Text("↑")}
-                                                TextButton(modifier=Modifier.weight(1f),onClick={
-                                                    val copy=item.copy(id=UUID.randomUUID().toString(),parts=item.parts.map{it.copy(id=UUID.randomUUID().toString())})
-                                                    takeoffs.add(i+1,copy)
-                                                }){Text("نسخ البند")}
-                                                TextButton(modifier=Modifier.weight(1f),onClick={editIndex=i}){Text("الكمية / المواد / النتيجة")}
-                                                IconButton(onClick={takeoffs.removeAt(i)}){Icon(Icons.Rounded.Delete,"حذف",tint=MaterialTheme.colorScheme.error)}
+                                                FilledTonalButton(modifier=Modifier.weight(1f),onClick={editIndex=i}){Text("الخامات والنتيجة")}
+                                                ActionMenu(buildList{
+                                                    add("تعديل الكمية والأجزاء" to {editIndex=i})
+                                                    add("نسخ البند" to {takeoffs.add(i+1,item.copy(id=UUID.randomUUID().toString(),parts=item.parts.map{it.copy(id=UUID.randomUUID().toString())}))})
+                                                    if(i>0)add("تحريك لأعلى" to {val previous=takeoffs[i-1];takeoffs[i-1]=takeoffs[i];takeoffs[i]=previous})
+                                                    add("حذف البند" to {takeoffs.removeAt(i);Unit})
+                                                })
                                             }
                                             QuantityEngine.purchaseInfo(space,item)?.let{purchase->
                                                 Text("شراء تقريبي: ${purchase.pieces} قطعة"+(purchase.packs?.let{" • $it كرتونة"}?:""),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.tertiary)
@@ -450,6 +454,7 @@ private fun OpeningRow(
                 Text("${fmt(opening.width*opening.height*opening.count)} م²",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Black)
                 IconButton(onClick=onDelete,modifier=Modifier.size(40.dp)){Icon(Icons.Rounded.Delete,"حذف")}
             }
+            ExpandableSection("الحائط والجوانب وجلسة الشباك"){
             if(walls.isNotEmpty()){
                 ChoiceFieldX(
                     "الحائط",
@@ -460,14 +465,16 @@ private fun OpeningRow(
                 )
             }
             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                NumberFieldX("العرض",width,{width=it;onChange(opening.copy(width=n(it)))},"م",Modifier.weight(1f))
-                NumberFieldX("الارتفاع",height,{height=it;onChange(opening.copy(height=n(it)))},"م",Modifier.weight(1f))
-            }
-            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                 NumberFieldX("جلسة الشباك",sill,{sill=it;onChange(opening.copy(sill=n(it)))},"م",Modifier.weight(1f),help="من الأرض لأسفل الفتحة.")
                 NumberFieldX("عمق الجنب",reveal,{reveal=it;onChange(opening.copy(revealDepth=n(it)))},"م",Modifier.weight(1f),help="لو هتحسب جوانب الباب أو الشباك.")
+            }
+            }
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                NumberFieldX("العرض",width,{width=it;onChange(opening.copy(width=n(it)))},"م",Modifier.weight(1f))
+                NumberFieldX("الارتفاع",height,{height=it;onChange(opening.copy(height=n(it)))},"م",Modifier.weight(1f))
             }
             NumberFieldX("العدد",count,{count=it;onChange(opening.copy(count=n(it).toInt().coerceAtLeast(1)))},"عدد")
         }
     }
 }
+

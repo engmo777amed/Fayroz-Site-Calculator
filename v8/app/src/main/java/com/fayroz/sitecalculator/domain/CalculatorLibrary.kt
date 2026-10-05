@@ -20,7 +20,7 @@ object CalculatorLibrary {
     private val count=f("count","العدد","عدد","1")
     private fun get(v:Map<String,Double>,k:String)=v[k]?:0.0
     private operator fun Map<String,Double>.invoke(k:String)=get(this,k)
-    val groups=listOf("المونة والتشطيبات","الأرضيات والكسوات","الدهانات والعزل","الجبس والأسقف","أدوات الموقع","المباني","الخرسانة والشدات","حصر الحديد","الأعمال الترابية","الطرق والرصف","حصر السباكة","حصر الكهرباء")
+    val groups=listOf("المونة والمحارة","الأرضيات والكسوات","الدهانات والعزل","الجبس والأسقف","أدوات الموقع","المباني","الخرسانة والشدات","حصر الحديد","الأعمال الترابية","الطرق والرصف","حصر السباكة","حصر الكهرباء")
     val all:List<CalcDef> = buildList {
         fun addDef(id:String,title:String,g:Int,fields:List<CalcField>,formula:String,solve:(Map<String,Double>)->CalcAnswer){add(CalcDef(id,title,groups[g],fields,formula,solve))}
         fun mortar(id:String,title:String,thick:String,sand:String){
@@ -29,11 +29,11 @@ object CalculatorLibrary {
                 val wet=v("area")*v("thickness")/1000;val dry=wet*v("dry")*(1+v("waste")/100)
                 val kg=dry*v("cement")/(v("cement")+v("sand"))*v("density");val sandM=dry*v("sand")/(v("cement")+v("sand"))
                 val bags=ceil(kg/v("bag"));val extra=v("area")*v("extraRate")*(1+v("waste")/100)
-                CalcAnswer(listOf(o("مونة منفذة",wet,"م³"),o("أسمنت فعلي",kg,"كجم"),o("شراء أسمنت",bags,"شيكارة"),o("رمل",sandM,"م³"),o("مادة إضافية",extra,"وحدة"),o("تكلفة الاستهلاك",kg/v("bag")*v("cementPrice")+sandM*v("sandPrice")+extra*v("extraPrice"),"جنيه")),"خلطة حجمية، والسمك متوسط التنفيذ. الشكاير تُقرب بعد تجميع الكمية.",bags*v("cementPrice")+sandM*v("sandPrice")+extra*v("extraPrice"))
+                CalcAnswer(listOf(o("مونة منفذة",wet,"م³"),o("أسمنت فعلي",kg,"كجم"),o("شراء أسمنت",bags,"شيكارة"),o("رمل",sandM,"م³"),o("مادة إضافية",extra,"وحدة"),o("تكلفة الاستهلاك",kg/v("bag")*v("cementPrice")+sandM*v("sandPrice")+extra*v("extraPrice"),"جنيه")),"خلطة حجمية، والسمك متوسط التنفيذ. الشكاير تُقرب بعد تجميع الكمية.",bags*v("cementPrice")+sandM*v("sandPrice")+extra*v("extraPrice"),kg/v("bag")*v("cementPrice")+sandM*v("sandPrice")+extra*v("extraPrice"))
             }
         }
-        mortar("plaster","محارة حوائط / أسقف / واجهات","15","4")
-        mortar("splash","طرطشة حوائط / أسقف","5","2")
+        mortar("plaster","مونة المحارة","15","4")
+        mortar("splash","مونة الطرطشة","5","2")
         mortar("screed","مونة تسوية الأرضيات","50","4")
         mortar("bedding","مونة تركيب البلاط","30","4")
         mortar("custom_mortar","خلطة مونة مخصصة","15","4")
@@ -129,9 +129,22 @@ object CalculatorLibrary {
     }
     fun recipe(def:CalcDef,inputs:Map<String,String>,quantity:Double):Map<String,String> = def.fields.associate{it.key to it.default}+inputs+
         ((if(def.fields.any{it.key=="area"})"area" else if(def.fields.any{it.key=="length"})"length" else "count") to quantity.toString())
+    val mortarIds=setOf("plaster","splash","screed","bedding","custom_mortar")
+    private fun number(raw:String)=raw.map{if(it.isDigit())it.digitToInt().digitToChar()else it}.joinToString("").replace('٫','.').replace(',','.').toDoubleOrNull()
+    fun mortarArea(raw:Map<String,String>):Double {
+        val mode=raw["_mortarMode"]?:"area"
+        if(mode=="area")return number(raw["area"].orEmpty())?:0.0
+        val thickness=number(raw["thickness"].orEmpty())?:0.0
+        require(thickness>0){"متوسط السمك يجب أن يكون أكبر من صفر"}
+        val volume=if(mode=="unit")1.0 else number(raw["_volume"].orEmpty())?:0.0
+        require(volume>0&&volume.isFinite()){ "حجم المونة يجب أن يكون أكبر من صفر" }
+        val waste=number(raw["waste"].orEmpty())?:0.0
+        return volume*1000/thickness/(if(mode=="coverage")1+waste/100 else 1.0)
+    }
     fun evaluate(def:CalcDef,raw:Map<String,String>):CalcAnswer {
+        val normalized=if(def.id in mortarIds)raw+("area" to mortarArea(raw).toString())else raw
         val values=def.fields.associate{field->
-            val text=raw[field.key].orEmpty().map{if(it.isDigit())it.digitToInt().digitToChar()else it}.joinToString("").replace('٫','.').replace(',','.').replace("٬","")
+            val text=normalized[field.key].orEmpty().map{if(it.isDigit())it.digitToInt().digitToChar()else it}.joinToString("").replace('٫','.').replace(',','.').replace("٬","")
             val v=if(text.isBlank()&&!field.required)0.0 else text.toDoubleOrNull()
             require(v!=null&&v.isFinite()){ "راجع ${field.label}" }
             require(field.signed||v>=0){"${field.label} لا يمكن أن يكون سالبًا"}
@@ -141,11 +154,17 @@ object CalculatorLibrary {
         }
         val answer=def.solve(values)
         require(answer.outputs.all{it.value.isFinite()}&&answer.cost.isFinite()){ "راجع المقاسات والمعدلات؛ نتيجة غير صالحة" }
+        if(def.id in mortarIds){
+            val area=values["area"]?:0.0
+            return answer.copy(outputs=listOf(CalcOutput("مساحة التغطية عند السمك المدخل",area,"م²"))+answer.outputs,
+                explanation=answer.explanation+" القيم وفق الخلطة المدخلة. تغطية الطرطشة تقدير حجمي يُراجع باستهلاك الموقع.")
+        }
         return answer
     }
     fun result(def:CalcDef,raw:Map<String,String>,answer:CalcAnswer)=MaterialResult(def.id,def.title,
-        raw["area"]?.toDoubleOrNull()?:raw["length"]?.toDoubleOrNull()?:0.0,
+        if(def.id in mortarIds)mortarArea(raw)else raw["area"]?.toDoubleOrNull()?:raw["length"]?.toDoubleOrNull()?:0.0,
         if("area" in raw)"م²" else if("length" in raw)"م" else "",
         answer.outputs.map{MaterialLine(it.label,"${format(it.value)} ${it.unit}")},def.formula+"\n"+answer.explanation,raw,answer.cost)
     private fun format(x:Double)=java.math.BigDecimal.valueOf(x).setScale(3,java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
 }
+

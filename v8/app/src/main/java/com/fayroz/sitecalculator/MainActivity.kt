@@ -279,6 +279,7 @@ class MainActivity:ComponentActivity(){
                             onOpenMaterials={material->
                                 route=Route.Tool(material.toolId,material,p.id,true)
                             },
+                            onDirectItem={route=Route.DirectItem(p.id)},
                             onShare={shareProject(p)},
                             onUpdate={replaceProject(it)},
                             onEditSource={sid,spid,itemId->route=Route.RoomEdit(p.id,sid,spid)},
@@ -416,3 +417,4 @@ class MainActivity:ComponentActivity(){
         }
     }
 }
+

@@ -131,4 +131,31 @@ class DomainTest {
     val rows=CostEngine.rows(Project(name="",sections=listOf(Section(name="",spaces=listOf(space)))))
     assertEquals(10.0,rows.single().labor,0.0)
  }
+ @Test fun mortarCubicMeterAndCoverageModes(){
+    val def=CalculatorLibrary.all.first{it.id=="plaster"}
+    val raw=def.fields.associate{it.key to it.default}+mapOf("_mortarMode" to "unit","thickness" to "20","waste" to "0","cementPrice" to "200","sandPrice" to "300")
+    val answer=CalculatorLibrary.evaluate(def,raw)
+    assertEquals(1.0,answer.outputs.first{it.label=="مونة منفذة"}.value,1e-9)
+    assertEquals(50.0,answer.outputs.first{it.label=="مساحة التغطية عند السمك المدخل"}.value,1e-9)
+    assertEquals(answer.outputs.first{it.label=="تكلفة الاستهلاك"}.value,answer.consumedCost,1e-9)
+    assertTrue(answer.cost>answer.consumedCost)
+    val coverage=raw+mapOf("_mortarMode" to "coverage","_volume" to "2","waste" to "10")
+    assertEquals(100.0/1.1,CalculatorLibrary.mortarArea(coverage),1e-9)
+    assertTrue(runCatching{CalculatorLibrary.evaluate(def,coverage+("_volume" to "0"))}.isFailure)
+ }
+ @Test fun shoppingContainsOnlyMaterialsAndUsesPackageUnits(){
+    val def=CalculatorLibrary.all.first{it.id=="tile"}
+    val raw=def.fields.associate{it.key to it.default}+mapOf("area" to "10","tileW" to "50","tileH" to "50","pack" to "4","price" to "100","waste" to "0")
+    val answer=CalculatorLibrary.evaluate(def,raw)
+    val buy=CostEngine.calculatorPurchases(def,raw,answer)
+    assertEquals(1,buy.size);assertEquals("كرتونة",buy.single().packageUnit)
+    assertEquals(10,buy.single().packages);assertEquals(1000.0,buy.single().cost,1e-9)
+    assertFalse(buy.any{it.unit=="جنيه"||it.material.contains("فائض")||it.material.contains("صافي")})
+ }
+ @Test fun netExecutionAndWasteStaySeparate(){
+    val t=Takeoff(name="الأرضيات",unit=UnitType.AREA,kind=CalcKind.DIRECT,directValue=100.0,waste=5.0)
+    val q=QuantityEngine.calculateOne(Space(name="",type="",takeoffs=listOf(t)),t)
+    assertEquals(100.0,q.repeatedFinal,0.0);assertEquals(105.0,q.repeatedFinal+q.waste,0.0)
+ }
 }
+

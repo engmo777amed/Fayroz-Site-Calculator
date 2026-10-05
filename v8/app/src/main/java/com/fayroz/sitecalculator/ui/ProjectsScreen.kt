@@ -47,7 +47,7 @@ fun ProjectsScreen(
                 }
             }
         }
-        item{Row{Checkbox(showArchived,{showArchived=it});Text("عرض الأرشيف",Modifier.padding(top=12.dp))}}
+        item{TextButton(onClick={showArchived=!showArchived}){Text(if(showArchived)"عرض المشروعات الحالية" else "الأرشيف")}}
         if(projects.isNotEmpty())item{
             TextFieldX("بحث",search,{search=it},placeholder="اسم مشروع أو دور أو غرفة")
         }
@@ -78,23 +78,15 @@ fun ProjectsScreen(
                                 Text(p.name,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Black,maxLines=1,overflow=TextOverflow.Ellipsis)
                                 Text("${p.type} • ${p.sections.size} جزء • $total مكان",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            if(p.id==activeProjectId){
-                                AssistChip(onClick={},label={Text("نشط")},leadingIcon={Icon(Icons.Rounded.CheckCircle,null,Modifier.size(16.dp))})
-                            }else{
-                                TextButton(onClick={onSetActive(p.id)}){Text("خليه نشط")}
-                            }
-                        }
-                        Row{
-                            TextButton(onClick={onUpdate(p.copy(id=UUID.randomUUID().toString(),name=p.name+" — نسخة",sections=p.sections.map{it.copy(id=UUID.randomUUID().toString(),spaces=it.spaces.map(::copySpace))},calculations=emptyList(),archived=false,createdAt=System.currentTimeMillis(),updatedAt=System.currentTimeMillis()))}){Text("نسخ")}
-                            TextButton(onClick={onUpdate(p.copy(archived=!p.archived))}){Text(if(p.archived)"استرجاع" else "أرشفة")}
-                            TextButton(onClick={delete=p}){Text("حذف")}
+                            if(p.id==activeProjectId)Icon(Icons.Rounded.CheckCircle,"مشروع نشط",tint=MaterialTheme.colorScheme.primary)
+                            ActionMenu(listOf(
+                                "تعيين نشط" to {onSetActive(p.id)},
+                                "نسخ المشروع" to {onUpdate(p.copy(id=UUID.randomUUID().toString(),name=p.name+" — نسخة",sections=p.sections.map{it.copy(id=UUID.randomUUID().toString(),spaces=it.spaces.map(::copySpace))},calculations=emptyList(),archived=false,createdAt=System.currentTimeMillis(),updatedAt=System.currentTimeMillis()))},
+                                (if(p.archived)"استرجاع" else "أرشفة") to {onUpdate(p.copy(archived=!p.archived))},
+                                "حذف" to {delete=p}
+                            ))
                         }
                         if(total>0){
-                            LinearProgressIndicator(
-                                progress={done.toFloat()/total.toFloat()},
-                                modifier=Modifier.fillMaxWidth(),
-                                color=MaterialTheme.colorScheme.secondary
-                            )
                             Text("خلص $done من $total",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
@@ -131,3 +123,4 @@ private fun NewProjectDialog(onDismiss:()->Unit,onCreate:(String,String)->Unit){
         dismissButton={TextButton(onClick=onDismiss){Text("إلغاء")}}
     )
 }
+
