@@ -88,16 +88,18 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
                             MetricRow("تكلفة الجزء","${fmt(row.total)} جنيه",true)
                             if(row.quantity>0)MetricRow("تكلفة المواد للوحدة","${fmt(row.materialCost/row.quantity)} جنيه/${row.unit}")
                         }
+                        row.materialLines.forEach{MetricRow(it.label,it.value)}
+                        if(row.spec==null)MetricRow("تكلفة مواد الجزء","${fmt(row.materialCost)} جنيه",true)
                         var show by remember(row.itemId,row.partId){mutableStateOf(false)}
                         TextButton(onClick={show=!show}){Text("طريقة الحساب")};if(show)Text(row.formula,style=MaterialTheme.typography.bodySmall)
                         TextButton(onClick={onEditSource(row.sectionId,row.spaceId,row.itemId)}){Text("فتح المصدر للتعديل")}
                     }}
                 }
                 "شراء الخامات"->{
-                    item{Text("تجميع مواد المونة حسب العبوة والسعر، ثم تقريب العبوات مرة واحدة. خامات البنود الأخرى محفوظة في حاسباتها.",style=MaterialTheme.typography.bodySmall)}
+                    item{Text("تجميع خامات الأجزاء المتطابقة بالمواصفات والأسعار، ثم تقريب العبوات مرة واحدة.",style=MaterialTheme.typography.bodySmall)}
                     val purchases=CostEngine.purchase(rows)
                     items(purchases.size){i->val p=purchases[i];BoxCard{Text(p.material,fontWeight=FontWeight.Bold);MetricRow("احتياج فعلي","${fmt(p.amount)} ${p.unit}");p.packages?.let{MetricRow("شراء","$it عبوة")};MetricRow("تكلفة شراء","${fmt(p.cost)} جنيه",true)}}
-                    item{MetricRow("إجمالي شراء المونة","${fmt(purchases.sumOf{it.cost})} جنيه",true)}
+                    item{MetricRow("إجمالي شراء الخامات","${fmt(purchases.sumOf{it.cost})} جنيه",true)}
                 }
                 "حسابات محفوظة"->{items(scoped.calculations.size){i->val c=scoped.calculations[i];BoxCard{Text(c.title,fontWeight=FontWeight.Bold);Text(c.summary);MetricRow("التكلفة عند الحفظ","${fmt(c.cost)} جنيه");TextButton(onClick={onOpenCalc(c)}){Text("فتح بنفس المدخلات")}}}}
                 else->{

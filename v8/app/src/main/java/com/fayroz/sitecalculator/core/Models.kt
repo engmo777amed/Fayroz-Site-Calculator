@@ -68,7 +68,8 @@ data class Takeoff(
     val note:String="",
     val parts:List<WorkPart> = emptyList(),
     val surfaceIds:List<String> = emptyList(),
-    val material:MaterialSpec?=null
+    val material:MaterialSpec?=null,
+    val calculatorInputs:Map<String,String> = emptyMap()
 )
 
 data class Space(
@@ -162,7 +163,8 @@ data class PurchaseInfo(
 data class WorkPart(
     val id:String=UUID.randomUUID().toString(), val name:String="جزء",
     val length:Double=0.0,val width:Double=0.0,val quantity:Double?=null,
-    val deduction:Double=0.0,val note:String="",val material:MaterialSpec?=null
+    val deduction:Double=0.0,val note:String="",val material:MaterialSpec?=null,
+    val calculatorInputs:Map<String,String> = emptyMap()
 )
 data class MaterialSpec(
     val thicknessMm:Double=15.0,val cementParts:Double=1.0,val sandParts:Double=4.0,

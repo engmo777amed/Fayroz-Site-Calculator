@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import com.fayroz.sitecalculator.core.*
 import com.fayroz.sitecalculator.domain.QuantityEngine
 import com.fayroz.sitecalculator.domain.CostEngine
+import com.fayroz.sitecalculator.domain.CalculatorLibrary
 
 @Composable
 fun TakeoffEditorDialog(
@@ -24,6 +25,9 @@ fun TakeoffEditorDialog(
     onDismiss:()->Unit,
     onSave:(Takeoff)->Unit
 ){
+    var recipe by remember{mutableStateOf(item.calculatorInputs)}
+    var partRecipeId by remember{mutableStateOf<String?>(null)}
+    val recipeDef=CalculatorLibrary.forItem(item.name)
     var parts by remember{mutableStateOf(item.parts)}
     var surfaces by remember{mutableStateOf(item.surfaceIds.toSet())}
     var material by remember{mutableStateOf(item.material?:defaultMaterial?:CostEngine.defaultSpec(item.name))}
@@ -56,7 +60,7 @@ fun TakeoffEditorDialog(
         layerThickness=n(layerThickness),includeOpeningReveals=reveals,wallIds=wallIds.toList(),
         manualValue=if(manualEnabled)n(manual)else null,overrideReason=overrideReason,
         adjustments=adjustments,pieceWidth=n(pieceW),pieceHeight=n(pieceH),
-        piecesPerPack=n(pack).toInt().coerceAtLeast(0),note=note,parts=parts,surfaceIds=surfaces.toList(),material=material
+        piecesPerPack=n(pack).toInt().coerceAtLeast(0),note=note,parts=parts,surfaceIds=surfaces.toList(),material=material,calculatorInputs=recipe
     )
     val q=QuantityEngine.calculateOne(space,preview)
 
@@ -108,6 +112,7 @@ fun TakeoffEditorDialog(
                                 TextFieldX("ملاحظة الجزء",p.note,{change(p.copy(note=it))})
                                 Row{
                                     if(material!=null)TextButton(onClick={partSpecId=p.id}){Text("خلطة وتكلفة الجزء")}
+                                    else if(recipeDef!=null)TextButton(onClick={partRecipeId=p.id}){Text("خامات وتكلفة الجزء")}
                                     TextButton(onClick={parts=parts.filterNot{it.id==p.id}}){Text("حذف الجزء")}
                                 }
                                 HorizontalDivider()
@@ -132,6 +137,11 @@ fun TakeoffEditorDialog(
                     TextButton(onClick={show=!show}){Text(if(show)"إخفاء مواصفات الخامات" else "خلطة وسمك وأسعار هذا البند")}
                     if(show)BoxCard{MaterialSpecFields(m,{material=it})}
                 }}
+                if(material==null&&recipeDef!=null)item{
+                    var show by remember{mutableStateOf(false)}
+                    TextButton(onClick={show=!show}){Text("خامات وأسعار هذا البند")}
+                    if(show)BoxCard{RecipeFields(recipeDef,q.repeatedFinal,recipe,{recipe=it})}
+                }
                 item{TextButton(onClick={advanced=!advanced}){Text(if(advanced)"إخفاء التفاصيل الإضافية" else "إضافات وخصومات وكمية فعلية ومقاس القطعة")}}
 
 
@@ -236,6 +246,7 @@ fun TakeoffEditorDialog(
             error=when{
                 q.oneSpaceFinal<=0->"أدخل مقاسات أو كمية أكبر من صفر."
                 preview.waste<0||preview.tileHeight<0||preview.upstand<0->"القيم لا يمكن أن تكون سالبة."
+                recipeDef!=null&&parts.isEmpty()&&runCatching{CalculatorLibrary.evaluate(recipeDef,CalculatorLibrary.recipe(recipeDef,recipe,q.repeatedFinal))}.isFailure->"راجع بيانات الخامات والعبوات."
                 parts.any{QuantityEngine.partValue(it,item.unit)<=0}->"راجع مقاسات وخصومات الأجزاء."
                 material?.let{it.bagKg<=0||it.cementParts+it.sandParts<=0||it.thicknessMm<=0}==true->"راجع وزن الشيكارة والخلطة والسمك."
                 manualEnabled&&overrideReason.isBlank()->"اكتب سبب اعتماد الكمية الفعلية."
@@ -246,6 +257,16 @@ fun TakeoffEditorDialog(
         dismissButton={TextButton(onClick=onDismiss){Text("إلغاء")}}
     )
 
+    partRecipeId?.let{id->
+        val part=parts.firstOrNull{it.id==id}
+        if(part!=null&&recipeDef!=null){
+            var values by remember(id){mutableStateOf(part.calculatorInputs.takeIf{it.isNotEmpty()}?:recipe)}
+            AlertDialog(onDismissRequest={partRecipeId=null},title={Text("خامات ${part.name}")},
+                text={androidx.compose.foundation.lazy.LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)){item{RecipeFields(recipeDef,QuantityEngine.partValue(part,item.unit)*space.repeatCount,values,{values=it})}}},
+                confirmButton={TextButton(onClick={if(runCatching{CalculatorLibrary.evaluate(recipeDef,CalculatorLibrary.recipe(recipeDef,values,QuantityEngine.partValue(part,item.unit)*space.repeatCount))}.isSuccess){parts=parts.map{if(it.id==id)it.copy(calculatorInputs=values)else it};partRecipeId=null}}){Text("اعتماد")}},
+                dismissButton={TextButton(onClick={partRecipeId=null}){Text("إلغاء")}})
+        }
+    }
     partSpecId?.let{id->
         val part=parts.firstOrNull{it.id==id}
         if(part!=null){

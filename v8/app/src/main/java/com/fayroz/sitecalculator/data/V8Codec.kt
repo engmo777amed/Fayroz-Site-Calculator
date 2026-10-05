@@ -81,11 +81,11 @@ object V8Codec {
             put("wallIds",JSONArray(t.wallIds))
             put("pieceWidth",t.pieceWidth);put("pieceHeight",t.pieceHeight);put("piecesPerPack",t.piecesPerPack)
             put("overrideReason",t.overrideReason);put("note",t.note)
-            put("surfaceIds",JSONArray(t.surfaceIds))
+            put("surfaceIds",JSONArray(t.surfaceIds));put("calculatorInputs",JSONObject(t.calculatorInputs))
             put("material",t.material?.let(::materialObj)?:JSONObject.NULL)
             put("parts",JSONArray().apply{t.parts.forEach{p->put(JSONObject().apply{
                 put("id",p.id);put("name",p.name);put("length",p.length);put("width",p.width)
-                put("quantity",p.quantity?:JSONObject.NULL);put("deduction",p.deduction);put("note",p.note)
+                put("calculatorInputs",JSONObject(p.calculatorInputs));put("quantity",p.quantity?:JSONObject.NULL);put("deduction",p.deduction);put("note",p.note)
                 put("material",p.material?.let(::materialObj)?:JSONObject.NULL)
             })}})
             put("adjustments",JSONArray().apply{t.adjustments.forEach{a->put(JSONObject().apply{
@@ -201,7 +201,7 @@ object V8Codec {
                 pieceWidth=t.optDouble("pieceWidth"),pieceHeight=t.optDouble("pieceHeight"),
                 piecesPerPack=t.optInt("piecesPerPack",0),
                 overrideReason=t.optString("overrideReason"),note=t.optString("note"),
-                material=materialFrom(t.optJSONObject("material")),
+                material=materialFrom(t.optJSONObject("material")),calculatorInputs=stringMap(t.optJSONObject("calculatorInputs")),
                 surfaceIds=strings(t.optJSONArray("surfaceIds")),
                 parts=buildList{
                     val pa=t.optJSONArray("parts")?:JSONArray()
@@ -210,7 +210,7 @@ object V8Codec {
                         add(WorkPart(p.optString("id",UUID.randomUUID().toString()),p.optString("name","جزء"),
                             p.optDouble("length",0.0),p.optDouble("width",0.0),
                             if(p.isNull("quantity"))null else p.optDouble("quantity"),p.optDouble("deduction",0.0),
-                            p.optString("note"),materialFrom(p.optJSONObject("material"))))
+                            p.optString("note"),materialFrom(p.optJSONObject("material")),stringMap(p.optJSONObject("calculatorInputs"))))
                     }
                 }
             )

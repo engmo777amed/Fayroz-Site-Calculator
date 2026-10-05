@@ -27,7 +27,7 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
     val context=LocalContext.current
     var detailed by remember{mutableStateOf(false)}
     var baseline by remember{mutableStateOf<MaterialResult?>(null)}
-    var label by remember{mutableStateOf(seed?.title?:def.title)}
+    var label by remember{mutableStateOf(seed?.inputs?.get("_label")?:seed?.title?:def.title)}
     var source by remember{mutableStateOf("حساب مستقل")}
     var sectionId by remember{mutableStateOf<String?>(null)}
     var spaceId by remember{mutableStateOf<String?>(null)}

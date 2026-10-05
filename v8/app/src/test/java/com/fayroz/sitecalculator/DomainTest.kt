@@ -49,8 +49,16 @@ class DomainTest {
     val rows=CostEngine.rows(Project(name="",sections=listOf(Section(name="",spaces=listOf(Space(name="",type="",takeoffs=listOf(t)))))))
     assertEquals(rows[0].cementKg*2,rows[1].cementKg,1e-9)
  }
+ @Test fun tileConsumptionDoesNotRoundPerPart(){
+    val recipe=mapOf("tileW" to "50","tileH" to "50","pack" to "4","price" to "100","waste" to "0")
+    val t=Takeoff(name="الأرضيات",unit=UnitType.AREA,kind=CalcKind.FLOOR,calculatorInputs=recipe,parts=listOf(WorkPart(length=.5,width=1.0),WorkPart(length=.5,width=1.0)))
+    val p=Project(name="",sections=listOf(Section(name="",spaces=listOf(Space(name="",type="",takeoffs=listOf(t)))))))
+    val rows=CostEngine.rows(p)
+    assertEquals(100.0,rows.sumOf{it.materialCost},1e-9)
+    assertEquals(100.0,CostEngine.purchase(rows).sumOf{it.cost},1e-9)
+ }
  @Test fun codecPreservesAllNewData(){
-    val t=Takeoff(name="طرطشة الأسقف",unit=UnitType.AREA,kind=CalcKind.CEILING,material=MaterialSpec(cementPrice=100.0),parts=listOf(WorkPart(length=2.0,width=3.0,material=MaterialSpec(thicknessMm=5.0))),surfaceIds=listOf("s1"))
+    val t=Takeoff(name="طرطشة الأسقف",unit=UnitType.AREA,kind=CalcKind.CEILING,material=MaterialSpec(cementPrice=100.0),parts=listOf(WorkPart(length=2.0,width=3.0,material=MaterialSpec(thicknessMm=5.0),calculatorInputs=mapOf("rate" to "5"))),surfaceIds=listOf("s1"))
     val p=Project(name="اختبار",archived=true,defaults=mapOf("cementPrice" to "100"),sections=listOf(Section(name="دور",spaces=listOf(Space(name="غرفة",type="",takeoffs=listOf(t))))),calculations=listOf(SavedCalculation(toolId="tile",title="حساب",summary="",inputs=mapOf("area" to "12"),cost=300.0)))
     assertEquals(p,V8Codec.decodeProjects(V8Codec.encodeProjects(listOf(p))).single())
  }

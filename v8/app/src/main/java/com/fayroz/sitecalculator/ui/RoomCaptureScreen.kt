@@ -55,6 +55,7 @@ fun RoomCaptureScreen(
     var geometryMode by remember{
         mutableStateOf(
             when{
+                restored?.walls?.isNotEmpty()==true&&restored.floorSurfaces.isNotEmpty()-> "حوائط ومسطحات مستقلة"
                 restored?.walls?.isNotEmpty()==true -> "أكتر من حائط ورا بعض"
                 restored?.floorSurfaces?.isNotEmpty()==true -> "قسم المساحة لكذا جزء"
                 else -> "مستطيل بسيط"
@@ -84,13 +85,13 @@ fun RoomCaptureScreen(
         width=lengthMeters(width,dimUnit),
         height=lengthMeters(height,dimUnit).takeIf{it>0}?:3.0,
         repeatCount=n(repeat).toInt().coerceAtLeast(1),
-        walls=if(geometryMode=="أكتر من حائط ورا بعض")walls.toList() else emptyList(),
+        walls=if(geometryMode in listOf("أكتر من حائط ورا بعض","حوائط ومسطحات مستقلة"))walls.toList() else emptyList(),
         openings=openings.toList(),
-        takeoffs=takeoffs.toList(),
+        takeoffs=takeoffs.map{it.copy(material=it.material?:CostEngine.defaultSpec(it.name,defaults))},
         note=note.trim(),
         status=status,
         updatedAt=System.currentTimeMillis(),
-        floorSurfaces=if(geometryMode=="قسم المساحة لكذا جزء")floors.toList() else emptyList(),
+        floorSurfaces=if(geometryMode in listOf("قسم المساحة لكذا جزء","حوائط ومسطحات مستقلة"))floors.toList() else emptyList(),
         ceilingSurfaces=if(ceilingDetails)ceilings.toList() else emptyList(),
         photoUris=photos.toList()
     )
@@ -222,12 +223,12 @@ fun RoomCaptureScreen(
                         ChoiceFieldX(
                             "هتحسب المكان إزاي؟",
                             geometryMode,
-                            listOf("مستطيل بسيط","أكتر من حائط ورا بعض","قسم المساحة لكذا جزء"),
+                            listOf("مستطيل بسيط","أكتر من حائط ورا بعض","قسم المساحة لكذا جزء","حوائط ومسطحات مستقلة"),
                             {geometryMode=it},
                             help="للصالة أو الشكل غير المنتظم استخدم الحوائط المتتالية أو قسم المساحة لأجزاء."
                         )
 
-                        if(geometryMode=="أكتر من حائط ورا بعض"){
+                        if(geometryMode in listOf("أكتر من حائط ورا بعض","حوائط ومسطحات مستقلة")){
                             if(walls.isEmpty())walls.add(WallPart(name="حائط 1",height=lengthMeters(height,dimUnit).takeIf{it>0}?:3.0))
                             walls.forEachIndexed{i,w->
                                 var wl by remember(w.id,dimUnit){mutableStateOf(if(w.length>0)fmt(w.length/(lengthUnits.first{it.label==dimUnit}.meters)) else "")}
@@ -251,7 +252,7 @@ fun RoomCaptureScreen(
                             ){Icon(Icons.Rounded.Add,null);Spacer(Modifier.width(4.dp));Text("ضيف حائط")}
                         }
 
-                        if(geometryMode=="قسم المساحة لكذا جزء"){
+                        if(geometryMode in listOf("قسم المساحة لكذا جزء","حوائط ومسطحات مستقلة")){
                             if(floors.isEmpty())floors.add(SurfacePart(name="مسطح 1"))
                             Text("مسطحات الأرضية",fontWeight=FontWeight.Black)
                             floors.forEachIndexed{i,s->
