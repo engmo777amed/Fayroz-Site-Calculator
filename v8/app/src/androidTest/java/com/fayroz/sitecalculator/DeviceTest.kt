@@ -31,7 +31,7 @@ class DeviceTest {
     return Project(name="اختبار الحصر",sections=listOf(Section(name="الدور الأول",spaces=listOf(Space(name="غرفة الاختبار",type="غرفة نوم",length=4.0,width=3.0,takeoffs=listOf(t))))))
  }
  @Before fun reset(){context.getSharedPreferences("fayroz_site_v8",Context.MODE_PRIVATE).edit().clear().commit();context.getSharedPreferences("fayroz_site_projects",Context.MODE_PRIVATE).edit().clear().commit()}
- private fun shot(name:String){val file=File(context.getExternalFilesDir(null),"screenshots/$name.png");file.parentFile!!.mkdirs();assertTrue(device.takeScreenshot(file))}
+ private fun shot(name:String){val file=File(context.getExternalFilesDir(null),"screenshots/$name.png");file.parentFile!!.mkdirs();assertTrue(device.takeScreenshot(file));device.executeShellCommand("mkdir -p /sdcard/Download/site-v9-screenshots");device.executeShellCommand("cp ${file.absolutePath} /sdcard/Download/site-v9-screenshots/$name.png")}
  @After fun captureFinalState(){shot("last-state");device.dumpWindowHierarchy(File(context.getExternalFilesDir(null),"screenshots/window.xml"))}
  @Test fun libraryAndProjectScreensOpen(){
     V8Repository(context).saveProjects(listOf(sample()))

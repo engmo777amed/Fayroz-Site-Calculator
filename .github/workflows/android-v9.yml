@@ -37,10 +37,10 @@ jobs:
           arch: x86_64
           disable-animations: true
           script: |
-            cd v8; gradle :app:connectedDebugAndroidTest --stacktrace; test_status=$?; adb pull /sdcard/Android/data/com.fayroz.sitecalculator/files/screenshots ./screenshots; exit $test_status
+            cd v8; gradle :app:connectedDebugAndroidTest --stacktrace; test_status=$?; adb pull /sdcard/Download/site-v9-screenshots ./screenshots; exit $test_status
       - name: Screenshots
         if: always()
-        run: adb pull /sdcard/Android/data/com.fayroz.sitecalculator/files/screenshots ./screenshots || true
+        run: adb pull /sdcard/Download/site-v9-screenshots ./screenshots || true
       - name: Build APK
         run: gradle :app:assembleDebug :app:assembleRelease --stacktrace
       - name: Copy signing utility
