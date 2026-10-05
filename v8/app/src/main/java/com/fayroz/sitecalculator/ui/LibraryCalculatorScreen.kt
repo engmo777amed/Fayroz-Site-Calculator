@@ -85,7 +85,7 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
     }
     BackHandler{if(stage==1){stage=0;error=null}else onBack()}
     LaunchedEffect(stage){listState.scrollToItem(0)}
-    Scaffold(topBar={TopAppBar(title={Column{Text(def.title,fontWeight=FontWeight.Bold);Text("الحاسبات / ${def.group}",style=MaterialTheme.typography.labelSmall)}},navigationIcon={TextButton(onClick={if(stage==1){stage=0;error=null}else onBack()}){Text("رجوع")}})},
+    Scaffold(topBar={TopAppBar(title={Column{Text(def.title,fontWeight=FontWeight.Bold,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis);Text("الحاسبات / ${def.group}",style=MaterialTheme.typography.labelSmall,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)}},navigationIcon={TextButton(onClick={if(stage==1){stage=0;error=null}else onBack()}){Text("رجوع")}})},
         bottomBar={Surface(shadowElevation=8.dp){Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
             error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
             Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
