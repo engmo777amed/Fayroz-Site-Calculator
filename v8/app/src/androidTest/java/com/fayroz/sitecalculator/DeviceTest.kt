@@ -1,6 +1,8 @@
 package com.fayroz.sitecalculator
 
 import android.content.Context
+import android.content.Intent
+import com.fayroz.sitecalculator.domain.CalculatorLibrary
 import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -42,6 +44,13 @@ class DeviceTest {
        assertTrue(device.wait(Until.hasObject(By.text("اختبار الحصر")),10000))
        device.findObject(By.text("اختبار الحصر")).click()
        assertTrue(device.wait(Until.hasObject(By.text("الدور الأول")),10000));shot("project")
+    }
+ }
+ @Test fun everyCalculatorOpensOnDevice(){
+    CalculatorLibrary.all.forEach{def->
+        ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java).putExtra("calculator",def.id)).use{
+            assertTrue(def.id,device.wait(Until.hasObject(By.text("اسم الحساب")),10000))
+        }
     }
  }
  @Test fun backupIncludesPhotosAndRestoresSpecs(){

@@ -9,7 +9,7 @@ import com.fayroz.sitecalculator.domain.*
 fun RecipeFields(def:CalcDef,quantity:Double,inputs:Map<String,String>,onChange:(Map<String,String>)->Unit){
     Text("${def.title} — المساحة تأتي من الحصر تلقائيًا")
     def.fields.filter{it.key !in setOf("area","length","count")}.forEach{f->
-        NumberFieldX(f.label,inputs[f.key]?:f.default,{onChange(inputs+(f.key to it))},f.unit)
+        CalcInputField(f,inputs[f.key]?:f.default,{onChange(inputs+(f.key to it))})
     }
     listOf("_laborRate" to "المصنعية للوحدة","_transportRate" to "النقل للوحدة","_equipmentRate" to "المعدات للوحدة").forEach{(key,label)->
         NumberFieldX(label,inputs[key]?:"0",{onChange(inputs+(key to it))},"جنيه")
@@ -23,4 +23,16 @@ fun RecipeFields(def:CalcDef,quantity:Double,inputs:Map<String,String>,onChange:
         Text("الشراء المجمع يقرب العبوات بعد جمع الأجزاء المتطابقة.",style=MaterialTheme.typography.bodySmall)
     }
     answer.exceptionOrNull()?.let{Text(it.message?:"راجع البيانات",color=MaterialTheme.colorScheme.error)}
+}
+
+@Composable
+fun CalcInputField(field:CalcField,value:String,onChange:(String)->Unit){
+    var displayUnit by remember(field.key){mutableStateOf(field.unit)}
+    if(field.unit in listOf("م","سم","مم")){
+        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+            NumberFieldX(field.label,if(value.isBlank())"" else convertLength(value,field.unit,displayUnit),
+                {onChange(if(it.isBlank())"" else convertLength(it,displayUnit,field.unit))},displayUnit,androidx.compose.ui.Modifier.weight(3f))
+            ChoiceFieldX("الوحدة",displayUnit,listOf("م","سم","مم"),{displayUnit=it},androidx.compose.ui.Modifier.weight(1f))
+        }
+    }else NumberFieldX(field.label,value,onChange,field.unit)
 }

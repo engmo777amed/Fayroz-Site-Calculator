@@ -28,9 +28,9 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
     var detailed by remember{mutableStateOf(false)}
     var baseline by remember{mutableStateOf<MaterialResult?>(null)}
     var label by remember{mutableStateOf(seed?.inputs?.get("_label")?:seed?.title?:def.title)}
-    var source by remember{mutableStateOf("حساب مستقل")}
-    var sectionId by remember{mutableStateOf<String?>(null)}
-    var spaceId by remember{mutableStateOf<String?>(null)}
+    var source by remember{mutableStateOf(seed?.inputs?.get("_source")?:"حساب مستقل")}
+    var sectionId by remember{mutableStateOf(seed?.inputs?.get("_sectionId")?.takeIf{it.isNotBlank()})}
+    var spaceId by remember{mutableStateOf(seed?.inputs?.get("_spaceId")?.takeIf{it.isNotBlank()})}
     val attempt=runCatching{CalculatorLibrary.evaluate(def,raw)}
     val answer=attempt.getOrNull()
     val result=answer?.let{CalculatorLibrary.result(def,raw.toMap(),it).copy(title=label)}
@@ -73,7 +73,7 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
                     TextButton(onClick={def.fields.forEach{raw[it.key]=it.default}}){Text("القيم الأصلية")}
                 }
                 def.fields.filter{detailed||it.required||it.key in setOf("waste","price","thickness","coats","cementPrice","sandPrice")}.forEach{field->
-                    NumberFieldX(field.label,raw[field.key].orEmpty(),{raw[field.key]=it},field.unit)
+                    CalcInputField(field,raw[field.key].orEmpty(),{raw[field.key]=it})
                 }
                 if(!detailed){
                     val hidden=def.fields.filter{!it.required&&it.key !in setOf("waste","price","thickness","coats","cementPrice","sandPrice")}
@@ -100,7 +100,7 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
                         TextButton(onClick={baseline=null}){Text("مسح المقارنة")}
                     }
                     Button(onClick={
-                        val next=result.copy(inputs=result.inputs+mapOf("_label" to label,"_source" to source))
+                        val next=result.copy(inputs=result.inputs+mapOf("_label" to label,"_source" to source,"_sectionId" to sectionId.orEmpty(),"_spaceId" to spaceId.orEmpty()))
                         def.fields.forEach{repository.setPref("calc.$toolId.${it.key}",raw[it.key].orEmpty())}
                         if(project!=null&&source!="حساب مستقل")onSave(next,sectionId,spaceId)
                         else repository.saveRecentCalc(SavedCalculation(toolId=next.toolId,title=next.title,summary=next.lines.joinToString(" • "){"${it.label}: ${it.value}"},sourceQuantity=next.sourceQuantity,unit=next.sourceUnit,inputs=next.inputs,cost=next.cost,explanation=next.explanation))

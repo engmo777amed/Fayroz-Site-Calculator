@@ -44,7 +44,9 @@ class MainActivity:ComponentActivity(){
             var appearance by remember{mutableStateOf(repository.appearance())}
             var active by remember{mutableStateOf(repository.activeLocation())}
             var tab by remember{mutableStateOf(RootTab.HOME)}
-            var route by remember{mutableStateOf<Route>(Route.Root)}
+            var route by remember{mutableStateOf<Route>(
+                intent.getStringExtra("calculator")?.takeIf{id->CalculatorLibrary.all.any{it.id==id}}?.let{Route.Tool(it)}?:Route.Root
+            )}
 
             fun persist(){
                 repository.saveProjects(projects.toList())
@@ -178,7 +180,8 @@ class MainActivity:ComponentActivity(){
                                             if(p==null){tab=RootTab.PROJECTS}
                                             else route=Route.DirectItem(p.id)
                                         },
-                                        onSettings={route=Route.Settings}
+                                        onSettings={route=Route.Settings},
+                                        onOpenSaved={calc->route=Route.Tool(calc.toolId,MaterialResult(calc.toolId,calc.title,calc.sourceQuantity,calc.unit,emptyList(),calc.explanation,calc.inputs,calc.cost),active?.projectId)}
                                     )
 
                                     RootTab.PROJECTS->ProjectsScreen(

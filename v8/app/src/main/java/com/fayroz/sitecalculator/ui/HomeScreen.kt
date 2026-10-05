@@ -29,7 +29,8 @@ fun HomeScreen(
     onTools:()->Unit,
     onNewRoom:()->Unit,
     onDirectItem:()->Unit,
-    onSettings:()->Unit
+    onSettings:()->Unit,
+    onOpenSaved:(SavedCalculation)->Unit = {}
 ){
     val project=active?.let{a->projects.firstOrNull{it.id==a.projectId}}
     val section=project?.sections?.firstOrNull{it.id==active?.sectionId}
@@ -110,7 +111,7 @@ fun HomeScreen(
             item{PageHeader("آخر حساباتك")}
             items(recentCalcs.take(3).size){index->
                 val calc=recentCalcs[index]
-                Surface(shape=RoundedCornerShape(14.dp),tonalElevation=1.dp){
+                Surface(onClick={onOpenSaved(calc)},shape=RoundedCornerShape(14.dp),tonalElevation=1.dp){
                     Column(Modifier.fillMaxWidth().padding(10.dp)){
                         Text(calc.title,fontWeight=FontWeight.Black)
                         Text(calc.summary,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=2)

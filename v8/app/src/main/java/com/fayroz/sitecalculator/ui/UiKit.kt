@@ -19,7 +19,7 @@ import java.util.Locale
 fun n(raw:String):Double = raw.map{c->if(c.isDigit())c.digitToInt().digitToChar() else c}.joinToString("")
     .replace(',','.').replace('٫','.').replace("٬","").toDoubleOrNull()?.takeIf{it.isFinite()}?:0.0
 fun exact(v:Double):String = java.math.BigDecimal.valueOf(v).stripTrailingZeros().toPlainString()
-fun fmt(v:Double):String=String.format(Locale.US,"%.2f",v).trimEnd('0').trimEnd('.')
+fun fmt(v:Double):String=String.format(Locale.US,"%.3f",v).trimEnd('0').trimEnd('.')
 
 data class LengthUnit(val label:String,val meters:Double)
 val lengthUnits=listOf(LengthUnit("م",1.0),LengthUnit("سم",.01),LengthUnit("مم",.001))

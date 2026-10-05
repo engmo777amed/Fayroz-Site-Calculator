@@ -36,11 +36,11 @@ fun TakeoffEditorDialog(
     var advanced by remember{mutableStateOf(false)}
     var error by remember{mutableStateOf<String?>(null)}
     var kind by remember{mutableStateOf(item.kind)}
-    var direct by remember{mutableStateOf(if(item.directValue>0)fmt(item.directValue) else "")}
-    var waste by remember{mutableStateOf(fmt(item.waste))}
-    var tileHeight by remember{mutableStateOf(fmt(item.tileHeight))}
-    var upstand by remember{mutableStateOf(fmt(item.upstand))}
-    var layerThickness by remember{mutableStateOf(if(item.layerThickness>0)fmt(item.layerThickness) else "")}
+    var direct by remember{mutableStateOf(if(item.directValue>0)exact(item.directValue) else "")}
+    var waste by remember{mutableStateOf(exact(item.waste))}
+    var tileHeight by remember{mutableStateOf(exact(item.tileHeight))}
+    var upstand by remember{mutableStateOf(exact(item.upstand))}
+    var layerThickness by remember{mutableStateOf(if(item.layerThickness>0)exact(item.layerThickness) else "")}
     var reveals by remember{mutableStateOf(item.includeOpeningReveals)}
     var wallIds by remember{mutableStateOf(item.wallIds.toSet())}
     var manualEnabled by remember{mutableStateOf(item.manualValue!=null)}
@@ -50,8 +50,8 @@ fun TakeoffEditorDialog(
     var adjType by remember{mutableStateOf(AdjustKind.ADD)}
     var adjValue by remember{mutableStateOf("")}
     var adjNote by remember{mutableStateOf("")}
-    var pieceW by remember{mutableStateOf(if(item.pieceWidth>0)fmt(item.pieceWidth) else "")}
-    var pieceH by remember{mutableStateOf(if(item.pieceHeight>0)fmt(item.pieceHeight) else "")}
+    var pieceW by remember{mutableStateOf(if(item.pieceWidth>0)exact(item.pieceWidth) else "")}
+    var pieceH by remember{mutableStateOf(if(item.pieceHeight>0)exact(item.pieceHeight) else "")}
     var pack by remember{mutableStateOf(if(item.piecesPerPack>0)item.piecesPerPack.toString() else "")}
     var note by remember{mutableStateOf(item.note)}
     var formulaOpen by remember{mutableStateOf(false)}

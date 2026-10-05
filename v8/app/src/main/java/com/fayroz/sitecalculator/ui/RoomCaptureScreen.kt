@@ -233,8 +233,8 @@ fun RoomCaptureScreen(
                         if(geometryMode in listOf("أكتر من حائط ورا بعض","حوائط ومسطحات مستقلة")){
                             if(walls.isEmpty())walls.add(WallPart(name="حائط 1",height=lengthMeters(height,dimUnit).takeIf{it>0}?:3.0))
                             walls.forEachIndexed{i,w->
-                                var wl by remember(w.id,dimUnit){mutableStateOf(if(w.length>0)fmt(w.length/(lengthUnits.first{it.label==dimUnit}.meters)) else "")}
-                                var wh by remember(w.id,dimUnit){mutableStateOf(fmt(w.height/(lengthUnits.first{it.label==dimUnit}.meters)))}
+                                var wl by remember(w.id,dimUnit){mutableStateOf(if(w.length>0)exact(w.length/(lengthUnits.first{it.label==dimUnit}.meters)) else "")}
+                                var wh by remember(w.id,dimUnit){mutableStateOf(exact(w.height/(lengthUnits.first{it.label==dimUnit}.meters)))}
                                 Surface(shape=RoundedCornerShape(12.dp),color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.35f)){
                                     Column(Modifier.padding(8.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
                                         Row(verticalAlignment=Alignment.CenterVertically){
@@ -370,6 +370,7 @@ fun RoomCaptureScreen(
                                                 Text("مواد ${fmt(rows.sumOf{it.materialCost})} جنيه • الإجمالي ${fmt(rows.sumOf{it.total})} جنيه",style=MaterialTheme.typography.bodySmall)
                                             }
                                             Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                                                if(i>0)TextButton(onClick={val previous=takeoffs[i-1];takeoffs[i-1]=takeoffs[i];takeoffs[i]=previous}){Text("↑")}
                                                 TextButton(onClick={
                                                     val copy=item.copy(id=UUID.randomUUID().toString(),parts=item.parts.map{it.copy(id=UUID.randomUUID().toString())})
                                                     takeoffs.add(i+1,copy)
@@ -414,9 +415,9 @@ private fun SurfacePartRow(
     onChange:(SurfacePart)->Unit,
     onDelete:()->Unit
 ){
-    var l by remember(surface.id,unit){mutableStateOf(if(surface.length>0)fmt(surface.length/(lengthUnits.first{it.label==unit}.meters)) else "")}
-    var w by remember(surface.id,unit){mutableStateOf(if(surface.width>0)fmt(surface.width/(lengthUnits.first{it.label==unit}.meters)) else "")}
-    var d by remember(surface.id){mutableStateOf(if(surface.deductionArea>0)fmt(surface.deductionArea) else "")}
+    var l by remember(surface.id,unit){mutableStateOf(if(surface.length>0)exact(surface.length/(lengthUnits.first{it.label==unit}.meters)) else "")}
+    var w by remember(surface.id,unit){mutableStateOf(if(surface.width>0)exact(surface.width/(lengthUnits.first{it.label==unit}.meters)) else "")}
+    var d by remember(surface.id){mutableStateOf(if(surface.deductionArea>0)exact(surface.deductionArea) else "")}
     Surface(shape=RoundedCornerShape(12.dp),color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.35f)){
         Column(Modifier.padding(8.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
             Row(verticalAlignment=Alignment.CenterVertically){
@@ -440,10 +441,10 @@ private fun OpeningRow(
     onChange:(Opening)->Unit,
     onDelete:()->Unit
 ){
-    var width by remember(opening.id){mutableStateOf(if(opening.width>0)fmt(opening.width) else "")}
-    var height by remember(opening.id){mutableStateOf(if(opening.height>0)fmt(opening.height) else "")}
-    var sill by remember(opening.id){mutableStateOf(fmt(opening.sill))}
-    var reveal by remember(opening.id){mutableStateOf(if(opening.revealDepth>0)fmt(opening.revealDepth) else "")}
+    var width by remember(opening.id){mutableStateOf(if(opening.width>0)exact(opening.width) else "")}
+    var height by remember(opening.id){mutableStateOf(if(opening.height>0)exact(opening.height) else "")}
+    var sill by remember(opening.id){mutableStateOf(exact(opening.sill))}
+    var reveal by remember(opening.id){mutableStateOf(if(opening.revealDepth>0)exact(opening.revealDepth) else "")}
     var count by remember(opening.id){mutableStateOf(opening.count.toString())}
 
     Surface(shape=RoundedCornerShape(13.dp),color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.35f)){

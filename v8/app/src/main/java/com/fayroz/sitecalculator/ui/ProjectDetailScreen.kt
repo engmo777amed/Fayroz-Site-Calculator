@@ -28,6 +28,7 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
     var itemFilter by remember{mutableStateOf("كل البنود")}
     var add by remember{mutableStateOf(false)}
     var sectionName by remember{mutableStateOf("")}
+    var deleteSection by remember{mutableStateOf<Section?>(null)}
     var editSection by remember{mutableStateOf<Section?>(null)}
     var renameProject by remember{mutableStateOf(false)}
     var projectName by remember{mutableStateOf(project.name)}
@@ -70,6 +71,7 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
                                 val copy=s.copy(id=UUID.randomUUID().toString(),name=s.name+" — نسخة",spaces=s.spaces.map{copySpace(it)})
                                 onUpdate(project.copy(sections=project.sections+copy,updatedAt=System.currentTimeMillis()))
                             }){Text("نسخ")}
+                            TextButton(onClick={deleteSection=s}){Text("حذف") }
                             if(i>0)TextButton(onClick={val list=project.sections.toMutableList();list[i]=list[i-1].also{list[i-1]=list[i]};onUpdate(project.copy(sections=list))}){Text("↑")}
                         }
                     }}
@@ -138,6 +140,8 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
             }}
         }
     }
+    deleteSection?.let{section->AlertDialog(onDismissRequest={deleteSection=null},title={Text("حذف ${section.name}؟")},text={Text("سيُحذف الدور وأماكنه وحصره. الحسابات المحفوظة التابعة له تُحذف أيضًا.")},
+        confirmButton={TextButton(onClick={onUpdate(project.copy(sections=project.sections.filterNot{it.id==section.id},calculations=project.calculations.filterNot{it.sectionId==section.id},updatedAt=System.currentTimeMillis()));deleteSection=null}){Text("حذف")}},dismissButton={TextButton(onClick={deleteSection=null}){Text("إلغاء")}})}
     if(add||editSection!=null)AlertDialog(onDismissRequest={add=false;editSection=null},title={Text("اسم الدور / الجزء")},text={TextFieldX("الاسم",sectionName,{sectionName=it})},confirmButton={TextButton(onClick={
         if(sectionName.isNotBlank()){
             val old=editSection

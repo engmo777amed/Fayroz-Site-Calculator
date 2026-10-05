@@ -13,6 +13,13 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         versionCode = 11
         versionName = "9.0.0"
+        manifestPlaceholders["appLabel"] = "Fayroz Site Calculator"
+    }
+    buildTypes {
+        getByName("release") {
+            applicationIdSuffix = ".v9"
+            manifestPlaceholders["appLabel"] = "Fayroz Site Calculator 9"
+        }
     }
     buildFeatures { compose = true; buildConfig = true }
     testOptions { unitTests.isReturnDefaultValues = true }
