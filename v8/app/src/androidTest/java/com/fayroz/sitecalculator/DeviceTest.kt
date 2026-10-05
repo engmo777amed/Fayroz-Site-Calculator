@@ -89,8 +89,18 @@ class DeviceTest {
  }
  private fun type(label:String,value:String){field(label).performTextReplacement(value);compose.waitForIdle();field(label).assertTextEquals(value)}
  private fun assertText(text:String){
-    compose.waitUntil(timeoutMillis=10000){compose.onAllNodesWithText(text,useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()}
-    compose.onAllNodesWithText(text,useUnmergedTree=true).onFirst().assertExists()
+    repeat(15){
+        compose.waitForIdle()
+        val nodes=compose.onAllNodesWithText(text,useUnmergedTree=true)
+        if(nodes.fetchSemanticsNodes().isNotEmpty()){
+            val node=nodes.onFirst()
+            runCatching{node.performScrollTo()}
+            node.assertExists();return
+        }
+        device.swipe(device.displayWidth/2,device.displayHeight*3/4,device.displayWidth/2,device.displayHeight/3,20)
+        device.waitForIdle()
+    }
+    fail("Text missing after scrolling: $text")
  }
  private fun clickText(text:String){
     val imePackage=device.executeShellCommand("settings get secure default_input_method").trim().substringBefore("/")
