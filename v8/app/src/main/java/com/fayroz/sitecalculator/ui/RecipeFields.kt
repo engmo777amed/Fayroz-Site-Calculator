@@ -11,14 +11,21 @@ fun RecipeFields(def:CalcDef,quantity:Double,inputs:Map<String,String>,onChange:
     MetricRow("كمية من الحصر",fmt(quantity))
     var prices by remember{mutableStateOf(true)}
     var more by remember{mutableStateOf(false)}
+    var latestInputs by remember{mutableStateOf(inputs)}
+    SideEffect{latestInputs=inputs}
+    fun update(fieldKey:String,value:String){
+        val updated=latestInputs+(fieldKey to value)
+        latestInputs=updated
+        onChange(updated)
+    }
     val normal=def.fields.filter{it.key !in setOf("area","length","count")&&!it.key.contains("price",true)&&it.key !in setOf("dry","density","extraRate")}
-    normal.forEach{f->CalcInputField(f,inputs[f.key]?:f.default,{onChange(inputs+(f.key to it))},inputs["_unit.${f.key}"],{onChange(inputs+("_unit.${f.key}" to it))})}
+    normal.forEach{f->CalcInputField(f,inputs[f.key]?:f.default,{update(f.key,it)},inputs["_unit.${f.key}"],{update("_unit.${f.key}",it)})}
     TextButton(onClick={prices=!prices}){Text("الأسعار — اختيارية")}
-    if(prices)def.fields.filter{it.key.contains("price",true)}.forEach{f->CalcInputField(f,inputs[f.key]?:f.default,{onChange(inputs+(f.key to it))},inputs["_unit.${f.key}"],{onChange(inputs+("_unit.${f.key}" to it))})}
+    if(prices)def.fields.filter{it.key.contains("price",true)}.forEach{f->CalcInputField(f,inputs[f.key]?:f.default,{update(f.key,it)},inputs["_unit.${f.key}"],{update("_unit.${f.key}",it)})}
     TextButton(onClick={more=!more}){Text("إعدادات إضافية ومصنعية")}
     if(more){
-        def.fields.filter{it.key in setOf("dry","density","extraRate")}.forEach{f->CalcInputField(f,inputs[f.key]?:f.default,{onChange(inputs+(f.key to it))},inputs["_unit.${f.key}"],{onChange(inputs+("_unit.${f.key}" to it))})}
-        listOf("_laborRate" to "المصنعية للوحدة","_transportRate" to "النقل للوحدة","_equipmentRate" to "المعدات للوحدة").forEach{(key,label)->NumberFieldX(label,inputs[key]?:"0",{onChange(inputs+(key to it))},"جنيه")}
+        def.fields.filter{it.key in setOf("dry","density","extraRate")}.forEach{f->CalcInputField(f,inputs[f.key]?:f.default,{update(f.key,it)},inputs["_unit.${f.key}"],{update("_unit.${f.key}",it)})}
+        listOf("_laborRate" to "المصنعية للوحدة","_transportRate" to "النقل للوحدة","_equipmentRate" to "المعدات للوحدة").forEach{(key,label)->NumberFieldX(label,inputs[key]?:"0",{update(key,it)},"جنيه")}
     }
 
 }
