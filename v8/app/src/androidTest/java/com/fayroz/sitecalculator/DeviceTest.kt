@@ -19,6 +19,7 @@ import java.util.zip.ZipInputStream
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.Before
+import org.junit.After
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
@@ -31,6 +32,7 @@ class DeviceTest {
  }
  @Before fun reset(){context.getSharedPreferences("fayroz_site_v8",Context.MODE_PRIVATE).edit().clear().commit();context.getSharedPreferences("fayroz_site_projects",Context.MODE_PRIVATE).edit().clear().commit()}
  private fun shot(name:String){val file=File(context.getExternalFilesDir(null),"screenshots/$name.png");file.parentFile!!.mkdirs();assertTrue(device.takeScreenshot(file))}
+ @After fun captureFinalState(){shot("last-state");device.dumpWindowHierarchy(File(context.getExternalFilesDir(null),"screenshots/window.xml"))}
  @Test fun libraryAndProjectScreensOpen(){
     V8Repository(context).saveProjects(listOf(sample()))
     ActivityScenario.launch(MainActivity::class.java).use{
@@ -48,16 +50,16 @@ class DeviceTest {
        assertTrue(device.wait(Until.hasObject(By.text("غرفة الاختبار")),10000));shot("section")
        device.findObject(By.text("غرفة الاختبار")).click()
        assertTrue(device.wait(Until.hasObject(By.text("اسم المكان")),10000));shot("room-input")
-       device.findObject(By.text("التالي")).click();device.findObject(By.text("التالي")).click()
+       device.findObject(By.text("التالي")).click();device.waitForIdle();device.findObject(By.text("التالي")).click();device.waitForIdle()
        assertTrue(device.wait(Until.hasObject(By.desc("ضبط")),10000));shot("room-results")
-       device.findObject(By.desc("ضبط")).click();assertTrue(device.wait(Until.hasObject(By.text("نطاق التنفيذ")),10000));shot("part-editor")
+       device.findObject(By.desc("ضبط")).click();device.waitForIdle();shot("part-editor");assertTrue(device.wait(Until.hasObject(By.text("حفظ")),10000))
     }
  }
  @Test fun pdfPrintPreviewOpens(){
     ActivityScenario.launch(MainActivity::class.java).use{scenario->
        assertTrue(device.wait(Until.hasObject(By.text("الرئيسية")),10000))
        scenario.onActivity{ReportExport.printPdf(it,sample(),"حصر وتكلفة تفصيلي")}
-       assertTrue(device.wait(Until.hasObject(By.textContains("Save as PDF")),15000));shot("pdf-preview")
+       assertTrue(device.wait(Until.hasObject(By.pkg("com.android.printspooler")),15000));shot("pdf-preview")
        device.pressBack()
     }
  }

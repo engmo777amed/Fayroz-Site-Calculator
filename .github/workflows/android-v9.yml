@@ -37,7 +37,7 @@ jobs:
           arch: x86_64
           disable-animations: true
           script: |
-            cd v8 && gradle :app:connectedDebugAndroidTest --stacktrace && adb pull /sdcard/Android/data/com.fayroz.sitecalculator/files/screenshots ./screenshots
+            cd v8; gradle :app:connectedDebugAndroidTest --stacktrace; test_status=$?; adb pull /sdcard/Android/data/com.fayroz.sitecalculator/files/screenshots ./screenshots; exit $test_status
       - name: Screenshots
         if: always()
         run: adb pull /sdcard/Android/data/com.fayroz.sitecalculator/files/screenshots ./screenshots || true

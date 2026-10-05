@@ -65,6 +65,7 @@ fun RoomCaptureScreen(
     }
     var ceilingDetails by remember{mutableStateOf(restored?.ceilingSurfaces?.isNotEmpty()==true)}
     var editIndex by remember{mutableStateOf<Int?>(null)}
+    var showCatalog by remember{mutableStateOf(false)}
 
     val walls=remember{mutableStateListOf<WallPart>().apply{addAll(restored?.walls ?: emptyList())}}
     val floors=remember{mutableStateListOf<SurfacePart>().apply{addAll(restored?.floorSurfaces ?: emptyList())}}
@@ -322,9 +323,9 @@ fun RoomCaptureScreen(
                 else->{
                     item{
                         BoxCard{
-                            Text("اختار البنود",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Black)
+                            TextButton(onClick={showCatalog=!showCatalog}){Text(if(showCatalog)"قفل قائمة البنود" else "إضافة / اختيار البنود")}
                             Text("الاقتراحات حسب نوع المكان، وتقدر تضيف أو تشيل أي بند.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                            Catalog.items.forEach{def->
+                            if(showCatalog)Catalog.items.forEach{def->
                                 val selected=takeoffs.any{it.name==def.name}
                                 FilterChip(
                                     selected=selected,

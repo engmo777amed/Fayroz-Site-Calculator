@@ -49,6 +49,14 @@ class DomainTest {
     val rows=CostEngine.rows(Project(name="",sections=listOf(Section(name="",spaces=listOf(Space(name="",type="",takeoffs=listOf(t)))))))
     assertEquals(rows[0].cementKg*2,rows[1].cementKg,1e-9)
  }
+ @Test fun mortarVolumeDoesNotMultiplyThicknessTwice(){
+    val t=Takeoff(name="مونة تسوية الأرضيات",unit=UnitType.VOLUME,kind=CalcKind.DIRECT,directValue=1.0,material=MaterialSpec(thicknessMm=50.0,waste=0.0))
+    val space=Space(name="",type="",takeoffs=listOf(t))
+    val project=Project(name="",sections=listOf(Section(name="",spaces=listOf(space))))
+    val row=CostEngine.rows(project).single()
+    assertEquals(1.33/5*1440,row.cementKg,1e-9)
+    assertEquals(1.33*4/5,row.sandM3,1e-9)
+ }
  @Test fun tileConsumptionDoesNotRoundPerPart(){
     val recipe=mapOf("tileW" to "50","tileH" to "50","pack" to "4","price" to "100","waste" to "0")
     val t=Takeoff(name="الأرضيات",unit=UnitType.AREA,kind=CalcKind.FLOOR,calculatorInputs=recipe,parts=listOf(WorkPart(length=.5,width=1.0),WorkPart(length=.5,width=1.0)))

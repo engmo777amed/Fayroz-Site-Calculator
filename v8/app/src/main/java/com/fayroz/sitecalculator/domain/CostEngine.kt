@@ -39,7 +39,7 @@ object CostEngine {
             values.forEach{(part,base)->
                 val qty=base*factor*space.repeatCount
                 val spec=part?.material?:item.material?:defaultSpec(item.name,project.defaults)
-                val mat=if(spec!=null)measure(qty,spec)else Triple(0.0,0.0,0.0)
+                val mat=if(spec!=null)measure(if(item.unit==UnitType.VOLUME)qty/(spec.thicknessMm/1000)else qty,spec)else Triple(0.0,0.0,0.0)
                 val def=if(spec==null)CalculatorLibrary.forItem(item.name)else null
                 val inputs=(def?.let{CalculatorLibrary.defaults(it,project.defaults)}.orEmpty()+("waste" to item.waste.toString()))+(part?.calculatorInputs?.takeIf{it.isNotEmpty()}?:item.calculatorInputs)
                 val raw=def?.let{CalculatorLibrary.recipe(it,inputs,qty)}.orEmpty()
