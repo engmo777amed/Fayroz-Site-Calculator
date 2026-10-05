@@ -16,6 +16,8 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import com.fayroz.sitecalculator.core.*
 import com.fayroz.sitecalculator.data.V8Repository
 import com.fayroz.sitecalculator.domain.QuantityEngine
+import com.fayroz.sitecalculator.domain.CalculatorLibrary
+import android.widget.Toast
 import com.fayroz.sitecalculator.ui.*
 import java.util.UUID
 
@@ -26,7 +28,7 @@ private sealed interface Route{
     data object Settings:Route
     data class ProjectDetail(val projectId:String):Route
     data class SectionDetail(val projectId:String,val sectionId:String):Route
-    data class RoomEdit(val projectId:String,val sectionId:String,val spaceId:String?):Route
+    data class RoomEdit(val projectId:String,val sectionId:String,val spaceId:String?,val session:Long=System.nanoTime()):Route
     data class DirectItem(val projectId:String):Route
     data class Tool(val toolId:String,val seed:MaterialResult?=null,val projectId:String?=null):Route
 }
@@ -98,12 +100,12 @@ class MainActivity:ComponentActivity(){
                     sourceQuantity=result.sourceQuantity,
                     unit=result.sourceUnit,
                     sectionId=sectionId,
-                    spaceId=spaceId
+                    spaceId=spaceId,inputs=result.inputs,cost=result.cost,explanation=result.explanation
                 )
                 repository.saveRecentCalc(calc)
                 val p=projects.firstOrNull{it.id==targetProjectId}?:return
                 replaceProject(p.copy(
-                    calculations=(listOf(calc)+p.calculations).take(50),
+                    calculations=listOf(calc)+p.calculations,
                     updatedAt=System.currentTimeMillis()
                 ))
             }
@@ -187,6 +189,11 @@ class MainActivity:ComponentActivity(){
                                             val p=projects.first{it.id==pid}
                                             setActive(ActiveLocation(pid,p.sections.firstOrNull()?.id))
                                         },
+                                        onUpdate={replaceProject(it)},
+                                        onDelete={id->
+                                            projects.removeAll{it.id==id};persist()
+                                            if(active?.projectId==id){active=null;repository.clearActive()}
+                                        },
                                         onCreate={name,type->
                                             val first=Section(name="الرئيسي")
                                             val p=Project(name=name,type=type,sections=listOf(first))
@@ -204,15 +211,17 @@ class MainActivity:ComponentActivity(){
                                             if(active?.projectId==pid)setActive(ActiveLocation(pid,sid,spid))
                                             route=Route.RoomEdit(pid,sid,spid)
                                         },
-                                        onOpenCalc={id->
-                                            route=Route.Tool(id,null,active?.projectId)
+                                        onOpenCalc={calc->
+                                            route=Route.Tool(calc.toolId,MaterialResult(calc.toolId,calc.title,calc.sourceQuantity,calc.unit,emptyList(),calc.explanation,calc.inputs,calc.cost),active?.projectId)
                                         }
                                     )
 
                                     RootTab.TOOLS->ToolsScreen(
                                         recent=repository.recentCalcs(),
                                         hasActiveProject=activeProject()!=null,
-                                        onOpen={id->route=Route.Tool(id,null,active?.projectId)}
+                                        onOpen={id->route=Route.Tool(id,null,active?.projectId)},
+                                        repository=repository,
+                                        onOpenSaved={calc->route=Route.Tool(calc.toolId,MaterialResult(calc.toolId,calc.title,calc.sourceQuantity,calc.unit,emptyList(),calc.explanation,calc.inputs,calc.cost),active?.projectId)}
                                     )
                                 }
                             }
@@ -252,7 +261,10 @@ class MainActivity:ComponentActivity(){
                             onOpenMaterials={material->
                                 route=Route.Tool(material.toolId,material,p.id)
                             },
-                            onShare={shareProject(p)}
+                            onShare={shareProject(p)},
+                            onUpdate={replaceProject(it)},
+                            onEditSource={sid,spid,itemId->route=Route.RoomEdit(p.id,sid,spid)},
+                            onOpenCalc={calc->route=Route.Tool(calc.toolId,MaterialResult(calc.toolId,calc.title,calc.sourceQuantity,calc.unit,emptyList(),calc.explanation,calc.inputs,calc.cost),p.id)}
                         )
                     }
 
@@ -265,6 +277,7 @@ class MainActivity:ComponentActivity(){
                             section=s,
                             active=active,
                             onBack={route=Route.ProjectDetail(p.id)},
+                            onUpdateSection={updated->replaceProject(p.copy(sections=p.sections.map{if(it.id==updated.id)updated else it},updatedAt=System.currentTimeMillis()))},
                             onAddRoom={route=Route.RoomEdit(p.id,s.id,null)},
                             onEditRoom={spid->
                                 if(active?.projectId==p.id)setActive(ActiveLocation(p.id,s.id,spid))
@@ -317,28 +330,25 @@ class MainActivity:ComponentActivity(){
 
                     is Route.RoomEdit->{
                         val p=projects.firstOrNull{it.id==r.projectId}
-                        val s=p?.sections?.firstOrNull{it.id==r.sectionId}
-                        val initial=s?.spaces?.firstOrNull{it.id==r.spaceId}
-                        if(p==null||s==null)route=Route.Root
-                        else RoomCaptureScreen(
-                            title=if(initial==null)"حصر مكان جديد" else initial.name,
-                            draftKey="${p.id}.${s.id}.${r.spaceId?:"new"}",
-                            repository=repository,
-                            initial=initial,
-                            onBack={route=Route.SectionDetail(p.id,s.id)},
-                            onSave={space->
-                                val nextSpaces=if(s.spaces.any{it.id==space.id})
-                                    s.spaces.map{if(it.id==space.id)space else it}
-                                else s.spaces+space
-                                val updatedSection=s.copy(spaces=nextSpaces)
-                                replaceProject(p.copy(
-                                    sections=p.sections.map{if(it.id==s.id)updatedSection else it},
-                                    updatedAt=System.currentTimeMillis()
-                                ))
-                                setActive(ActiveLocation(p.id,s.id,space.id))
-                                route=Route.SectionDetail(p.id,s.id)
+                        val section=p?.sections?.firstOrNull{it.id==r.sectionId}
+                        val initial=section?.spaces?.firstOrNull{it.id==r.spaceId}
+                        if(p==null||section==null)route=Route.Root
+                        else {
+                            fun saveSpace(space:Space,next:Boolean){
+                                val current=projects.first{it.id==p.id}
+                                val sec=current.sections.first{it.id==section.id}
+                                val spaces=if(sec.spaces.any{it.id==space.id})sec.spaces.map{if(it.id==space.id)space else it}else sec.spaces+space
+                                replaceProject(current.copy(sections=current.sections.map{if(it.id==sec.id)it.copy(spaces=spaces)else it},updatedAt=System.currentTimeMillis()))
+                                setActive(ActiveLocation(p.id,sec.id,space.id))
+                                route=if(next)Route.RoomEdit(p.id,sec.id,null)else Route.SectionDetail(p.id,sec.id)
                             }
-                        )
+                            key(r.session){RoomCaptureScreen(
+                                title=initial?.name?:"حصر مكان جديد",
+                                draftKey="${p.id}.${section.id}.${r.spaceId?:"new"}",repository=repository,initial=initial,defaults=p.defaults,
+                                onBack={route=Route.SectionDetail(p.id,section.id)},
+                                onSave={saveSpace(it,false)},onSaveNext={saveSpace(it,true)}
+                            )}
+                        }
                     }
 
                     is Route.DirectItem->{
@@ -365,21 +375,21 @@ class MainActivity:ComponentActivity(){
                         val back={
                             route=if(r.projectId!=null)Route.ProjectDetail(r.projectId) else Route.Root
                         }
-                        if(r.toolId in setOf("slope","convert","area")){
+                        if(r.toolId in setOf("convert","area")){
                             SiteUtilityScreen(r.toolId,onBack=back)
                         }else{
                             val projectId=r.projectId ?: active?.projectId
                             val targetProject=projectId?.let{id->projects.firstOrNull{it.id==id}}
-                            MaterialCalculatorScreen(
+                            key(r.toolId,r.seed){LibraryCalculatorScreen(
                                 toolId=r.toolId,
                                 seed=r.seed,
                                 repository=repository,
-                                activeProject=targetProject,
+                                project=targetProject,
                                 onBack=back,
                                 onSave={result,sectionId,spaceId->
                                     if(targetProject!=null)saveCalculation(targetProject.id,result,sectionId,spaceId)
                                 }
-                            )
+                            )}
                         }
                     }
                 }

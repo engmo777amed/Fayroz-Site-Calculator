@@ -16,7 +16,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.util.Locale
 
-fun n(raw:String):Double=raw.replace(',','.').replace('٫','.').toDoubleOrNull()?:0.0
+fun n(raw:String):Double = raw.map{c->if(c.isDigit())c.digitToInt().digitToChar() else c}.joinToString("")
+    .replace(',','.').replace('٫','.').replace("٬","").toDoubleOrNull()?.takeIf{it.isFinite()}?:0.0
+fun exact(v:Double):String = java.math.BigDecimal.valueOf(v).stripTrailingZeros().toPlainString()
 fun fmt(v:Double):String=String.format(Locale.US,"%.2f",v).trimEnd('0').trimEnd('.')
 
 data class LengthUnit(val label:String,val meters:Double)
@@ -29,7 +31,7 @@ fun convertLength(value:String,from:String,to:String):String{
     if(value.isBlank())return ""
     val meters=lengthMeters(value,from)
     val factor=lengthUnits.firstOrNull{it.label==to}?.meters?:1.0
-    return fmt(meters/factor)
+    return exact(meters/factor)
 }
 
 @Composable

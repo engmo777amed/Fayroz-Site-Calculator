@@ -65,7 +65,10 @@ data class Takeoff(
     val pieceHeight:Double=0.0,
     val piecesPerPack:Int=0,
     val overrideReason:String="",
-    val note:String=""
+    val note:String="",
+    val parts:List<WorkPart> = emptyList(),
+    val surfaceIds:List<String> = emptyList(),
+    val material:MaterialSpec?=null
 )
 
 data class Space(
@@ -102,7 +105,10 @@ data class SavedCalculation(
     val unit:String="",
     val sectionId:String?=null,
     val spaceId:String?=null,
-    val createdAt:Long=System.currentTimeMillis()
+    val createdAt:Long=System.currentTimeMillis(),
+    val inputs:Map<String,String> = emptyMap(),
+    val cost:Double=0.0,
+    val explanation:String=""
 )
 
 data class Project(
@@ -112,7 +118,9 @@ data class Project(
     val sections:List<Section> = emptyList(),
     val calculations:List<SavedCalculation> = emptyList(),
     val createdAt:Long=System.currentTimeMillis(),
-    val updatedAt:Long=System.currentTimeMillis()
+    val updatedAt:Long=System.currentTimeMillis(),
+    val archived:Boolean=false,
+    val defaults:Map<String,String> = emptyMap()
 )
 
 data class ActiveLocation(
@@ -139,11 +147,27 @@ data class MaterialResult(
     val sourceQuantity:Double,
     val sourceUnit:String,
     val lines:List<MaterialLine>,
-    val explanation:String
+    val explanation:String,
+    val inputs:Map<String,String> = emptyMap(),
+    val cost:Double=0.0
 )
 
 data class PurchaseInfo(
     val pieceArea:Double,
     val pieces:Int,
     val packs:Int?
+)
+
+// Parts are measured independently; only deductions entered for this part apply.
+data class WorkPart(
+    val id:String=UUID.randomUUID().toString(), val name:String="جزء",
+    val length:Double=0.0,val width:Double=0.0,val quantity:Double?=null,
+    val deduction:Double=0.0,val note:String="",val material:MaterialSpec?=null
+)
+data class MaterialSpec(
+    val thicknessMm:Double=15.0,val cementParts:Double=1.0,val sandParts:Double=4.0,
+    val dryFactor:Double=1.33,val cementDensity:Double=1440.0,val bagKg:Double=50.0,
+    val waste:Double=5.0,val cementPrice:Double=0.0,val sandPrice:Double=0.0,
+    val extraRate:Double=0.0,val extraPrice:Double=0.0,val extraName:String="إضافات",
+    val laborRate:Double=0.0,val transportRate:Double=0.0,val equipmentRate:Double=0.0
 )

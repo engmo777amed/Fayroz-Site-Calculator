@@ -12,6 +12,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.fayroz.sitecalculator.core.Project
+import java.util.UUID
 
 @Composable
 fun ProjectsScreen(
@@ -19,12 +20,17 @@ fun ProjectsScreen(
     activeProjectId:String?,
     onOpen:(String)->Unit,
     onSetActive:(String)->Unit,
-    onCreate:(String,String)->Unit
+    onCreate:(String,String)->Unit,
+    onUpdate:(Project)->Unit,
+    onDelete:(String)->Unit
 ){
+    var showArchived by remember{mutableStateOf(false)}
+    var delete by remember{mutableStateOf<Project?>(null)}
     var search by remember{mutableStateOf("")}
     var createOpen by remember{mutableStateOf(false)}
     val q=search.trim()
-    val filtered=if(q.isBlank())projects else projects.filter{
+    val eligible=projects.filter{it.archived==showArchived}
+    val filtered=if(q.isBlank())eligible else eligible.filter{
         it.name.contains(q,true)||it.type.contains(q,true)||
             it.sections.any{s->s.name.contains(q,true)||s.spaces.any{x->x.name.contains(q,true)}}
     }
@@ -41,6 +47,7 @@ fun ProjectsScreen(
                 }
             }
         }
+        item{Row{Checkbox(showArchived,{showArchived=it});Text("عرض الأرشيف",Modifier.padding(top=12.dp))}}
         if(projects.isNotEmpty())item{
             TextFieldX("بحث",search,{search=it},placeholder="اسم مشروع أو دور أو غرفة")
         }
@@ -77,6 +84,11 @@ fun ProjectsScreen(
                                 TextButton(onClick={onSetActive(p.id)}){Text("خليه نشط")}
                             }
                         }
+                        Row{
+                            TextButton(onClick={onUpdate(p.copy(id=UUID.randomUUID().toString(),name=p.name+" — نسخة",sections=p.sections.map{it.copy(id=UUID.randomUUID().toString(),spaces=it.spaces.map(::copySpace))},calculations=emptyList(),archived=false,createdAt=System.currentTimeMillis(),updatedAt=System.currentTimeMillis()))}){Text("نسخ")}
+                            TextButton(onClick={onUpdate(p.copy(archived=!p.archived))}){Text(if(p.archived)"استرجاع" else "أرشفة")}
+                            TextButton(onClick={delete=p}){Text("حذف")}
+                        }
                         if(total>0){
                             LinearProgressIndicator(
                                 progress={done.toFloat()/total.toFloat()},
@@ -91,6 +103,7 @@ fun ProjectsScreen(
         }
     }
 
+    delete?.let{p->AlertDialog(onDismissRequest={delete=null},title={Text("حذف ${p.name}؟")},text={Text("سيُحذف المشروع وحصره. احفظ نسخة احتياطية إذا احتجته لاحقًا.")},confirmButton={TextButton(onClick={onDelete(p.id);delete=null}){Text("حذف")}},dismissButton={TextButton(onClick={delete=null}){Text("إلغاء")}})}
     if(createOpen){
         NewProjectDialog(
             onDismiss={createOpen=false},

@@ -43,7 +43,10 @@ object QuantityEngine {
         if(depth<=0.0)return 0.0
         val visibleHeight=if(level==null)o.height else max(0.0,min(o.sill+o.height,level)-o.sill)
         val vertical=2.0*visibleHeight
-        val horizontal=if(o.kind==OpeningKind.DOOR)o.width else 2.0*o.width
+        val cutoff=level?:Double.POSITIVE_INFINITY
+        val top=o.sill+o.height
+        val horizontal=(if(top<=cutoff&&visibleHeight>0)o.width else 0.0)+
+            (if(o.kind!=OpeningKind.DOOR&&o.sill<cutoff&&visibleHeight>0)o.width else 0.0)
         return (vertical+horizontal)*depth*o.count
     }
 
@@ -52,7 +55,7 @@ object QuantityEngine {
         val selected=if(wallIds.isEmpty())all else all.filter{it.id in wallIds}
         return selected.mapIndexed{index,wall->
             val gross=wall.length*wall.height
-            val ops=openingsForWall(space,wall.id,index)
+            val ops=openingsForWall(space,wall.id,all.indexOfFirst{it.id==wall.id})
             val deduct=ops.sumOf(::openingArea)
             val reveals=if(includeReveals)ops.sumOf{revealArea(it)}else 0.0
             (gross-deduct+reveals).coerceAtLeast(0.0)
@@ -65,7 +68,7 @@ object QuantityEngine {
         return selected.mapIndexed{index,wall->
             val level=min(tileHeight.coerceAtLeast(0.0),wall.height)
             val gross=wall.length*level
-            val ops=openingsForWall(space,wall.id,index)
+            val ops=openingsForWall(space,wall.id,all.indexOfFirst{it.id==wall.id})
             val deduct=ops.sumOf{openingOverlapBelow(it,level)}
             val reveals=if(includeReveals)ops.sumOf{revealArea(it,level)}else 0.0
             (gross-deduct+reveals).coerceAtLeast(0.0)
@@ -104,13 +107,19 @@ object QuantityEngine {
     }
 
     fun calculateOne(space:Space,item:Takeoff):QuantityResult{
-        val (base,formula)=baseValue(space,item)
+        val (rawBase,rawFormula)=baseValue(space,item)
+        val surfaceBase=if(item.surfaceIds.isNotEmpty()){
+            val surfaces=if(item.kind==CalcKind.CEILING)effectiveCeilingSurfaces(space) else effectiveFloorSurfaces(space)
+            surfaces.filter{it.id in item.surfaceIds}.sumOf{max(0.0,it.length*it.width-it.deductionArea)}
+        }else rawBase
+        val base=if(item.parts.isNotEmpty())item.parts.sumOf{partValue(it,item.unit)} else surfaceBase
+        val formula=if(item.parts.isNotEmpty())"أجزاء مستقلة: "+item.parts.joinToString("، "){it.name+" = "+f(partValue(it,item.unit))}else rawFormula
         val additions=item.adjustments.filter{it.kind==AdjustKind.ADD}.sumOf{it.amount}
         val deductions=item.adjustments.filter{it.kind==AdjustKind.DEDUCT}.sumOf{it.amount}
         val adjusted=max(0.0,base+additions-deductions)
         val waste=adjusted*(item.waste.coerceAtLeast(0.0)/100.0)
         val calculated=adjusted+waste
-        val one=item.manualValue ?: calculated
+        val one=(item.manualValue ?: adjusted).coerceAtLeast(0.0)
         val repeat=space.repeatCount.coerceAtLeast(1)
         val repeated=one*repeat
 
@@ -119,7 +128,7 @@ object QuantityEngine {
             append(". الأساس ${f(base)} ${item.unit.label}")
             if(additions>0)append(" + إضافة ${f(additions)}")
             if(deductions>0)append(" - خصم ${f(deductions)}")
-            if(waste>0)append(" + هالك ${f(waste)}")
+            if(waste>0)append(". هالك الشراء ${f(item.waste)}% منفصل عن صافي الحصر")
             if(item.manualValue!=null)append(". تم اعتماد كمية فعلية ${f(item.manualValue)} بدل المحسوب")
             if(repeat>1)append(". المكان الواحد ${f(one)} × $repeat = ${f(repeated)}")
         }
@@ -127,11 +136,18 @@ object QuantityEngine {
         return QuantityResult(base,additions,deductions,waste,one,repeated,explanation)
     }
 
+    fun partValue(p:WorkPart,unit:UnitType):Double = max(0.0,(p.quantity?:when(unit){
+        UnitType.AREA->p.length*p.width
+        UnitType.LENGTH->p.length
+        UnitType.VOLUME->p.length*p.width
+        UnitType.COUNT->p.length
+    })-p.deduction)
+
     fun purchaseInfo(space:Space,item:Takeoff):PurchaseInfo?{
         if(item.unit!=UnitType.AREA||item.pieceWidth<=0.0||item.pieceHeight<=0.0)return null
         val pieceArea=item.pieceWidth*item.pieceHeight
         if(pieceArea<=0.0)return null
-        val pieces=ceil(calculateOne(space,item).repeatedFinal/pieceArea).toInt().coerceAtLeast(0)
+        val pieces=ceil(calculateOne(space,item).repeatedFinal*(1+item.waste/100)/pieceArea).toInt().coerceAtLeast(0)
         val packs=if(item.piecesPerPack>0)ceil(pieces.toDouble()/item.piecesPerPack).toInt() else null
         return PurchaseInfo(pieceArea,pieces,packs)
     }
@@ -154,10 +170,10 @@ object QuantityEngine {
         return map.map{SummaryLine(it.key.first,it.key.second,it.value)}
     }
 
-    fun contributors(project:Project,itemName:String):List<Pair<String,Double>>{
+    fun contributors(project:Project,itemName:String,unit:UnitType?=null):List<Pair<String,Double>>{
         val out=mutableListOf<Pair<String,Double>>()
         project.sections.forEach{section->section.spaces.forEach{space->
-            space.takeoffs.filter{it.name==itemName}.forEach{item->
+            space.takeoffs.filter{it.name==itemName&&(unit==null||it.unit==unit)}.forEach{item->
                 out += "${section.name} ← ${space.name}" to calculateOne(space,item).repeatedFinal
             }
         }}

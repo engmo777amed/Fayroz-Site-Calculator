@@ -27,7 +27,7 @@ fun TodayScreen(
     active:ActiveLocation?,
     recent:List<SavedCalculation>,
     onOpenSpace:(String,String,String)->Unit,
-    onOpenCalc:(String)->Unit
+    onOpenCalc:(SavedCalculation)->Unit
 ){
     val activeItems=buildList{
         projects.forEach{p->
@@ -106,7 +106,7 @@ fun TodayScreen(
             items(recent.take(5).size){i->
                 val calc=recent[i]
                 Surface(
-                    onClick={onOpenCalc(calc.toolId)},
+                    onClick={onOpenCalc(calc)},
                     shape=RoundedCornerShape(14.dp),
                     color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.35f)
                 ){

@@ -13,15 +13,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.fayroz.sitecalculator.core.*
 import com.fayroz.sitecalculator.domain.QuantityEngine
+import com.fayroz.sitecalculator.domain.CostEngine
 
 @Composable
 fun TakeoffEditorDialog(
     item:Takeoff,
     walls:List<WallPart>,
     space:Space,
+    defaultMaterial:MaterialSpec?=null,
     onDismiss:()->Unit,
     onSave:(Takeoff)->Unit
 ){
+    var parts by remember{mutableStateOf(item.parts)}
+    var surfaces by remember{mutableStateOf(item.surfaceIds.toSet())}
+    var material by remember{mutableStateOf(item.material?:defaultMaterial?:CostEngine.defaultSpec(item.name))}
+    var partSpecId by remember{mutableStateOf<String?>(null)}
+    var advanced by remember{mutableStateOf(false)}
+    var error by remember{mutableStateOf<String?>(null)}
     var kind by remember{mutableStateOf(item.kind)}
     var direct by remember{mutableStateOf(if(item.directValue>0)fmt(item.directValue) else "")}
     var waste by remember{mutableStateOf(fmt(item.waste))}
@@ -48,7 +56,7 @@ fun TakeoffEditorDialog(
         layerThickness=n(layerThickness),includeOpeningReveals=reveals,wallIds=wallIds.toList(),
         manualValue=if(manualEnabled)n(manual)else null,overrideReason=overrideReason,
         adjustments=adjustments,pieceWidth=n(pieceW),pieceHeight=n(pieceH),
-        piecesPerPack=n(pack).toInt().coerceAtLeast(0),note=note
+        piecesPerPack=n(pack).toInt().coerceAtLeast(0),note=note,parts=parts,surfaceIds=surfaces.toList(),material=material
     )
     val q=QuantityEngine.calculateOne(space,preview)
 
@@ -81,7 +89,51 @@ fun TakeoffEditorDialog(
                 if(kind==CalcKind.SCREED_VOLUME)item{
                     NumberFieldX("متوسط السمك",layerThickness,{layerThickness=it},"م")
                 }
-                item{NumberFieldX("الهالك",waste,{waste=it},"%",help="الهالك خاص بالبند ده فقط.")}
+                item{NumberFieldX("هالك شراء البند",waste,{waste=it},"%",help="لا يضاف لصافي الأعمال. خامات المونة لها هالك مستقل.")}
+                item{
+                    BoxCard{
+                        Text("نطاق التنفيذ",fontWeight=FontWeight.Black)
+                        Text("اترك الأجزاء فارغة لحساب المسطح المختار كله؛ أو أضف أجزاء مستقلة. الخصومات لكل جزء تُدخل هنا.",style=MaterialTheme.typography.bodySmall)
+                        parts.forEach{p->
+                            Column(verticalArrangement=Arrangement.spacedBy(5.dp)){
+                                fun change(x:WorkPart){parts=parts.map{if(it.id==p.id)x else it}}
+                                TextFieldX("اسم الجزء",p.name,{change(p.copy(name=it))})
+                                if(item.unit==UnitType.AREA){
+                                    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                                        SpecNumber("الطول",p.length,"م",Modifier.weight(1f)){change(p.copy(length=it,quantity=null))}
+                                        SpecNumber("العرض / الارتفاع",p.width,"م",Modifier.weight(1f)){change(p.copy(width=it,quantity=null))}
+                                    }
+                                }else SpecNumber("الكمية",p.quantity?:p.length,item.unit.label){change(p.copy(quantity=it))}
+                                SpecNumber("خصم هذا الجزء",p.deduction,item.unit.label){change(p.copy(deduction=it))}
+                                TextFieldX("ملاحظة الجزء",p.note,{change(p.copy(note=it))})
+                                Row{
+                                    if(material!=null)TextButton(onClick={partSpecId=p.id}){Text("خلطة وتكلفة الجزء")}
+                                    TextButton(onClick={parts=parts.filterNot{it.id==p.id}}){Text("حذف الجزء")}
+                                }
+                                HorizontalDivider()
+                            }
+                        }
+                        OutlinedButton(onClick={parts=parts+WorkPart(name="جزء ${parts.size+1}")},modifier=Modifier.fillMaxWidth()){Text("إضافة جزء مستقل")}
+                    }
+                }
+                if(parts.isEmpty()&&kind in listOf(CalcKind.CEILING,CalcKind.FLOOR)){
+                    val choices=if(kind==CalcKind.CEILING)QuantityEngine.effectiveCeilingSurfaces(space) else QuantityEngine.effectiveFloorSurfaces(space)
+                    if(choices.size>1)item{
+                        BoxCard{
+                            Text("مسطحات معينة (عدم الاختيار = الكل)")
+                            choices.forEach{p->Row(verticalAlignment=Alignment.CenterVertically){
+                                Checkbox(p.id in surfaces,{yes->surfaces=if(yes)surfaces+p.id else surfaces-p.id});Text(p.name)
+                            }}
+                        }
+                    }
+                }
+                material?.let{m->item{
+                    var show by remember{mutableStateOf(false)}
+                    TextButton(onClick={show=!show}){Text(if(show)"إخفاء مواصفات الخامات" else "خلطة وسمك وأسعار هذا البند")}
+                    if(show)BoxCard{MaterialSpecFields(m,{material=it})}
+                }}
+                item{TextButton(onClick={advanced=!advanced}){Text(if(advanced)"إخفاء التفاصيل الإضافية" else "إضافات وخصومات وكمية فعلية ومقاس القطعة")}}
+
 
                 if(kind in listOf(CalcKind.WALLS,CalcKind.WALL_TILES)){
                     item{
@@ -108,7 +160,7 @@ fun TakeoffEditorDialog(
                     }
                 }
 
-                item{
+                if(advanced)item{
                     BoxCard{
                         Text("إضافة أو خصم",fontWeight=FontWeight.Black)
                         adjustments.forEachIndexed{i,a->
@@ -143,7 +195,7 @@ fun TakeoffEditorDialog(
                     }
                 }
 
-                item{
+                if(advanced)item{
                     Row(verticalAlignment=Alignment.CenterVertically){
                         Column(Modifier.weight(1f)){
                             Text("عندي كمية فعلية من الموقع",fontWeight=FontWeight.Black)
@@ -157,7 +209,7 @@ fun TakeoffEditorDialog(
                     item{TextFieldX("سبب الاعتماد",overrideReason,{overrideReason=it},placeholder="مثال: حصر فعلي بالموقع")}
                 }
 
-                if(item.unit==UnitType.AREA){
+                if(advanced&&item.unit==UnitType.AREA){
                     item{
                         BoxCard{
                             Text("مقاس البلاطة أو القطعة - اختياري",fontWeight=FontWeight.Black)
@@ -171,7 +223,8 @@ fun TakeoffEditorDialog(
                 }
 
                 item{TextFieldX("ملاحظة البند",note,{note=it},placeholder="اختياري")}
-                item{MetricRow("النتيجة","${fmt(q.repeatedFinal)} ${item.unit.label}",true)}
+                error?.let{msg->item{Text(msg,color=MaterialTheme.colorScheme.error)}}
+                item{MetricRow("صافي الحصر","${fmt(q.repeatedFinal)} ${item.unit.label}",true)}
                 item{
                     OutlinedButton(onClick={formulaOpen=true},modifier=Modifier.fillMaxWidth()){
                         Text("اتحسبت إزاي؟")
@@ -179,10 +232,30 @@ fun TakeoffEditorDialog(
                 }
             }
         },
-        confirmButton={Button(onClick={onSave(preview)}){Text("حفظ")}},
+        confirmButton={Button(onClick={
+            error=when{
+                q.oneSpaceFinal<=0->"أدخل مقاسات أو كمية أكبر من صفر."
+                preview.waste<0||preview.tileHeight<0||preview.upstand<0->"القيم لا يمكن أن تكون سالبة."
+                parts.any{QuantityEngine.partValue(it,item.unit)<=0}->"راجع مقاسات وخصومات الأجزاء."
+                material?.let{it.bagKg<=0||it.cementParts+it.sandParts<=0||it.thicknessMm<=0}==true->"راجع وزن الشيكارة والخلطة والسمك."
+                manualEnabled&&overrideReason.isBlank()->"اكتب سبب اعتماد الكمية الفعلية."
+                else->null
+            }
+            if(error==null)onSave(preview)
+        }){Text("حفظ")}},
         dismissButton={TextButton(onClick=onDismiss){Text("إلغاء")}}
     )
 
+    partSpecId?.let{id->
+        val part=parts.firstOrNull{it.id==id}
+        if(part!=null){
+            var spec by remember(id){mutableStateOf(part.material?:material?:MaterialSpec())}
+            AlertDialog(onDismissRequest={partSpecId=null},title={Text("خامات ${part.name}")},
+                text={androidx.compose.foundation.lazy.LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)){item{MaterialSpecFields(spec,{spec=it})}}},
+                confirmButton={TextButton(onClick={if(spec.bagKg>0&&spec.thicknessMm>0&&spec.cementParts+spec.sandParts>0){parts=parts.map{if(it.id==id)it.copy(material=spec)else it};partSpecId=null}}){Text("اعتماد")}},
+                dismissButton={TextButton(onClick={parts=parts.map{if(it.id==id)it.copy(material=null)else it};partSpecId=null}){Text("استخدم مواصفات البند")}})
+        }
+    }
     if(formulaOpen){
         AlertDialog(
             onDismissRequest={formulaOpen=false},

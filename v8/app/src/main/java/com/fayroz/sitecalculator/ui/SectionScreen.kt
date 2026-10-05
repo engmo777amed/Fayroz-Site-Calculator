@@ -22,6 +22,7 @@ fun SectionScreen(
     section:Section,
     active:ActiveLocation?,
     onBack:()->Unit,
+    onUpdateSection:(Section)->Unit,
     onAddRoom:()->Unit,
     onEditRoom:(String)->Unit,
     onSetActiveRoom:(String)->Unit,
@@ -30,6 +31,8 @@ fun SectionScreen(
     onDeleteRoom:(String)->Unit
 ){
     val summary=QuantityEngine.summarize(section)
+    val costRows=com.fayroz.sitecalculator.domain.CostEngine.rows(project.copy(sections=listOf(section)))
+    val purchase=com.fayroz.sitecalculator.domain.CostEngine.purchase(costRows)
     val materials=MaterialEngine.aggregate(summary)
     var materialsOpen by remember{mutableStateOf(false)}
     var deleteTarget by remember{mutableStateOf<Space?>(null)}
@@ -64,7 +67,7 @@ fun SectionScreen(
                             Button(onClick={materialsOpen=true},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){
                                 Icon(Icons.Rounded.Inventory2,null)
                                 Spacer(Modifier.width(5.dp))
-                                Text("إجمالي خامات الجزء")
+                                Text("خامات المونة وتكلفة الجزء")
                             }
                         }
                     }
@@ -129,6 +132,7 @@ fun SectionScreen(
                                 }
                             }
                             Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                                if(index>0)TextButton(onClick={val list=section.spaces.toMutableList();list[index]=list[index-1].also{list[index-1]=list[index]};onUpdateSection(section.copy(spaces=list))}){Text("↑")}
                                 TextButton(onClick={onEditRoom(space.id)}){Text("تعديل")}
                                 TextButton(onClick={deleteTarget=space}){Text("حذف",color=MaterialTheme.colorScheme.error)}
                             }
@@ -158,13 +162,12 @@ fun SectionScreen(
             title={Text("إجمالي خامات الجزء",fontWeight=FontWeight.Black)},
             text={
                 androidx.compose.foundation.lazy.LazyColumn(verticalArrangement=Arrangement.spacedBy(9.dp)){
-                    items(materials.size){i->
-                        val m=materials[i]
-                        Column{
-                            Text(m.title,fontWeight=FontWeight.Black,color=MaterialTheme.colorScheme.primary)
-                            m.lines.forEach{line->Text("• ${line.label}: ${line.value}",style=MaterialTheme.typography.bodySmall)}
-                        }
-                    }
+                    item{MetricRow("تكلفة مواد","${fmt(costRows.sumOf{it.materialCost})} جنيه")}
+                    items(purchase.size){i->val m=purchase[i];Column{
+                        Text(m.material,fontWeight=FontWeight.Bold)
+                        Text("${fmt(m.amount)} ${m.unit}"+(m.packages?.let{" • $it عبوة"}?:""))
+                        Text("شراء ${fmt(m.cost)} جنيه")
+                    }}
                 }
             },
             confirmButton={TextButton(onClick={materialsOpen=false}){Text("تمام")}}

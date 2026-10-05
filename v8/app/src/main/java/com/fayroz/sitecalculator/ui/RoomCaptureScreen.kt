@@ -21,6 +21,9 @@ import com.fayroz.sitecalculator.core.*
 import com.fayroz.sitecalculator.data.V8Repository
 import com.fayroz.sitecalculator.domain.Catalog
 import com.fayroz.sitecalculator.domain.QuantityEngine
+import com.fayroz.sitecalculator.domain.CostEngine
+import com.fayroz.sitecalculator.domain.Validation
+import android.widget.Toast
 import java.util.UUID
 
 @Composable
@@ -30,11 +33,15 @@ fun RoomCaptureScreen(
     repository:V8Repository,
     initial:Space?,
     onBack:()->Unit,
-    onSave:(Space)->Unit
+    onSave:(Space)->Unit,
+    defaults:Map<String,String> = emptyMap(),
+    onSaveNext:(Space)->Unit = onSave
 ){
-    val restored=remember(draftKey,initial?.id){initial ?: repository.loadDraft(draftKey)}
+    val restored=remember(draftKey,initial?.id){repository.loadDraft(draftKey) ?: initial}
     val stableId=remember(draftKey,initial?.id){initial?.id ?: restored?.id ?: UUID.randomUUID().toString()}
 
+    val context=LocalContext.current
+    var error by remember{mutableStateOf<String?>(null)}
     var step by remember{mutableIntStateOf(0)}
     var name by remember{mutableStateOf(restored?.name ?: "")}
     var type by remember{mutableStateOf(restored?.type ?: "غرفة نوم")}
@@ -95,7 +102,6 @@ fun RoomCaptureScreen(
         repository.saveDraft(draftKey,current())
     }
 
-    val context=LocalContext.current
     val photoPicker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri->
         if(uri!=null){
             runCatching{context.contentResolver.takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION)}
@@ -122,13 +128,21 @@ fun RoomCaptureScreen(
                         if(step<2)Button(onClick={step++},modifier=Modifier.weight(1f).heightIn(min=48.dp)){Text("التالي")}
                         else Button(
                             onClick={
-                                repository.clearDraft(draftKey)
-                                onSave(current().copy(status=if(status==WorkStatus.NOT_STARTED)WorkStatus.IN_PROGRESS else status))
+                                val value=current()
+                                error=Validation.space(value)
+                                if(error==null){onSave(value);repository.clearDraft(draftKey);Toast.makeText(context,"تم حفظ الحصر بنجاح ✓",Toast.LENGTH_SHORT).show()}
                             },
                             modifier=Modifier.weight(1f).heightIn(min=48.dp)
                         ){
-                            Icon(Icons.Rounded.Save,null,Modifier.size(18.dp));Spacer(Modifier.width(4.dp));Text("حفظ الحصر")
+                            Icon(Icons.Rounded.Save,null,Modifier.size(18.dp));Spacer(Modifier.width(4.dp));Text("حفظ")
                         }
+                        if(step==2)OutlinedButton(onClick={
+                            val value=current();error=Validation.space(value)
+                            if(error==null){onSaveNext(value);repository.clearDraft(draftKey);Toast.makeText(context,"تم الحفظ — مكان جديد",Toast.LENGTH_SHORT).show()}
+                        },modifier=Modifier.weight(1f)){Text("حفظ وإضافة")}
+                    }
+                    error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
+                    Row {
                     }
                 }
             }
@@ -196,7 +210,12 @@ fun RoomCaptureScreen(
                             }
                         }
                         if(photos.isNotEmpty()){
-                            TextButton(onClick={photos.clear()}){Text("إزالة كل الصور",color=MaterialTheme.colorScheme.error)}
+                            photos.toList().forEachIndexed{i,uri->
+                                Row{
+                                    TextButton(onClick={runCatching{context.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(android.net.Uri.parse(uri),"image/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))}.onFailure{Toast.makeText(context,"الصورة غير متاحة",Toast.LENGTH_SHORT).show()}}){Text("معاينة صورة ${i+1}")}
+                                    TextButton(onClick={photos.remove(uri)}){Text("حذف الصورة")}
+                                }
+                            }
                         }
 
                         HorizontalDivider()
@@ -278,7 +297,7 @@ fun RoomCaptureScreen(
                             OpeningRow(
                                 index=i,
                                 opening=o,
-                                walls=if(geometryMode=="أكتر من حائط ورا بعض")walls else emptyList(),
+                                walls=QuantityEngine.effectiveWalls(current()),
                                 onChange={openings[i]=it},
                                 onDelete={openings.removeAt(i)}
                             )
@@ -286,11 +305,11 @@ fun RoomCaptureScreen(
 
                         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                             OutlinedButton(
-                                onClick={openings.add(Opening(kind=OpeningKind.DOOR,width=.90,height=2.10,wallId=walls.firstOrNull()?.id))},
+                                onClick={openings.add(Opening(kind=OpeningKind.DOOR,width=.90,height=2.10,wallId=QuantityEngine.effectiveWalls(current()).firstOrNull()?.id))},
                                 modifier=Modifier.weight(1f)
                             ){Icon(Icons.Rounded.DoorFront,null);Spacer(Modifier.width(4.dp));Text("باب")}
                             OutlinedButton(
-                                onClick={openings.add(Opening(kind=OpeningKind.WINDOW,width=1.20,height=1.20,sill=.90,wallId=walls.firstOrNull()?.id))},
+                                onClick={openings.add(Opening(kind=OpeningKind.WINDOW,width=1.20,height=1.20,sill=.90,wallId=QuantityEngine.effectiveWalls(current()).firstOrNull()?.id))},
                                 modifier=Modifier.weight(1f)
                             ){Icon(Icons.Rounded.Window,null);Spacer(Modifier.width(4.dp));Text("شباك")}
                         }
@@ -332,7 +351,7 @@ fun RoomCaptureScreen(
                                             Row(verticalAlignment=Alignment.CenterVertically){
                                                 Column(Modifier.weight(1f)){
                                                     Text(item.name,fontWeight=FontWeight.Black)
-                                                    Text(item.kind.label+" • هالك "+fmt(item.waste)+"%",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                                    Text(item.kind.label+" • "+(if(item.parts.isNotEmpty())"${item.parts.size} أجزاء" else "مسطح كامل"),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                                                 }
                                                 Text("${fmt(q.repeatedFinal)} ${item.unit.label}",fontWeight=FontWeight.Black,color=MaterialTheme.colorScheme.primary)
                                                 IconButton(onClick={editIndex=i}){Icon(Icons.Rounded.Tune,"ضبط")}
@@ -340,7 +359,18 @@ fun RoomCaptureScreen(
                                             if(space.repeatCount>1){
                                                 Text("المكان الواحد ${fmt(q.oneSpaceFinal)} × ${space.repeatCount}",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                                             }
+                                            item.parts.forEach{part->Text("${part.name}: ${fmt(QuantityEngine.partValue(part,item.unit)*space.repeatCount)} ${item.unit.label}",style=MaterialTheme.typography.bodySmall)}
+                                            CostEngine.defaultSpec(item.name,defaults)?.let{default->
+                                                val previewProject=Project(name="",defaults=defaults,sections=listOf(Section(name="",spaces=listOf(space.copy(takeoffs=listOf(item))))))
+                                                val rows=CostEngine.rows(previewProject)
+                                                Text("أسمنت ${fmt(rows.sumOf{it.cementKg})} كجم • رمل ${fmt(rows.sumOf{it.sandM3})} م³",style=MaterialTheme.typography.bodySmall)
+                                                Text("مواد ${fmt(rows.sumOf{it.materialCost})} جنيه • الإجمالي ${fmt(rows.sumOf{it.total})} جنيه",style=MaterialTheme.typography.bodySmall)
+                                            }
                                             Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                                                TextButton(onClick={
+                                                    val copy=item.copy(id=UUID.randomUUID().toString(),parts=item.parts.map{it.copy(id=UUID.randomUUID().toString())})
+                                                    takeoffs.add(i+1,copy)
+                                                }){Text("نسخ البند")}
                                                 TextButton(onClick={editIndex=i}){Text("ضبط / اتحسبت إزاي؟")}
                                                 TextButton(onClick={takeoffs.removeAt(i)}){Text("حذف",color=MaterialTheme.colorScheme.error)}
                                             }
@@ -362,8 +392,9 @@ fun RoomCaptureScreen(
         if(i in takeoffs.indices){
             TakeoffEditorDialog(
                 item=takeoffs[i],
-                walls=if(geometryMode=="أكتر من حائط ورا بعض")walls else emptyList(),
+                walls=QuantityEngine.effectiveWalls(current()),
                 space=current(),
+                defaultMaterial=CostEngine.defaultSpec(takeoffs[i].name,defaults),
                 onDismiss={editIndex=null},
                 onSave={takeoffs[i]=it;editIndex=null}
             )

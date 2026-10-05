@@ -1,0 +1,46 @@
+name: Verify and build Site Calculator V9
+on:
+  push:
+    branches: [feature/site-v9-parts-cost-calculators]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: site-v9-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: v8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Unit tests and Android lint
+        run: gradle :app:testDebugUnitTest :app:lintDebug --stacktrace
+      - name: Build APK
+        run: gradle :app:assembleDebug :app:assembleRelease --stacktrace
+      - name: Copy signing utility
+        run: |
+          mkdir -p signing-tools
+          cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" signing-tools/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Site-V9-validation
+          path: |
+            v8/app/build/reports
+            v8/app/build/test-results
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Fayroz-Site-Calculator-V9-unsigned
+          path: |
+            v8/app/build/outputs/apk
+            v8/signing-tools

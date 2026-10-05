@@ -19,6 +19,8 @@ object Catalog {
     }
 
     val items=listOf(
+        ItemDef("طرطشة الحوائط",UnitType.AREA,CalcKind.WALLS),
+        ItemDef("طرطشة الأسقف",UnitType.AREA,CalcKind.CEILING),
         ItemDef("مباني",UnitType.AREA,CalcKind.WALLS),
         ItemDef("محارة الحوائط",UnitType.AREA,CalcKind.WALLS),
         ItemDef("محارة السقف",UnitType.AREA,CalcKind.CEILING),
@@ -28,7 +30,7 @@ object Catalog {
         ItemDef("سيراميك الحوائط",UnitType.AREA,CalcKind.WALL_TILES,5.0,2.4),
         ItemDef("الوزرات",UnitType.LENGTH,CalcKind.SKIRTING,5.0),
         ItemDef("عزل الأرضية",UnitType.AREA,CalcKind.WATERPROOF,5.0,upstand=.20),
-        ItemDef("سقف جبس بورد",UnitType.AREA,CalcKind.FLOOR,10.0),
+        ItemDef("سقف جبس بورد",UnitType.AREA,CalcKind.CEILING,10.0),
         ItemDef("مونة تسوية الأرضيات",UnitType.AREA,CalcKind.FLOOR,5.0)
     )
 

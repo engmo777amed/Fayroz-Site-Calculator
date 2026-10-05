@@ -17,9 +17,25 @@ object V8Codec {
     fun encodeSpace(s:Space)=spaceObj(s).toString()
     fun decodeSpace(raw:String)=runCatching{spaceFrom(JSONObject(raw))}.getOrNull()
 
+    fun stringMap(o:JSONObject?):Map<String,String> = if(o==null)emptyMap() else o.keys().asSequence().associateWith{o.optString(it)}
+    private fun strings(a:JSONArray?):List<String> = if(a==null)emptyList() else (0 until a.length()).map{a.getString(it)}
+    fun materialObj(m:MaterialSpec)=JSONObject().apply{
+        put("thicknessMm",m.thicknessMm);put("cementParts",m.cementParts);put("sandParts",m.sandParts)
+        put("dryFactor",m.dryFactor);put("cementDensity",m.cementDensity);put("bagKg",m.bagKg)
+        put("waste",m.waste);put("cementPrice",m.cementPrice);put("sandPrice",m.sandPrice)
+        put("extraRate",m.extraRate);put("extraPrice",m.extraPrice);put("extraName",m.extraName)
+        put("laborRate",m.laborRate);put("transportRate",m.transportRate);put("equipmentRate",m.equipmentRate)
+    }
+    fun materialFrom(o:JSONObject?):MaterialSpec? = o?.let{MaterialSpec(
+        it.optDouble("thicknessMm",15.0),it.optDouble("cementParts",1.0),it.optDouble("sandParts",4.0),
+        it.optDouble("dryFactor",1.33),it.optDouble("cementDensity",1440.0),it.optDouble("bagKg",50.0),
+        it.optDouble("waste",5.0),it.optDouble("cementPrice",0.0),it.optDouble("sandPrice",0.0),
+        it.optDouble("extraRate",0.0),it.optDouble("extraPrice",0.0),it.optString("extraName","إضافات"),
+        it.optDouble("laborRate",0.0),it.optDouble("transportRate",0.0),it.optDouble("equipmentRate",0.0)
+    )}
     private fun projectObj(p:Project)=JSONObject().apply{
         put("id",p.id);put("name",p.name);put("type",p.type)
-        put("createdAt",p.createdAt);put("updatedAt",p.updatedAt)
+        put("createdAt",p.createdAt);put("updatedAt",p.updatedAt);put("archived",p.archived);put("defaults",JSONObject(p.defaults))
         put("sections",JSONArray().apply{p.sections.forEach{s->
             put(JSONObject().apply{
                 put("id",s.id);put("name",s.name)
@@ -31,7 +47,7 @@ object V8Codec {
                 put("id",c.id);put("toolId",c.toolId);put("title",c.title);put("summary",c.summary)
                 put("sourceQuantity",c.sourceQuantity);put("unit",c.unit)
                 put("sectionId",c.sectionId?:JSONObject.NULL);put("spaceId",c.spaceId?:JSONObject.NULL)
-                put("createdAt",c.createdAt)
+                put("createdAt",c.createdAt);put("inputs",JSONObject(c.inputs));put("cost",c.cost);put("explanation",c.explanation)
             })
         }})
     }
@@ -65,6 +81,13 @@ object V8Codec {
             put("wallIds",JSONArray(t.wallIds))
             put("pieceWidth",t.pieceWidth);put("pieceHeight",t.pieceHeight);put("piecesPerPack",t.piecesPerPack)
             put("overrideReason",t.overrideReason);put("note",t.note)
+            put("surfaceIds",JSONArray(t.surfaceIds))
+            put("material",t.material?.let(::materialObj)?:JSONObject.NULL)
+            put("parts",JSONArray().apply{t.parts.forEach{p->put(JSONObject().apply{
+                put("id",p.id);put("name",p.name);put("length",p.length);put("width",p.width)
+                put("quantity",p.quantity?:JSONObject.NULL);put("deduction",p.deduction);put("note",p.note)
+                put("material",p.material?.let(::materialObj)?:JSONObject.NULL)
+            })}})
             put("adjustments",JSONArray().apply{t.adjustments.forEach{a->put(JSONObject().apply{
                 put("id",a.id);put("kind",a.kind.name);put("amount",a.amount);put("note",a.note)
             })}})
@@ -96,13 +119,13 @@ object V8Codec {
                 sourceQuantity=x.optDouble("sourceQuantity"),unit=x.optString("unit"),
                 sectionId=if(x.isNull("sectionId"))null else x.optString("sectionId"),
                 spaceId=if(x.isNull("spaceId"))null else x.optString("spaceId"),
-                createdAt=x.optLong("createdAt",System.currentTimeMillis())
+                createdAt=x.optLong("createdAt",System.currentTimeMillis()),inputs=stringMap(x.optJSONObject("inputs")),cost=x.optDouble("cost",0.0),explanation=x.optString("explanation")
             )
         }
         return Project(
             id=o.optString("id",UUID.randomUUID().toString()),name=o.optString("name","مشروع"),
             type=o.optString("type","شقة"),sections=sections,calculations=calcs,
-            createdAt=o.optLong("createdAt",System.currentTimeMillis()),updatedAt=o.optLong("updatedAt",System.currentTimeMillis())
+            createdAt=o.optLong("createdAt",System.currentTimeMillis()),updatedAt=o.optLong("updatedAt",System.currentTimeMillis()),archived=o.optBoolean("archived"),defaults=stringMap(o.optJSONObject("defaults"))
         )
     }
 
@@ -177,7 +200,19 @@ object V8Codec {
                 wallIds=wallIds,
                 pieceWidth=t.optDouble("pieceWidth"),pieceHeight=t.optDouble("pieceHeight"),
                 piecesPerPack=t.optInt("piecesPerPack",0),
-                overrideReason=t.optString("overrideReason"),note=t.optString("note")
+                overrideReason=t.optString("overrideReason"),note=t.optString("note"),
+                material=materialFrom(t.optJSONObject("material")),
+                surfaceIds=strings(t.optJSONArray("surfaceIds")),
+                parts=buildList{
+                    val pa=t.optJSONArray("parts")?:JSONArray()
+                    for(k in 0 until pa.length()){
+                        val p=pa.getJSONObject(k)
+                        add(WorkPart(p.optString("id",UUID.randomUUID().toString()),p.optString("name","جزء"),
+                            p.optDouble("length",0.0),p.optDouble("width",0.0),
+                            if(p.isNull("quantity"))null else p.optDouble("quantity"),p.optDouble("deduction",0.0),
+                            p.optString("note"),materialFrom(p.optJSONObject("material"))))
+                    }
+                }
             )
         }
 

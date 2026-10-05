@@ -65,7 +65,8 @@ object MaterialEngine {
         waste:Double=5.0
     ):MaterialResult{
         val module=(brickL+joint)*(brickH+joint)
-        val net=if(module>0)area/module else 0.0
+        val layers=kotlin.math.max(1.0,kotlin.math.round((wallThickness+joint)/(brickW+joint)))
+        val net=if(module>0)area/module*layers else 0.0
         val bricks=ceil(net*(1+waste/100.0)).toInt()
         val wet=(area*wallThickness-brickL*brickW*brickH*net).coerceAtLeast(0.0)
         val dry=wet*1.33
@@ -173,7 +174,7 @@ object MaterialEngine {
 
     fun forSummary(line:SummaryLine):MaterialResult?=when(line.name){
         "محارة الحوائط","محارة السقف" -> mortar("plaster","خامات المحارة",line.quantity,plasterPresets.first())
-        "مونة الطرطشة" -> mortar("splash","مونة الطرطشة",line.quantity,splashPresets.first())
+        "طرطشة الحوائط","طرطشة الأسقف","مونة الطرطشة" -> mortar("splash","مونة الطرطشة",line.quantity,splashPresets.first())
         "مونة تسوية الأرضيات" -> mortar("screed","مونة تسوية الأرضيات",line.quantity,screedPresets.first())
         "مباني" -> masonry(line.quantity)
         "الأرضيات","سيراميك الحوائط" -> tile(line.quantity)
