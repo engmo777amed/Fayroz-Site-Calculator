@@ -31,9 +31,9 @@ fun lengthMeters(value:String,unit:String):Double =
 
 fun convertLength(value:String,from:String,to:String):String{
     if(value.isBlank())return ""
-    val meters=lengthMeters(value,from)
-    val factor=lengthUnits.firstOrNull{it.label==to}?.meters?:1.0
-    return exact(meters/factor)
+    val fromFactor=java.math.BigDecimal.valueOf(lengthUnits.firstOrNull{it.label==from}?.meters?:1.0)
+    val toFactor=java.math.BigDecimal.valueOf(lengthUnits.firstOrNull{it.label==to}?.meters?:1.0)
+    return java.math.BigDecimal.valueOf(n(value)).multiply(fromFactor).divide(toFactor).stripTrailingZeros().toPlainString()
 }
 
 @Composable
