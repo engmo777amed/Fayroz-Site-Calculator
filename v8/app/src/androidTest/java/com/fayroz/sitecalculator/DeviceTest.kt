@@ -17,6 +17,9 @@ import java.io.File
 import java.io.ByteArrayOutputStream
 import java.util.zip.ZipInputStream
 import org.junit.Assert.*
+import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import org.junit.Rule
 import org.junit.Test
 import org.junit.Before
 import org.junit.After
@@ -24,6 +27,7 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class DeviceTest {
+ @get:Rule val compose = createEmptyComposeRule()
  private val context get()=InstrumentationRegistry.getInstrumentation().targetContext
  private val device get()=UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
  private fun sample():Project {
@@ -39,8 +43,8 @@ class DeviceTest {
        assertTrue(device.wait(Until.hasObject(By.text("الرئيسية")),10000));shot("home")
        device.findObject(By.text("الحاسبات")).click()
        assertTrue(device.wait(Until.hasObject(By.text("أقسام الحاسبات")),10000));shot("calculators")
-       device.findObject(By.textContains("المونة والتشطيبات")).click();device.waitForIdle()
-       device.findObject(By.textContains("محارة حوائط / أسقف / واجهات")).click()
+       clickText("المونة والتشطيبات")
+       clickText("محارة حوائط / أسقف / واجهات")
        assertTrue(device.wait(Until.hasObject(By.text("اسم الحساب")),10000));shot("mortar-calculator")
        device.pressBack();device.pressBack()
        device.findObject(By.text("المشروعات")).click()
@@ -70,12 +74,26 @@ class DeviceTest {
        assertEquals(250.0,saved.parts.single().material!!.cementPrice,0.0)
     }
  }
- private fun field(label:String):androidx.test.uiautomator.UiObject2 {
-    val selector=By.desc("إدخال $label")
-    repeat(15){device.findObject(selector)?.let{node->val editable=if(node.className=="android.widget.EditText")node else node.findObject(By.clazz("android.widget.EditText"));if(editable!=null)return editable};device.swipe(device.displayWidth/2,device.displayHeight*3/4,device.displayWidth/2,device.displayHeight/3,20);device.waitForIdle()}
+ private fun field(label:String):SemanticsNodeInteraction {
+    val matcher=hasSetTextAction() and (hasContentDescription("إدخال $label") or hasAnyAncestor(hasContentDescription("إدخال $label")))
+    repeat(15){
+        compose.waitForIdle()
+        if(compose.onAllNodes(matcher,useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()) {
+            val node=compose.onNode(matcher,useUnmergedTree=true)
+            runCatching{node.performScrollTo()}
+            return node
+        }
+        device.swipe(device.displayWidth/2,device.displayHeight*3/4,device.displayWidth/2,device.displayHeight/3,20)
+    }
     fail("Field missing: $label");throw IllegalStateException()
  }
- private fun type(label:String,value:String){field(label).text=value;device.waitForIdle();assertTrue("Input was not applied: $label",field(label).text.contains(value))}
+ private fun type(label:String,value:String){field(label).performTextReplacement(value);compose.waitForIdle();field(label).assertTextEquals(value)}
+ private fun clickText(text:String){
+    compose.waitForIdle()
+    val node=compose.onNodeWithText(text)
+    runCatching{node.performScrollTo()}
+    node.performClick();compose.waitForIdle()
+ }
  @Test fun calculatorComputesSavesAndReopensDecimalInputs(){
     val intent=Intent(context,MainActivity::class.java).putExtra("calculator","plaster")
     ActivityScenario.launch<MainActivity>(intent).use{
@@ -83,8 +101,8 @@ class DeviceTest {
        type("اسم الحساب","اختبار محارة 12.5")
        type("المساحة الصافية","12.5")
        type("متوسط السمك","15.5")
-       device.findObject(By.text("مم")).click();device.findObject(By.text("سم")).click();device.waitForIdle()
-       assertTrue(field("متوسط السمك").text.contains("1.55"))
+       clickText("مم");clickText("سم")
+       field("متوسط السمك").assertTextEquals("1.55")
        type("سعر شيكارة الأسمنت","200")
        type("سعر متر الرمل","300")
        shot("calculator-filled")
@@ -100,8 +118,8 @@ class DeviceTest {
        device.findObject(By.textContains("اختبار محارة 12.5")).click()
        assertTrue(device.wait(Until.hasObject(By.text("12.5 م²")),10000))
        device.findObject(By.text("تعديل المدخلات")).click()
-       assertTrue(field("المساحة الصافية").text.contains("12.5"))
-       assertTrue(field("متوسط السمك").text.contains("1.55"))
+       field("المساحة الصافية").assertTextEquals("12.5")
+       field("متوسط السمك").assertTextEquals("1.55")
     }
  }
  @Test fun quantitiesWorkWithoutPricesAndErrorsAreVisible(){
