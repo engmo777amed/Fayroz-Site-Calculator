@@ -23,7 +23,7 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
     onBack:()->Unit,onSave:(MaterialResult,String?,String?)->Unit){
     val def=CalculatorLibrary.all.firstOrNull{it.id==toolId}?:return
     val raw=remember(toolId,seed){mutableStateMapOf<String,String>().apply{
-        def.fields.forEach{put(it.key,seed?.inputs?.get(it.key)?:repository.pref("calc.$toolId.${it.key}",it.default))}
+        def.fields.forEach{put(it.key,seed?.inputs?.get(it.key)?:repository.pref("calc.$toolId.${it.key}",it.default));seed?.inputs?.get("_unit.${it.key}")?.let{put("_unit.${it.key}",it)}}
         if(seed!=null&&seed.inputs.isEmpty()&&seed.sourceQuantity>0&&def.fields.any{it.key=="area"})put("area",exact(seed.sourceQuantity))
     }}
     val context=LocalContext.current
@@ -106,11 +106,11 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
                 item{TextButton(onClick={detailed=!detailed}){Text(if(detailed)"إخفاء المواصفات الإضافية" else "مواصفات إضافية")}}
                 val visible=def.fields.filter{detailed||it.key !in setOf("dry","density","extraRate","extraPrice")}
                 items(visible.size){i->val field=visible[i];BoxCard{
-                    CalcInputField(field,raw[field.key].orEmpty(),{raw[field.key]=it;error=null})
+                    CalcInputField(field,raw[field.key].orEmpty(),{raw[field.key]=it;error=null},raw["_unit.${field.key}"],{raw["_unit.${field.key}"]=it})
                     if(error.orEmpty().contains(field.label)&&error!=null)Text(error.orEmpty(),color=MaterialTheme.colorScheme.error)
                 }}
                 if(!detailed)item{Text("مواصفات مستخدمة: "+def.fields.filter{it.key in setOf("dry","density","extraRate","extraPrice")}.joinToString(" • "){"${it.label}: ${raw[it.key]} ${it.unit}"},style=MaterialTheme.typography.bodySmall)}
-                item{OutlinedButton(onClick={def.fields.forEach{raw[it.key]=it.default};error=null},modifier=Modifier.fillMaxWidth()){Text("استعادة القيم الأصلية")}}
+                item{OutlinedButton(onClick={def.fields.forEach{raw[it.key]=it.default;raw.remove("_unit.${it.key}")};error=null},modifier=Modifier.fillMaxWidth()){Text("استعادة القيم الأصلية")}}
             }else if(answer!=null&&result!=null){
                 item{CalculatorResultCards(def,raw.toMap(),answer,"$label • $source")}
                 item{OutlinedButton(onClick={

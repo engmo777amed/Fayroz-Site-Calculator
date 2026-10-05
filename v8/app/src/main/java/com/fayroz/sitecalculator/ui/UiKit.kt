@@ -163,8 +163,8 @@ fun NumberUnitField(
                         onClick={
                             menu=false
                             val converted=convertLength(value,unit,u.label)
-                            onValue(converted)
                             onUnit(u.label)
+                            onValue(converted)
                         }
                     )
                 }

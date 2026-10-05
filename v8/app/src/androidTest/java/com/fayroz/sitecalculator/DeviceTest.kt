@@ -83,6 +83,8 @@ class DeviceTest {
        type("اسم الحساب","اختبار محارة 12.5")
        type("المساحة الصافية","12.5")
        type("متوسط السمك","15.5")
+       device.findObject(By.text("مم")).click();device.findObject(By.text("سم")).click();device.waitForIdle()
+       assertTrue(field("متوسط السمك").text.contains("1.55"))
        type("سعر شيكارة الأسمنت","200")
        type("سعر متر الرمل","300")
        shot("calculator-filled")
@@ -99,7 +101,7 @@ class DeviceTest {
        assertTrue(device.wait(Until.hasObject(By.text("12.5 م²")),10000))
        device.findObject(By.text("تعديل المدخلات")).click()
        assertTrue(field("المساحة الصافية").text.contains("12.5"))
-       assertTrue(field("متوسط السمك").text.contains("15.5"))
+       assertTrue(field("متوسط السمك").text.contains("1.55"))
     }
  }
  @Test fun quantitiesWorkWithoutPricesAndErrorsAreVisible(){

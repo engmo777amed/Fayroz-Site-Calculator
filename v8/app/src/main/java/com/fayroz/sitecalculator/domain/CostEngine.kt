@@ -55,7 +55,7 @@ object CostEngine {
     data class Purchase(val material:String,val unit:String,val amount:Double,val packages:Int?,val price:Double,val cost:Double)
     fun purchase(rows:List<Row>):List<Purchase> = buildList {
         // Different package sizes/prices remain separate, quantities rounded only after aggregation.
-        rows.filter{it.calculatorId!=null}.groupBy{r->r.calculatorId to r.calculatorInputs.filterKeys{it !in setOf("area","length","count")}}.forEach{(key,group)->
+        rows.filter{it.calculatorId!=null}.groupBy{r->r.calculatorId to r.calculatorInputs.filterKeys{k->k !in setOf("area","length","count")&&CalculatorLibrary.all.first{it.id==r.calculatorId}.fields.any{it.key==k}}}.forEach{(key,group)->
             val def=CalculatorLibrary.all.first{it.id==key.first}
             val raw=CalculatorLibrary.recipe(def,key.second,group.sumOf{it.quantity})
             val answer=runCatching{CalculatorLibrary.evaluate(def,raw)}.getOrNull()
