@@ -100,4 +100,13 @@ class DomainTest {
     val raw=def.fields.associate{it.key to it.default}+mapOf("area" to "12.5","cementPrice" to "٢٠٠","sandPrice" to "٣٠٠")
     assertTrue(com.fayroz.sitecalculator.domain.MaterialReview.missing(def,raw).isEmpty())
  }
+ @Test fun blankOptionalPricesAllowQuantityResults(){
+    val def=CalculatorLibrary.all.first{it.id=="paint"}
+    val inputs=def.fields.associate{it.key to it.default}+mapOf("area" to "10","price" to "")
+    val answer=CalculatorLibrary.evaluate(def,inputs)
+    assertEquals(2.1,answer.outputs.first{it.label=="استهلاك دهان"}.value,1e-9)
+    assertEquals(0.0,answer.cost,0.0)
+    assertTrue(com.fayroz.sitecalculator.domain.MaterialReview.missing(def,inputs).isNotEmpty())
+    assertTrue(runCatching{CalculatorLibrary.evaluate(def,inputs+("area" to ""))}.isFailure)
+ }
 }

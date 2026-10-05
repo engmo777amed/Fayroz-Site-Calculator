@@ -132,7 +132,7 @@ object CalculatorLibrary {
     fun evaluate(def:CalcDef,raw:Map<String,String>):CalcAnswer {
         val values=def.fields.associate{field->
             val text=raw[field.key].orEmpty().map{if(it.isDigit())it.digitToInt().digitToChar()else it}.joinToString("").replace('٫','.').replace(',','.').replace("٬","")
-            val v=text.toDoubleOrNull()
+            val v=if(text.isBlank()&&!field.required)0.0 else text.toDoubleOrNull()
             require(v!=null&&v.isFinite()){ "راجع ${field.label}" }
             require(field.signed||v>=0){"${field.label} لا يمكن أن يكون سالبًا"}
             require(!field.required||v>0){"${field.label} يجب أن يكون أكبر من صفر"}

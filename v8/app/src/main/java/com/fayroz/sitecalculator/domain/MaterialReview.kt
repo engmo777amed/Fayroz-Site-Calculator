@@ -34,7 +34,7 @@ object MaterialReview {
                 val raw=item.calculatorInputs+(part?.calculatorInputs.orEmpty())
                 val message=runCatching{CalculatorLibrary.evaluate(def,CalculatorLibrary.recipe(def,raw,quantity))}.exceptionOrNull()?.message
                 if(message!=null)return "${part?.name?:item.name}: $message"
-                if(raw.filterKeys{it.startsWith("_")&&it.endsWith("Rate")}.values.any{it.toDoubleOrNull()?.let{v->v.isFinite()&&v>=0}!=true})return "راجع المصنعية والنقل والمعدات."
+                if(raw.filterKeys{it.startsWith("_")&&it.endsWith("Rate")}.values.any{it.isNotBlank()&&it.toDoubleOrNull()?.let{v->v.isFinite()&&v>=0}!=true})return "راجع المصنعية والنقل والمعدات."
             }
         }
         return null
