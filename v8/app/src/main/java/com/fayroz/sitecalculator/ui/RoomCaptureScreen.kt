@@ -22,6 +22,7 @@ import com.fayroz.sitecalculator.data.V8Repository
 import com.fayroz.sitecalculator.domain.Catalog
 import com.fayroz.sitecalculator.domain.QuantityEngine
 import com.fayroz.sitecalculator.domain.CostEngine
+import com.fayroz.sitecalculator.domain.CalculatorLibrary
 import com.fayroz.sitecalculator.domain.Validation
 import android.widget.Toast
 import java.util.UUID
@@ -46,9 +47,9 @@ fun RoomCaptureScreen(
     var name by remember{mutableStateOf(restored?.name ?: "")}
     var type by remember{mutableStateOf(restored?.type ?: "غرفة نوم")}
     var dimUnit by remember{mutableStateOf("م")}
-    var length by remember{mutableStateOf(restored?.length?.takeIf{it>0}?.let(::fmt) ?: "")}
-    var width by remember{mutableStateOf(restored?.width?.takeIf{it>0}?.let(::fmt) ?: "")}
-    var height by remember{mutableStateOf(restored?.height?.let(::fmt) ?: "3")}
+    var length by remember{mutableStateOf(restored?.length?.takeIf{it>0}?.let(::exact) ?: "")}
+    var width by remember{mutableStateOf(restored?.width?.takeIf{it>0}?.let(::exact) ?: "")}
+    var height by remember{mutableStateOf(restored?.height?.let(::exact) ?: "3")}
     var repeat by remember{mutableStateOf((restored?.repeatCount ?: 1).toString())}
     var note by remember{mutableStateOf(restored?.note ?: "")}
     var status by remember{mutableStateOf(restored?.status ?: WorkStatus.IN_PROGRESS)}
@@ -87,7 +88,8 @@ fun RoomCaptureScreen(
         repeatCount=n(repeat).toInt().coerceAtLeast(1),
         walls=if(geometryMode in listOf("أكتر من حائط ورا بعض","حوائط ومسطحات مستقلة"))walls.toList() else emptyList(),
         openings=openings.toList(),
-        takeoffs=takeoffs.map{it.copy(material=it.material?:CostEngine.defaultSpec(it.name,defaults))},
+        takeoffs=takeoffs.map{item->item.copy(material=item.material?:CostEngine.defaultSpec(item.name,defaults),
+            calculatorInputs=CalculatorLibrary.forItem(item.name)?.let{CalculatorLibrary.defaults(it,defaults)+("waste" to item.waste.toString())+item.calculatorInputs}?:item.calculatorInputs)},
         note=note.trim(),
         status=status,
         updatedAt=System.currentTimeMillis(),
@@ -396,6 +398,7 @@ fun RoomCaptureScreen(
                 walls=QuantityEngine.effectiveWalls(current()),
                 space=current(),
                 defaultMaterial=CostEngine.defaultSpec(takeoffs[i].name,defaults),
+                defaultRecipe=CalculatorLibrary.forItem(takeoffs[i].name)?.let{CalculatorLibrary.defaults(it,defaults)}.orEmpty(),
                 onDismiss={editIndex=null},
                 onSave={takeoffs[i]=it;editIndex=null}
             )

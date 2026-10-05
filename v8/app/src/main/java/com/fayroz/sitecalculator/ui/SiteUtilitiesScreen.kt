@@ -63,10 +63,10 @@ private fun UnitUtility(onBack:()->Unit){
     Scaffold(topBar={TopAppBar(title={Text("تحويل الوحدات",fontWeight=FontWeight.Black)},navigationIcon={IconButton(onClick=onBack){Icon(Icons.Rounded.ArrowForward,"رجوع")}})}){p->
         androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize().padding(p),contentPadding=PaddingValues(12.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){
             item{BoxCard{
-                ChoiceFieldX("نوع التحويل",type,listOf("طول","مساحة","حجم"),{
-                    type=it;unit=when(it){"طول"->"م";"مساحة"->"م²";else->"م³"}
+                ChoiceFieldX("نوع التحويل",type,listOf("طول","مساحة","حجم","وزن"),{
+                    type=it;unit=when(it){"طول"->"م";"مساحة"->"م²";"وزن"->"كجم";else->"م³"}
                 })
-                ChoiceFieldX("الوحدة اللي معاك",unit,when(type){"طول"->listOf("م","سم","مم");"مساحة"->listOf("م²","سم²");else->listOf("م³","لتر")},{unit=it})
+                ChoiceFieldX("الوحدة اللي معاك",unit,when(type){"طول"->listOf("م","سم","مم");"مساحة"->listOf("م²","سم²");"وزن"->listOf("كجم","طن","جرام");else->listOf("م³","لتر")},{unit=it})
                 NumberFieldX("القيمة",value,{value=it},unit)
             }}
             if(value.isNotBlank())item{BoxCard{
@@ -78,6 +78,10 @@ private fun UnitUtility(onBack:()->Unit){
                     "مساحة"->{
                         val m2=if(unit=="سم²")x/10000 else x
                         MetricRow("متر مربع","${fmt(m2)} م²",true);MetricRow("سنتيمتر مربع","${fmt(m2*10000)} سم²")
+                    }
+                    "وزن"->{
+                        val kg=when(unit){"طن"->x*1000;"جرام"->x/1000;else->x}
+                        MetricRow("كيلوجرام","${fmt(kg)} كجم",true);MetricRow("طن","${fmt(kg/1000)} طن");MetricRow("جرام","${fmt(kg*1000)} جرام")
                     }
                     else->{
                         val m3=if(unit=="لتر")x/1000 else x
@@ -121,11 +125,15 @@ private fun IrregularAreaUtility(onBack:()->Unit){
                     Row{
                         Checkbox(part.deduct,{parts[i]=part.copy(deduct=it)})
                         Text("خصم الجزء ده",Modifier.padding(top=12.dp))
+                        TextButton(onClick={parts.removeAt(i)}){Text("حذف") }
                     }
                 }
                 OutlinedButton(onClick={parts.add(AreaPart())},modifier=Modifier.fillMaxWidth()){Text("ضيف جزء")}
             }}
-            item{BoxCard{MetricRow("المساحة الصافية","${fmt(total)} م²",true)}}
+            item{BoxCard{
+                MetricRow("المساحة الصافية","${fmt(total)} م²",true)
+                Text("مراجعة الأجزاء: "+parts.mapIndexed{i,a->"${i+1}: "+(if(a.deduct)"−" else "+")+fmt(lengthMeters(a.length,unit)*lengthMeters(a.width,unit))}.joinToString(" • "))
+            }}
         }
     }
 }

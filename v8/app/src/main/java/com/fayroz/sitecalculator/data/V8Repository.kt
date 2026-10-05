@@ -138,7 +138,7 @@ class V8Repository(context:Context){
     fun clearDraft(key:String)=prefs.edit().remove("draft_$key").apply()
 
     fun saveRecentCalc(calc:SavedCalculation){
-        val next=(listOf(calc)+recentCalcs()).take(100)
+        val next=listOf(calc)+recentCalcs()
         val holder=Project(name="_recent",calculations=next)
         prefs.edit().putString("recent_calcs",V8Codec.encodeProjects(listOf(holder))).apply()
     }

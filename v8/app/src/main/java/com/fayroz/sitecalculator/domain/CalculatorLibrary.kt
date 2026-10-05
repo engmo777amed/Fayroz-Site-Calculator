@@ -42,7 +42,7 @@ object CalculatorLibrary {
             val need=v("area")*(1+v("waste")/100);val piece=v("tileW")*v("tileH")/10000;val pieces=ceil(need/piece);val packs=ceil(pieces/v("pack"));val buy=packs*v("pack")*piece
             CalcAnswer(listOf(o("صافي التنفيذ",v("area"),"م²"),o("بعد الهالك",need,"م²"),o("القطع المطلوبة",pieces,"قطعة"),o("عبوات الشراء",packs,"عبوة"),o("مساحة الشراء",buy,"م²"),o("فائض فوق المطلوب بالهالك",buy-need,"م²")),"مقاسات القطعة بالسنتيمتر؛ سعر العبوة الكاملة.",packs*v("price"),need/(v("pack")*piece)*v("price"))
         }
-        addDef("skirting","وزرات بالقطع الجاهزة",1,listOf(length,f("piece","طول قطعة الوزرة","م","0.6"),f("pack","قطع بالعبوة","قطعة","1"),waste(),f("price","سعر العبوة","جنيه","0",false)),"القطع = الطول بعد الهالك ÷ طول القطعة؛ العبوات تقرب لأعلى."){v->val pieces=ceil(v("length")*(1+v("waste")/100)/v("piece"));val packs=ceil(pieces/v("pack"));CalcAnswer(listOf(o("قطع",pieces,"قطعة"),o("عبوات",packs,"عبوة")),"خصم عروض الأبواب من الطول قبل الإدخال.",packs*v("price"))}
+        addDef("skirting","وزرات بالقطع الجاهزة",1,listOf(length,f("piece","طول قطعة الوزرة","م","0.6"),f("pack","قطع بالعبوة","قطعة","1"),waste(),f("price","سعر العبوة","جنيه","0",false)),"القطع = الطول بعد الهالك ÷ طول القطعة؛ العبوات تقرب لأعلى."){v->val pieces=ceil(v("length")*(1+v("waste")/100)/v("piece"));val packs=ceil(pieces/v("pack"));CalcAnswer(listOf(o("قطع",pieces,"قطعة"),o("عبوات",packs,"عبوة")),"خصم عروض الأبواب من الطول قبل الإدخال.",packs*v("price"),v("length")*(1+v("waste")/100)/(v("piece")*v("pack"))*v("price"))}
         addDef("skirting_cut","تقطيع وزرات من البلاط",1,listOf(length,f("tileL","طول البلاطة","سم","60"),f("tileW","عرض البلاطة","سم","60"),f("strip","ارتفاع الوزرة","سم","10"),f("kerf","سمك القطع","مم","3",false),waste(),f("price","سعر البلاطة","جنيه","0",false)),"شرائح البلاطة = الجزء الصحيح ((العرض + القطع) ÷ (ارتفاع الوزرة + القطع))."){v->val kerf=v("kerf")/10;val strips=floor((v("tileW")+kerf)/(v("strip")+kerf));require(strips>=1){"مقاس الوزرة أكبر من البلاطة"};val per=strips*v("tileL")/100;val tiles=ceil(v("length")*(1+v("waste")/100)/per);CalcAnswer(listOf(o("شرائح من البلاطة",strips,"شريحة"),o("طول من البلاطة",per,"م ط"),o("بلاطات شراء",tiles,"بلاطة")),"اتجاه تقطيع واحد؛ يمكن مقارنة الاتجاه الآخر بتبديل أبعاد البلاطة.",tiles*v("price"))}
         addDef("stairs_finish","كسوة درجات وبسطات السلالم",1,listOf(f("steps","عدد الدرجات","درجة"),width,f("tread","النائمة","سم","30"),f("riser","القائمة","سم","17"),f("landing","مساحة البسطات","م²","0",false),waste(),price()),"الكسوة = عرض السلم × الدرجات × (النائمة + القائمة) + البسطات."){v->val tread=v("width")*v("steps")*v("tread")/100;val rise=v("width")*v("steps")*v("riser")/100;val a=tread+rise+v("landing");val buy=a*(1+v("waste")/100);CalcAnswer(listOf(o("النوايم",tread,"م²"),o("القوايم",rise,"م²"),o("البسطات",v("landing"),"م²"),o("صافي الكسوة",a,"م²"),o("شراء بالهالك",buy,"م²")),"البروز والحواف والوزرات تُحصر مستقلة.",buy*v("price"))}
         fun consumable(id:String,title:String,g:Int,rate:String,pack:String,unit:String){
@@ -79,7 +79,7 @@ object CalculatorLibrary {
                 val courses=max(1.0,round((t+j)/(w+j)));val net=v("area")/((l+j)*(h+j))*courses
                 val wet=(v("area")*t-net*l*w*h).coerceAtLeast(0.0);val dry=wet*v("dry")
                 val kg=dry*v("cement")/(v("cement")+v("sand"))*1440;val sm=dry*v("sand")/(v("cement")+v("sand"));val bricks=ceil(net*(1+v("waste")/100));val bags=ceil(kg/50)
-                CalcAnswer(listOf(o("طبقات عبر السمك",courses,"طبقة"),o("وحدات شراء",bricks,"وحدة"),o("مونة منفذة",wet,"م³"),o("أسمنت",bags,"شيكارة"),o("رمل",sm,"م³")),"تقدير لرص طولي منتظم؛ عدد الطبقات المدعوم يطابق عرض الوحدة. للرص المختلف استخدم مقاس وجه الرص الفعلي. البلوك المجوف محسوب بالأبعاد الخارجية.",bricks/1000*v("brickPrice")+bags*v("cementPrice")+sm*v("sandPrice"))
+                CalcAnswer(listOf(o("طبقات عبر السمك",courses,"طبقة"),o("وحدات شراء",bricks,"وحدة"),o("مونة منفذة",wet,"م³"),o("أسمنت",bags,"شيكارة"),o("رمل",sm,"م³")),"تقدير لرص طولي منتظم؛ عدد الطبقات المدعوم يطابق عرض الوحدة. للرص المختلف استخدم مقاس وجه الرص الفعلي. البلوك المجوف محسوب بالأبعاد الخارجية.",bricks/1000*v("brickPrice")+bags*v("cementPrice")+sm*v("sandPrice"),net*(1+v("waste")/100)/1000*v("brickPrice")+kg/50*v("cementPrice")+sm*v("sandPrice"))
             }
         }
         masonry("masonry","طوب أحمر ومونة")
@@ -124,6 +124,9 @@ object CalculatorLibrary {
         "سقف جبس بورد"->"gypsum"
         else->""
     }}
+    fun defaults(def:CalcDef,project:Map<String,String>):Map<String,String> = def.fields.associate{field->
+        field.key to (project["recipe.${def.id}.${field.key}"]?:field.default)
+    }
     fun recipe(def:CalcDef,inputs:Map<String,String>,quantity:Double):Map<String,String> = def.fields.associate{it.key to it.default}+inputs+
         ((if(def.fields.any{it.key=="area"})"area" else if(def.fields.any{it.key=="length"})"length" else "count") to quantity.toString())
     fun evaluate(def:CalcDef,raw:Map<String,String>):CalcAnswer {

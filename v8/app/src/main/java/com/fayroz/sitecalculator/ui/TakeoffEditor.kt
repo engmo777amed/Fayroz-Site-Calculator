@@ -22,10 +22,11 @@ fun TakeoffEditorDialog(
     walls:List<WallPart>,
     space:Space,
     defaultMaterial:MaterialSpec?=null,
+    defaultRecipe:Map<String,String> = emptyMap(),
     onDismiss:()->Unit,
     onSave:(Takeoff)->Unit
 ){
-    var recipe by remember{mutableStateOf(item.calculatorInputs)}
+    var recipe by remember{mutableStateOf(defaultRecipe+("waste" to item.waste.toString())+item.calculatorInputs)}
     var partRecipeId by remember{mutableStateOf<String?>(null)}
     val recipeDef=CalculatorLibrary.forItem(item.name)
     var parts by remember{mutableStateOf(item.parts)}
@@ -43,7 +44,7 @@ fun TakeoffEditorDialog(
     var reveals by remember{mutableStateOf(item.includeOpeningReveals)}
     var wallIds by remember{mutableStateOf(item.wallIds.toSet())}
     var manualEnabled by remember{mutableStateOf(item.manualValue!=null)}
-    var manual by remember{mutableStateOf(item.manualValue?.let(::fmt)?:"")}
+    var manual by remember{mutableStateOf(item.manualValue?.let(::exact)?:"")}
     var overrideReason by remember{mutableStateOf(item.overrideReason)}
     var adjustments by remember{mutableStateOf(item.adjustments)}
     var adjType by remember{mutableStateOf(AdjustKind.ADD)}

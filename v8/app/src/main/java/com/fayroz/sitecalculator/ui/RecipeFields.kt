@@ -11,6 +11,9 @@ fun RecipeFields(def:CalcDef,quantity:Double,inputs:Map<String,String>,onChange:
     def.fields.filter{it.key !in setOf("area","length","count")}.forEach{f->
         NumberFieldX(f.label,inputs[f.key]?:f.default,{onChange(inputs+(f.key to it))},f.unit)
     }
+    listOf("_laborRate" to "المصنعية للوحدة","_transportRate" to "النقل للوحدة","_equipmentRate" to "المعدات للوحدة").forEach{(key,label)->
+        NumberFieldX(label,inputs[key]?:"0",{onChange(inputs+(key to it))},"جنيه")
+    }
     val raw=CalculatorLibrary.recipe(def,inputs,quantity)
     val answer=runCatching{CalculatorLibrary.evaluate(def,raw)}
     answer.getOrNull()?.let{a->

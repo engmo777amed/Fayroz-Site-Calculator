@@ -41,13 +41,13 @@ object CostEngine {
                 val spec=part?.material?:item.material?:defaultSpec(item.name,project.defaults)
                 val mat=if(spec!=null)measure(qty,spec)else Triple(0.0,0.0,0.0)
                 val def=if(spec==null)CalculatorLibrary.forItem(item.name)else null
-                val inputs=part?.calculatorInputs?.takeIf{it.isNotEmpty()}?:item.calculatorInputs
+                val inputs=(def?.let{CalculatorLibrary.defaults(it,project.defaults)}.orEmpty()+("waste" to item.waste.toString()))+(part?.calculatorInputs?.takeIf{it.isNotEmpty()}?:item.calculatorInputs)
                 val raw=def?.let{CalculatorLibrary.recipe(it,inputs,qty)}.orEmpty()
                 val answer=def?.let{runCatching{CalculatorLibrary.evaluate(it,raw)}.getOrNull()}
                 val cost=if(spec!=null)mat.first/spec.bagKg*spec.cementPrice+mat.second*spec.sandPrice+mat.third*spec.extraPrice else answer?.consumedCost?:0.0
                 add(Row(section.id,space.id,item.id,part?.id,"${section.name} / ${space.name}",item.name,
                     part?.name?:"كامل البند",qty,item.unit.label,mat.first,mat.second,mat.third,cost,
-                    qty*(spec?.laborRate?:0.0),qty*(spec?.transportRate?:0.0),qty*(spec?.equipmentRate?:0.0),spec,q.explanation,def?.id,raw,
+                    qty*(spec?.laborRate?:inputs["_laborRate"]?.toDoubleOrNull()?:0.0),qty*(spec?.transportRate?:inputs["_transportRate"]?.toDoubleOrNull()?:0.0),qty*(spec?.equipmentRate?:inputs["_equipmentRate"]?.toDoubleOrNull()?:0.0),spec,q.explanation,def?.id,raw,
                     if(def!=null&&answer!=null)CalculatorLibrary.result(def,raw,answer).lines else emptyList()))
             }
         }}}

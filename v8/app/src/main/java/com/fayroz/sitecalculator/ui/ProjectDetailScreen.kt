@@ -32,6 +32,7 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
     var renameProject by remember{mutableStateOf(false)}
     var projectName by remember{mutableStateOf(project.name)}
     var reportKind by remember{mutableStateOf("حصر وتكلفة تفصيلي")}
+    var defaultsTool by remember{mutableStateOf("tile")}
     var defaults by remember(project.defaults){mutableStateOf(project.defaults)}
     val scoped=project.copy(
         sections=project.sections.filter{sectionId==null||it.id==sectionId}.map{section->
@@ -109,6 +110,14 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
                         listOf(Triple("cementPrice","سعر شيكارة الأسمنت 50 كجم","جنيه"),Triple("sandPrice","سعر متر الرمل","جنيه/م³"),Triple("plasterThickness","سمك المحارة","مم"),Triple("plasterSand","رمل مقابل جزء أسمنت للمحارة","جزء"),Triple("splashThickness","سمك الطرطشة","مم"),Triple("splashSand","رمل مقابل جزء أسمنت للطرطشة","جزء"),Triple("mortarWaste","هالك المونة","%")).forEach{(key,label,unit)->
                             val default=when(key){"plasterThickness"->"15";"plasterSand"->"4";"splashThickness","mortarWaste"->"5";"splashSand"->"2";else->"0"}
                             NumberFieldX(label,defaults[key]?:default,{defaults=defaults+(key to it)},unit)
+                        }
+                        HorizontalDivider()
+                        val recipes=CalculatorLibrary.all.filter{it.id in setOf("tile","skirting","paint","waterproof","gypsum","masonry")}
+                        ChoiceFieldX("إعدادات باقي خامات المشروع",recipes.first{it.id==defaultsTool}.title,recipes.map{it.title},{title->defaultsTool=recipes.first{it.title==title}.id})
+                        val recipe=recipes.first{it.id==defaultsTool}
+                        recipe.fields.filter{it.key !in setOf("area","length","count")}.forEach{field->
+                            val key="recipe.${recipe.id}.${field.key}"
+                            NumberFieldX(field.label,defaults[key]?:field.default,{defaults=defaults+(key to it)},field.unit)
                         }
                         Button(onClick={
                             val valid=defaults.all{(_,v)->v.toDoubleOrNull()?.let{it>=0&&it.isFinite()}==true}&&listOf("plasterThickness","splashThickness","plasterSand","splashSand").all{defaults[it]?.toDoubleOrNull()?.let{x->x>0}?:true}

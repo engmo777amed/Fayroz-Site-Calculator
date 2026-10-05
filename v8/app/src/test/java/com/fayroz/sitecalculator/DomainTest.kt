@@ -52,7 +52,7 @@ class DomainTest {
  @Test fun tileConsumptionDoesNotRoundPerPart(){
     val recipe=mapOf("tileW" to "50","tileH" to "50","pack" to "4","price" to "100","waste" to "0")
     val t=Takeoff(name="الأرضيات",unit=UnitType.AREA,kind=CalcKind.FLOOR,calculatorInputs=recipe,parts=listOf(WorkPart(length=.5,width=1.0),WorkPart(length=.5,width=1.0)))
-    val p=Project(name="",sections=listOf(Section(name="",spaces=listOf(Space(name="",type="",takeoffs=listOf(t)))))))
+    val p=Project(name="",sections=listOf(Section(name="",spaces=listOf(Space(name="",type="",takeoffs=listOf(t))))))
     val rows=CostEngine.rows(p)
     assertEquals(100.0,rows.sumOf{it.materialCost},1e-9)
     assertEquals(100.0,CostEngine.purchase(rows).sumOf{it.cost},1e-9)
