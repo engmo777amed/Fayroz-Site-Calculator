@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.fayroz.sitecalculator.data.V8Repository
+import com.fayroz.sitecalculator.data.BackupArchive
 
 @Composable
 fun SettingsScreen(
@@ -27,24 +28,28 @@ fun SettingsScreen(
 ){
     val context=LocalContext.current
     var importMessage by remember{mutableStateOf<String?>(null)}
-    val saveLauncher=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")){uri->
+    var pending by remember{mutableStateOf<ByteArray?>(null)}
+    val saveLauncher=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")){uri->
         if(uri!=null){
-            runCatching{
-                context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use{it.write(repository.exportBackup())}
-            }
-            importMessage="النسخة اتحفظت."
+            importMessage=runCatching{
+                context.contentResolver.openOutputStream(uri)?.use{BackupArchive.write(context,repository,it)}?:error("تعذر فتح الملف")
+                "تم حفظ النسخة الاحتياطية والصور بنجاح."
+            }.getOrElse{"فشل حفظ النسخة: ${it.message}"}
         }
     }
     val launcher=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri->
         if(uri!=null){
-            val raw=runCatching{
-                context.contentResolver.openInputStream(uri)?.bufferedReader()?.use{it.readText()}?:""
-            }.getOrDefault("")
-            val ok=raw.isNotBlank()&&repository.importBackup(raw)
-            importMessage=if(ok)"النسخة رجعت بنجاح." else "الملف مش نسخة Fayroz V8 صالحة."
-            if(ok)onReload()
+            runCatching{context.contentResolver.openInputStream(uri)?.use{input->
+                val output=java.io.ByteArrayOutputStream();val block=ByteArray(8192);var total=0
+                while(true){val n=input.read(block);if(n<0)break;total+=n;require(total<=128*1024*1024);output.write(block,0,n)}
+                output.toByteArray()
+            }?:error("تعذر فتح الملف")}.onSuccess{pending=it}.onFailure{importMessage="تعذر قراءة النسخة أو حجمها أكبر من 128 ميجابايت."}
         }
     }
+    pending?.let{bytes->AlertDialog(onDismissRequest={pending=null},title={Text("استرجاع نسخة احتياطية")},
+        text={Text("دمج يضيف المشروعات والأماكن والحسابات غير الموجودة، ويحافظ على النسخة الحالية عند تكرارها. استبدال يرجّع بيانات النسخة مكان المشروعات الحالية.")},
+        confirmButton={TextButton(onClick={val ok=BackupArchive.restore(context,repository,bytes,true);importMessage=if(ok)"تم الدمج بنجاح." else "النسخة غير صالحة؛ لم تُستبدل بياناتك.";pending=null;if(ok)onReload()}){Text("دمج")}},
+        dismissButton={TextButton(onClick={val ok=BackupArchive.restore(context,repository,bytes,false);importMessage=if(ok)"تم الاستبدال بنجاح." else "النسخة غير صالحة؛ لم تُستبدل بياناتك.";pending=null;if(ok)onReload()}){Text("استبدال")}})}
 
     Scaffold(
         topBar={
@@ -91,13 +96,13 @@ fun SettingsScreen(
                     Text("احفظ المشروعات والحصر والحسابات في ملف، أو رجّع نسخة محفوظة.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                         OutlinedButton(
-                            onClick={saveLauncher.launch("Fayroz-Site-V8-Backup.json")},
+                            onClick={saveLauncher.launch("Fayroz-Site-V9-Backup.zip")},
                             modifier=Modifier.weight(1f).heightIn(min=48.dp)
                         ){
                             Icon(Icons.Rounded.Share,null);Spacer(Modifier.width(4.dp));Text("احفظ نسخة")
                         }
                         OutlinedButton(
-                            onClick={launcher.launch(arrayOf("application/json","text/plain","*/*"))},
+                            onClick={launcher.launch(arrayOf("application/zip","application/json","application/octet-stream"))},
                             modifier=Modifier.weight(1f).heightIn(min=48.dp)
                         ){
                             Icon(Icons.Rounded.Restore,null);Spacer(Modifier.width(4.dp));Text("رجّع نسخة")
@@ -112,8 +117,9 @@ fun SettingsScreen(
             item{PageHeader("عن الحسابات")}
             item{
                 BoxCard{
-                    Text("قواعد V8",fontWeight=FontWeight.Black)
+                    Text("Fayroz Site Calculator 9.0.0",fontWeight=FontWeight.Black)
                     Text("""• التكرار بيتطبق مرة واحدة فقط في التجميع.
+• صافي الحصر منفصل عن هالك الخامات والشراء.
 • خصم الفتحات بيتم من الحوائط تلقائيًا.
 • القيم الافتراضية في الخامات قيم بداية وقابلة للتعديل.
 • مواصفة المشروع أو نشرة المنتج المعتمدة هي المرجع.""".trimIndent(),style=MaterialTheme.typography.bodySmall)

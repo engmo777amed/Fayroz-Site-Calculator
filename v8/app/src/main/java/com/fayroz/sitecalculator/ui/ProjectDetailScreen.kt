@@ -33,7 +33,14 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
     var projectName by remember{mutableStateOf(project.name)}
     var reportKind by remember{mutableStateOf("حصر وتكلفة تفصيلي")}
     var defaults by remember(project.defaults){mutableStateOf(project.defaults)}
-    val scoped=project.copy(sections=project.sections.filter{sectionId==null||it.id==sectionId}.map{s->s.copy(spaces=s.spaces.filter{spaceId==null||it.id==spaceId}.map{sp->sp.copy(takeoffs=sp.takeoffs.filter{itemFilter=="كل البنود"||it.name==itemFilter})}))},calculations=project.calculations.filter{(sectionId==null||it.sectionId==sectionId)&&(spaceId==null||it.spaceId==spaceId)})
+    val scoped=project.copy(
+        sections=project.sections.filter{sectionId==null||it.id==sectionId}.map{section->
+            section.copy(spaces=section.spaces.filter{spaceId==null||it.id==spaceId}.map{space->
+                space.copy(takeoffs=space.takeoffs.filter{itemFilter=="كل البنود"||it.name==itemFilter})
+            })
+        },
+        calculations=project.calculations.filter{(sectionId==null||it.sectionId==sectionId)&&(spaceId==null||it.spaceId==spaceId)}
+    )
     val rows=CostEngine.rows(scoped)
     val summary=QuantityEngine.summarize(scoped)
     val export=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")){uri->

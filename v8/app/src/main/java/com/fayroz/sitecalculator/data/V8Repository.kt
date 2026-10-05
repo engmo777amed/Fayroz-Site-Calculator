@@ -91,11 +91,21 @@ class V8Repository(context:Context){
         )
     }
 
-    fun loadProjects():MutableList<Project> =
-        V8Codec.decodeProjects(prefs.getString("projects","[]")?:"[]")
+    fun loadProjects():MutableList<Project> {
+        val raw=prefs.getString("projects","[]")?:"[]"
+        val parsed=V8Codec.decodeProjects(raw)
+        if(parsed.isEmpty()&&raw!="[]"){
+            prefs.edit().putString("corrupt_projects",raw).commit()
+            return V8Codec.decodeProjects(prefs.getString("last_good_projects","[]")?:"[]")
+        }
+        return parsed
+    }
 
-    fun saveProjects(projects:List<Project>) =
-        prefs.edit().putString("projects",V8Codec.encodeProjects(projects)).apply()
+    fun saveProjects(projects:List<Project>) {
+        val raw=V8Codec.encodeProjects(projects)
+        check(prefs.edit().putString("last_good_projects",prefs.getString("projects","[]"))
+            .putString("projects",raw).commit()){ "تعذر حفظ المشروعات" }
+    }
 
     fun activeLocation():ActiveLocation?{
         val raw=prefs.getString("active_location",null)?:return null
@@ -139,17 +149,46 @@ class V8Repository(context:Context){
     }
 
     fun exportBackup():String=JSONObject().apply{
-        put("version",8)
+        put("version",9)
         put("projects",org.json.JSONArray(prefs.getString("projects","[]")?:"[]"))
+        put("settings",JSONObject().apply{prefs.all.forEach{(key,value)->if(key!="projects"&&value is String)put(key,value)}})
     }.toString()
 
-    fun importBackup(raw:String):Boolean=runCatching{
+    fun importBackup(raw:String,merge:Boolean=false):Boolean=runCatching{
         val root=JSONObject(raw)
+        require(root.optInt("version",0) in 8..9)
         val arr=root.getJSONArray("projects")
         val parsed=V8Codec.decodeProjects(arr.toString())
-        if(parsed.isEmpty()&&arr.length()>0)error("invalid")
-        prefs.edit().putString("projects",arr.toString()).apply()
-        true
+        require(parsed.size==arr.length())
+        require(parsed.map{it.id}.distinct().size==parsed.size)
+        require(parsed.all{it.id.isNotBlank()&&it.name.isNotBlank()})
+        val before=exportBackup()
+        val next=if(merge){
+            val current=loadProjects().toMutableList()
+            parsed.forEach{incoming->
+                val index=current.indexOfFirst{it.id==incoming.id}
+                if(index<0)current+=incoming
+                else{
+                    val local=current[index]
+                    val sections=local.sections.toMutableList()
+                    incoming.sections.forEach{s->
+                        val si=sections.indexOfFirst{it.id==s.id}
+                        if(si<0)sections+=s
+                        else sections[si]=sections[si].copy(spaces=sections[si].spaces+s.spaces.filter{remote->sections[si].spaces.none{it.id==remote.id}})
+                    }
+                    current[index]=local.copy(sections=sections,calculations=local.calculations+incoming.calculations.filter{remote->local.calculations.none{it.id==remote.id}})
+                }
+            }
+            current
+        }else parsed
+        val editor=prefs.edit().putString("before_import",before).putString("last_good_projects",prefs.getString("projects","[]"))
+            .putString("projects",V8Codec.encodeProjects(next))
+        val settings=root.optJSONObject("settings")
+        settings?.keys()?.forEach{key->if(key!="projects"&&!key.startsWith("draft_")&&key !in setOf("before_import","corrupt_projects","last_good_projects")){
+            if(!merge||!prefs.contains(key))editor.putString(key,settings.getString(key))
+        }}
+        if(!merge)editor.remove("active_location")
+        editor.commit()
     }.getOrDefault(false)
 
     fun appearance():String=prefs.getString("appearance","system")?:"system"

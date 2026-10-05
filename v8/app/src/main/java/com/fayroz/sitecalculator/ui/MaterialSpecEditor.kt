@@ -9,7 +9,6 @@ import com.fayroz.sitecalculator.core.MaterialSpec
 
 @Composable
 fun MaterialSpecFields(value:MaterialSpec,onChange:(MaterialSpec)->Unit){
-    fun field(label:String,x:Double,unit:String,change:(Double)->Unit){ /* composable below */ }
     SpecNumber("متوسط السمك",value.thicknessMm,"مم"){onChange(value.copy(thicknessMm=it))}
     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
         SpecNumber("أسمنت",value.cementParts,"جزء",Modifier.weight(1f)){onChange(value.copy(cementParts=it))}
