@@ -72,10 +72,10 @@ class DeviceTest {
  }
  private fun field(label:String):androidx.test.uiautomator.UiObject2 {
     val selector=By.desc("إدخال $label")
-    repeat(15){device.findObject(selector)?.let{return it};device.swipe(device.displayWidth/2,device.displayHeight*3/4,device.displayWidth/2,device.displayHeight/3,20);device.waitForIdle()}
+    repeat(15){device.findObject(selector)?.let{node->val editable=if(node.className=="android.widget.EditText")node else node.findObject(By.clazz("android.widget.EditText"));if(editable!=null)return editable};device.swipe(device.displayWidth/2,device.displayHeight*3/4,device.displayWidth/2,device.displayHeight/3,20);device.waitForIdle()}
     fail("Field missing: $label");throw IllegalStateException()
  }
- private fun type(label:String,value:String){field(label).text=value;device.waitForIdle()}
+ private fun type(label:String,value:String){field(label).text=value;device.waitForIdle();assertTrue("Input was not applied: $label",field(label).text.contains(value))}
  @Test fun calculatorComputesSavesAndReopensDecimalInputs(){
     val intent=Intent(context,MainActivity::class.java).putExtra("calculator","plaster")
     ActivityScenario.launch<MainActivity>(intent).use{
@@ -116,6 +116,16 @@ class DeviceTest {
        device.findObject(By.text("احسب واعرض النتيجة")).click()
        device.waitForIdle();shot("invalid-input")
        assertTrue(device.wait(Until.hasObject(By.textContains("المساحة الصافية يجب")),10000))
+    }
+ }
+ @Test fun utilityComputesAndSavesResult(){
+    ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java).putExtra("calculator","convert")).use{
+       assertTrue(device.wait(Until.hasObject(By.text("اسم الحساب")),10000))
+       type("القيمة","1.25")
+       device.findObject(By.text("احسب واعرض النتيجة")).click()
+       assertTrue(device.wait(Until.hasObject(By.text("125 سم")),10000));shot("unit-result")
+       device.findObject(By.text("حفظ النتيجة")).click()
+       assertEquals("1.25",V8Repository(context).recentCalcs().first().inputs["value"])
     }
  }
  @Test fun pdfPrintPreviewOpens(){
