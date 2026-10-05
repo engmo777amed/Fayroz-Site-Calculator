@@ -23,7 +23,10 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
     onBack:()->Unit,onSave:(MaterialResult,String?,String?)->Unit){
     val def=CalculatorLibrary.all.firstOrNull{it.id==toolId}?:return
     val raw=remember(toolId,seed){mutableStateMapOf<String,String>().apply{
-        def.fields.forEach{put(it.key,seed?.inputs?.get(it.key)?:if(project!=null)CalculatorLibrary.defaults(def,project.defaults)[it.key]?:it.default else repository.pref("calc.$toolId.${it.key}",it.default));seed?.inputs?.get("_unit.${it.key}")?.let{put("_unit.${it.key}",it)}}
+        def.fields.forEach{field->
+            put(field.key,seed?.inputs?.get(field.key)?:if(project!=null)CalculatorLibrary.defaults(def,project.defaults)[field.key]?:field.default else repository.pref("calc.$toolId.${field.key}",field.default))
+            seed?.inputs?.get("_unit.${field.key}")?.let{unit->put("_unit.${field.key}",unit)}
+        }
         if(seed!=null&&seed.inputs.isEmpty()&&seed.sourceQuantity>0&&def.fields.any{it.key=="area"})put("area",exact(seed.sourceQuantity))
     }}
     val context=LocalContext.current
