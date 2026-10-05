@@ -48,7 +48,7 @@ class MainActivity:ComponentActivity(){
             var active by remember{mutableStateOf(repository.activeLocation())}
             var tab by remember{mutableStateOf(RootTab.HOME)}
             var route by remember{mutableStateOf<Route>(
-                intent.getStringExtra("calculator")?.takeIf{id->CalculatorLibrary.all.any{it.id==id}}?.let{Route.Tool(it)}?:Route.Root
+                intent.getStringExtra("calculator")?.takeIf{id->(CalculatorLibrary.all.any{it.id==id}||id in setOf("convert","area"))}?.let{Route.Tool(it)}?:Route.Root
             )}
 
             fun persist(){
@@ -231,7 +231,7 @@ class MainActivity:ComponentActivity(){
                                     RootTab.TOOLS->ToolsScreen(
                                         recent=repository.recentCalcs(),
                                         hasActiveProject=activeProject()!=null,
-                                        onOpen={id->route=Route.Tool(id,null,active?.projectId)},
+                                        onOpen={id->route=Route.Tool(id)},
                                         repository=repository,
                                         onOpenSaved={calc->route=Route.Tool(calc.toolId,MaterialResult(calc.toolId,calc.title,calc.sourceQuantity,calc.unit,emptyList(),calc.explanation,calc.inputs,calc.cost),active?.projectId)}
                                     )
@@ -389,7 +389,7 @@ class MainActivity:ComponentActivity(){
                             route=if(r.projectId!=null)Route.ProjectDetail(r.projectId) else Route.Root
                         }
                         if(r.toolId in setOf("convert","area")){
-                            SiteUtilityScreen(r.toolId,onBack=back)
+                            SiteUtilityScreen(r.toolId,onBack=back,repository=repository,seed=r.seed)
                         }else{
                             val projectId=r.projectId ?: active?.projectId
                             val targetProject=projectId?.let{id->projects.firstOrNull{it.id==id}}

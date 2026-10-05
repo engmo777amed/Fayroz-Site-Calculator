@@ -24,6 +24,7 @@ object MaterialReview {
         return missing(def,row.calculatorInputs)
     }
     fun itemError(space:Space,item:Takeoff):String? {
+        if(item.parts.any{p->p.deduction<0||!p.deduction.isFinite()||(item.unit==UnitType.AREA&&(p.length<=0||p.width<=0||!p.length.isFinite()||!p.width.isFinite()))})return "راجع أطوال وعروض وخصومات الأجزاء."
         Validation.space(space.copy(name=space.name.ifBlank{"المكان"},takeoffs=listOf(item)))?.let{return it}
         (listOfNotNull(item.material)+item.parts.mapNotNull{it.material}).forEach{specError(it)?.let{error->return error}}
         val def=CalculatorLibrary.forItem(item.name)

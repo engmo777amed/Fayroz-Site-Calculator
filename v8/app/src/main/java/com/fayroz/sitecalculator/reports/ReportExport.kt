@@ -6,6 +6,7 @@ import android.print.PrintManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import com.fayroz.sitecalculator.core.*
+import com.fayroz.sitecalculator.domain.MaterialReview
 import com.fayroz.sitecalculator.domain.CostEngine
 import com.fayroz.sitecalculator.domain.QuantityEngine
 import java.io.OutputStream
@@ -28,10 +29,12 @@ object ReportExport {
             out+=listOf("البند","الوحدة","صافي الكمية")
             QuantityEngine.summarize(p).forEach{out+=listOf(it.name,it.unit.label,it.quantity.toString())}
         }else{
-            out+=listOf("المكان","البند","الجزء","صافي الكمية","الوحدة","سمك مم","أسمنت كجم","رمل م³","تكلفة المواد","مصنعية","نقل","معدات","الإجمالي","طريقة الحساب")
-            rows.forEach{out+=listOf(it.location,it.item,it.part,it.quantity.toString(),it.unit,it.spec?.thicknessMm?.toString()?:"",it.cementKg.toString(),it.sandM3.toString(),it.materialCost.toString(),it.labor.toString(),it.transport.toString(),it.equipment.toString(),it.total.toString(),it.formula)}
+            out+=listOf("المكان","البند","الجزء","صافي الكمية","الوحدة","سمك مم","أسمنت كجم","رمل م³","تكلفة المواد","مصنعية","نقل","معدات","الإجمالي","طريقة الحساب","حالة التسعير")
+            rows.forEach{out+=listOf(it.location,it.item,it.part,it.quantity.toString(),it.unit,it.spec?.thicknessMm?.toString()?:"",it.cementKg.toString(),it.sandM3.toString(),it.materialCost.toString(),it.labor.toString(),it.transport.toString(),it.equipment.toString(),it.total.toString(),it.formula,if(MaterialReview.missing(it).isEmpty())"مكتمل" else "أسعار ناقصة: "+MaterialReview.missing(it).joinToString("، "))}
             out+=listOf("إجمالي التكلفة",rows.sumOf{it.total}.toString(),"جنيه")
         }
+        val missing=rows.flatMap{MaterialReview.missing(it)}.distinct()
+        if(missing.isNotEmpty())out+=listOf("التكلفة غير مكتملة — المبالغ جزئية","أسعار ناقصة: "+missing.joinToString("، "))
         if(p.calculations.isNotEmpty()){
             out+=listOf("حسابات محفوظة بأسعار تاريخ الحفظ")
             p.calculations.forEach{c->out+=listOf(c.title,c.summary,c.cost.toString(),c.explanation,c.inputs.entries.joinToString(" • "){"${it.key}=${it.value}"})}
@@ -49,7 +52,7 @@ object ReportExport {
             add("xl/_rels/workbook.xml.rels","""<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>""")
             add("xl/styles.xml","""<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="1"><font><sz val="11"/><name val="Arial"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="right" vertical="top" wrapText="1" readingOrder="2"/></xf></cellXfs></styleSheet>""")
             add("xl/worksheets/sheet1.xml",buildString{
-                append("<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetViews><sheetView workbookViewId=\"0\" rightToLeft=\"1\"><pane ySplit=\"2\" topLeftCell=\"A3\" activePane=\"bottomLeft\" state=\"frozen\"/></sheetView></sheetViews><cols><col min=\"1\" max=\"14\" width=\"22\" customWidth=\"1\"/></cols><sheetData>")
+                append("<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetViews><sheetView workbookViewId=\"0\" rightToLeft=\"1\"><pane ySplit=\"2\" topLeftCell=\"A3\" activePane=\"bottomLeft\" state=\"frozen\"/></sheetView></sheetViews><cols><col min=\"1\" max=\"15\" width=\"22\" customWidth=\"1\"/></cols><sheetData>")
                 table.forEachIndexed{r,row->append("<row r=\"${r+1}\">");row.forEachIndexed{c,value->
                     val numeric=value.toDoubleOrNull()
                     if(numeric!=null&&numeric.isFinite())append("<c r=\"${column(c)}${r+1}\"><v>$numeric</v></c>")

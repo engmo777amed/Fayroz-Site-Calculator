@@ -84,7 +84,9 @@ fun TakeoffEditorDialog(
         if(error==null)stage=target
     }
     val selectedPart=parts.firstOrNull{it.id==selectedPartId}
-    val scopeName=if(selectedPart==null)"كامل البند" else selectedPart.name
+    val scopeName=if(manualEnabled)"كامل البند — كمية فعلية" else if(selectedPart==null)"كامل البند" else selectedPart.name
+    val partTotal=parts.sumOf{QuantityEngine.partValue(it,item.unit)}
+    val selectedQuantity=if(selectedPart!=null&&!manualEnabled&&partTotal>0)QuantityEngine.partValue(selectedPart,item.unit)/partTotal*q.repeatedFinal else q.repeatedFinal
     val projected=Project(name=space.name,sections=listOf(Section(name="",spaces=listOf(space.copy(takeoffs=listOf(preview))))))
     val rows=if(MaterialReview.itemError(space,preview)==null)runCatching{CostEngine.rows(projected)}.getOrDefault(emptyList())else emptyList()
     val selectedRows=rows.filter{manualEnabled||selectedPartId==null||it.partId==selectedPartId}
@@ -265,7 +267,7 @@ fun TakeoffEditorDialog(
                         val labels=listOf("كامل البند")+parts.mapIndexed{i,p->"${p.name} (${i+1})"}
                         val selectedIndex=parts.indexOfFirst{it.id==selectedPartId}
                         if(!manualEnabled)ChoiceFieldX("نطاق المواد والنتيجة",if(selectedIndex<0)labels[0] else labels[selectedIndex+1],labels,{label->selectedPartId=parts.getOrNull(labels.indexOf(label)-1)?.id;error=null})
-                        MetricRow("الصافي المحدد", "${fmt(if(selectedPart!=null)QuantityEngine.partValue(selectedPart,item.unit)*space.repeatCount else q.repeatedFinal)} ${item.unit.label}")
+                        MetricRow("الصافي المحدد", "${fmt(selectedQuantity)} ${item.unit.label}")
                         if(manualEnabled&&selectedPart!=null)Text("الكمية الفعلية تلغي توزيع الأجزاء. اختار كامل البند للنتيجة.",color=MaterialTheme.colorScheme.error)
                     }}
                 }

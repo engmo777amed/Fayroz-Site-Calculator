@@ -19,6 +19,7 @@ fun MaterialSpecFields(value:MaterialSpec,onChange:(MaterialSpec)->Unit,rateUnit
     SpecNumber("هالك الخامات",value.waste,"%"){onChange(value.copy(waste=it))}
     Text("الأسعار — اختيارية",style=MaterialTheme.typography.titleMedium)
     Text("يمكن حساب الكميات أولًا وإضافة الأسعار لاحقًا.",style=MaterialTheme.typography.bodySmall)
+    Text("وزن الشيكارة المعتمد: ${fmt(value.bagKg)} كجم",style=MaterialTheme.typography.bodySmall)
     SpecNumber("سعر شيكارة الأسمنت",value.cementPrice,"جنيه"){onChange(value.copy(cementPrice=it))}
     SpecNumber("سعر متر الرمل",value.sandPrice,"جنيه/م³"){onChange(value.copy(sandPrice=it))}
     var costs by remember{mutableStateOf(false)}

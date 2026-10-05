@@ -68,7 +68,8 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
             val fields=def.fields.filter{detailed||it.key !in setOf("dry","density","extraRate","extraPrice")}
             val index=fields.indexOfFirst{error.orEmpty().contains(it.label)}
             if(index<0)detailed=true
-            scope.launch{listState.animateScrollToItem(if(index<0)0 else index+3)}
+            val target=if(index>=0)index else def.fields.indexOfFirst{error.orEmpty().contains(it.label)}
+            scope.launch{listState.animateScrollToItem(if(target<0)0 else target+3)}
         }
     }
     fun saveResult(){
