@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -21,11 +22,12 @@ import android.widget.Toast
 import com.fayroz.sitecalculator.ui.*
 import java.util.UUID
 
-private enum class RootTab{ HOME,PROJECTS,TODAY,TOOLS }
+private enum class RootTab{ HOME,PROJECTS,TODAY,TOOLS,SAVED }
 
 private sealed interface Route{
     data object Root:Route
     data object Settings:Route
+    data object Prices:Route
     data class ProjectDetail(val projectId:String):Route
     data class SectionDetail(val projectId:String,val sectionId:String):Route
     data class RoomEdit(val projectId:String,val sectionId:String,val spaceId:String?,val session:Long=System.nanoTime()):Route
@@ -38,6 +40,7 @@ class MainActivity:ComponentActivity(){
         super.onCreate(savedInstanceState)
         setContent{
             val repository=remember{V8Repository(this)}
+            val rootState=rememberSaveableStateHolder()
             val projects=remember{
                 mutableStateListOf<Project>().apply{addAll(repository.loadProjects())}
             }
@@ -131,6 +134,7 @@ class MainActivity:ComponentActivity(){
                 BackHandler(enabled=route !is Route.Root){
                     route=when(val r=route){
                         is Route.Settings->Route.Root
+                        Route.Prices->Route.Root
                         is Route.ProjectDetail->Route.Root
                         is Route.SectionDetail->Route.ProjectDetail(r.projectId)
                         is Route.RoomEdit->Route.SectionDetail(r.projectId,r.sectionId)
@@ -154,8 +158,8 @@ class MainActivity:ComponentActivity(){
                                         icon={Icon(Icons.Rounded.FolderOpen,null)},label={Text("المشروعات")}
                                     )
                                     NavigationBarItem(
-                                        selected=tab==RootTab.TODAY,onClick={tab=RootTab.TODAY},
-                                        icon={Icon(Icons.Rounded.Today,null)},label={Text("شغل اليوم")}
+                                        selected=tab==RootTab.SAVED,onClick={tab=RootTab.SAVED},
+                                        icon={Icon(Icons.Rounded.History,null)},label={Text("المحفوظات")}
                                     )
                                     NavigationBarItem(
                                         selected=tab==RootTab.TOOLS,onClick={tab=RootTab.TOOLS},
@@ -165,7 +169,7 @@ class MainActivity:ComponentActivity(){
                             }
                         ){padding->
                             Surface(Modifier.padding(padding)){
-                                when(tab){
+                                rootState.SaveableStateProvider("root-${tab.name}"){when(tab){
                                     RootTab.HOME->HomeScreen(
                                         projects=projects,
                                         active=active,
@@ -181,6 +185,7 @@ class MainActivity:ComponentActivity(){
                                             else route=Route.DirectItem(p.id)
                                         },
                                         onSettings={route=Route.Settings},
+                                        onSaved={tab=RootTab.SAVED},onPrices={route=Route.Prices},
                                         onOpenSaved={calc->route=Route.Tool(calc.toolId,MaterialResult(calc.toolId,calc.title,calc.sourceQuantity,calc.unit,emptyList(),calc.explanation,calc.inputs,calc.cost),active?.projectId)}
                                     )
 
@@ -219,6 +224,10 @@ class MainActivity:ComponentActivity(){
                                         }
                                     )
 
+                                    RootTab.SAVED->SavedCalculationsScreen(repository.recentCalcs()){calc->
+                                        val pid=projects.firstOrNull{p->p.calculations.any{it.id==calc.id}}?.id
+                                        route=Route.Tool(calc.toolId,MaterialResult(calc.toolId,calc.title,calc.sourceQuantity,calc.unit,emptyList(),calc.explanation,calc.inputs,calc.cost),pid)
+                                    }
                                     RootTab.TOOLS->ToolsScreen(
                                         recent=repository.recentCalcs(),
                                         hasActiveProject=activeProject()!=null,
@@ -226,11 +235,12 @@ class MainActivity:ComponentActivity(){
                                         repository=repository,
                                         onOpenSaved={calc->route=Route.Tool(calc.toolId,MaterialResult(calc.toolId,calc.title,calc.sourceQuantity,calc.unit,emptyList(),calc.explanation,calc.inputs,calc.cost),active?.projectId)}
                                     )
-                                }
+                                }}
                             }
                         }
                     }
 
+                    Route.Prices->PricesScreen(projects.toList(),active?.projectId,{route=Route.Root},{replaceProject(it)})
                     Route.Settings->SettingsScreen(
                         repository=repository,
                         appearance=appearance,

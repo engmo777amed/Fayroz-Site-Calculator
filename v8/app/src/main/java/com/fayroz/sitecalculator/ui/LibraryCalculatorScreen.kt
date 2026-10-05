@@ -4,6 +4,8 @@ package com.fayroz.sitecalculator.ui
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
+import androidx.activity.compose.BackHandler
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -26,6 +28,10 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
     }}
     val context=LocalContext.current
     var detailed by remember{mutableStateOf(false)}
+    var stage by remember{mutableIntStateOf(if(seed!=null)1 else 0)}
+    var error by remember{mutableStateOf<String?>(null)}
+    val listState=androidx.compose.foundation.lazy.rememberLazyListState()
+    val scope=rememberCoroutineScope()
     var baseline by remember{mutableStateOf<MaterialResult?>(null)}
     var label by remember{mutableStateOf(seed?.inputs?.get("_label")?:seed?.title?:def.title)}
     var source by remember{mutableStateOf(seed?.inputs?.get("_source")?:"حساب مستقل")}
@@ -55,63 +61,67 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
         if(line!=null&&line.unit==UnitType.AREA&&def.fields.any{it.key=="area"})raw["area"]=exact(line.quantity)
         if(line!=null&&line.unit==UnitType.LENGTH&&def.fields.any{it.key=="length"})raw["length"]=exact(line.quantity)
     }
-    Scaffold(topBar={TopAppBar(title={Text(def.title,fontWeight=FontWeight.Bold)},navigationIcon={TextButton(onClick=onBack){Text("رجوع")}})}){padding->
-        LazyColumn(Modifier.fillMaxSize().padding(padding),contentPadding=PaddingValues(12.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){
-            item{Text(def.group,style=MaterialTheme.typography.labelMedium)}
-            item{BoxCard{
-                TextFieldX("اسم الحساب",label,{label=it})
-                if(project!=null){
-                    Text("المشروع: ${project.name}",fontWeight=FontWeight.Bold)
-                    ChoiceFieldX("مكان الحفظ ومصدر الحصر",source,sources.map{it.first},{x->
-                        source=x;val target=sources.first{it.first==x};sectionId=target.second;spaceId=target.third;sourceItem=""
-                    })
-                    if(source!="حساب مستقل"&&summary.isNotEmpty())ChoiceFieldX("تعبئة كمية من بند",sourceItem.ifBlank{"اختار بندًا"},summary.map{"${it.name} (${it.unit.label})"},::chooseSource)
-                }
-                Row{
-                    FilterChip(!detailed,{detailed=false},label={Text("سريع")})
-                    Spacer(Modifier.width(8.dp));FilterChip(detailed,{detailed=true},label={Text("تفصيلي")})
-                    TextButton(onClick={def.fields.forEach{raw[it.key]=it.default}}){Text("القيم الأصلية")}
-                }
-                def.fields.filter{detailed||it.required||it.key in setOf("waste","price","thickness","coats","cementPrice","sandPrice")}.forEach{field->
-                    CalcInputField(field,raw[field.key].orEmpty(),{raw[field.key]=it})
-                }
-                if(!detailed){
-                    val hidden=def.fields.filter{!it.required&&it.key !in setOf("waste","price","thickness","coats","cementPrice","sandPrice")}
-                    if(hidden.isNotEmpty())Text("القيم المستخدمة: "+hidden.joinToString(" • "){"${it.label} ${raw[it.key]} ${it.unit}"},style=MaterialTheme.typography.bodySmall)
-                }
-            }}
-            if(answer!=null&&result!=null){
-                item{BoxCard{
-                    Text("النتيجة",fontWeight=FontWeight.Bold)
-                    result.lines.forEach{MetricRow(it.label,it.value)}
-                    MetricRow("تكلفة الشراء / الحساب","${fmt(result.cost)} جنيه",true)
-                    if(result.cost==0.0)Text("أدخل أسعارًا لإظهار التكلفة.",style=MaterialTheme.typography.bodySmall)
-                    var explain by remember{mutableStateOf(false)}
-                    TextButton(onClick={explain=!explain}){Text("اتحسبت إزاي؟")}
-                    if(explain)Text(result.explanation,style=MaterialTheme.typography.bodySmall)
-                    baseline?.let{old->
-                        HorizontalDivider();Text("مقارنة البديل المحفوظ",fontWeight=FontWeight.Bold)
-                        old.lines.forEach{MetricRow("سابق: ${it.label}",it.value)}
-                        MetricRow("تكلفة السابق","${fmt(old.cost)} جنيه")
-                        MetricRow("فرق التكلفة الحالي − السابق","${fmt(result.cost-old.cost)} جنيه",true)
-                    }
-                    Row{
-                        TextButton(onClick={baseline=result}){Text("ثبّت للمقارنة")}
-                        TextButton(onClick={baseline=null}){Text("مسح المقارنة")}
-                    }
-                    Button(onClick={
-                        val next=result.copy(inputs=result.inputs+mapOf("_label" to label,"_source" to source,"_sectionId" to sectionId.orEmpty(),"_spaceId" to spaceId.orEmpty()))
-                        def.fields.forEach{repository.setPref("calc.$toolId.${it.key}",raw[it.key].orEmpty())}
-                        if(project!=null&&source!="حساب مستقل")onSave(next,sectionId,spaceId)
-                        else repository.saveRecentCalc(SavedCalculation(toolId=next.toolId,title=next.title,summary=next.lines.joinToString(" • "){"${it.label}: ${it.value}"},sourceQuantity=next.sourceQuantity,unit=next.sourceUnit,inputs=next.inputs,cost=next.cost,explanation=next.explanation))
-                        Toast.makeText(context,"تم حفظ الحساب بنجاح ✓",Toast.LENGTH_SHORT).show()
-                    },modifier=Modifier.fillMaxWidth()){Text(if(project!=null&&source!="حساب مستقل")"حفظ داخل المشروع" else "حفظ الحساب")}
-                    OutlinedButton(onClick={
-                        val text=buildString{appendLine(label);appendLine(source);result.lines.forEach{appendLine("${it.label}: ${it.value}")};appendLine("التكلفة: ${fmt(result.cost)} جنيه");appendLine(result.explanation)}
-                        context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_TEXT,text)},"مشاركة الحساب"))
-                    },modifier=Modifier.fillMaxWidth()){Text("مشاركة النتيجة")}
-                }}
-            }else item{Text(attempt.exceptionOrNull()?.message?:"أكمل البيانات المطلوبة",color=MaterialTheme.colorScheme.error)}
+    fun showResult(){
+        error=attempt.exceptionOrNull()?.message
+        if(error==null)stage=1
+        else{
+            val fields=def.fields.filter{detailed||it.key !in setOf("dry","density","extraRate","extraPrice")}
+            val index=fields.indexOfFirst{error.orEmpty().contains(it.label)}
+            if(index<0)detailed=true
+            scope.launch{listState.animateScrollToItem(if(index<0)0 else index+3)}
         }
     }
+    fun saveResult(){
+        if(result==null)return
+        val next=result.copy(inputs=result.inputs+mapOf("_label" to label,"_source" to source,"_sectionId" to sectionId.orEmpty(),"_spaceId" to spaceId.orEmpty()))
+        def.fields.forEach{repository.setPref("calc.$toolId.${it.key}",raw[it.key].orEmpty())}
+        if(project!=null&&source!="حساب مستقل")onSave(next,sectionId,spaceId)
+        else repository.saveRecentCalc(SavedCalculation(toolId=next.toolId,title=next.title,summary=next.lines.joinToString(" • "){"${it.label}: ${it.value}"},sourceQuantity=next.sourceQuantity,unit=next.sourceUnit,inputs=next.inputs,cost=next.cost,explanation=next.explanation))
+        Toast.makeText(context,"تم حفظ النتيجة ✓",Toast.LENGTH_SHORT).show()
+    }
+    BackHandler{if(stage==1){stage=0;error=null}else onBack()}
+    LaunchedEffect(stage){listState.scrollToItem(0)}
+    Scaffold(topBar={TopAppBar(title={Column{Text(def.title,fontWeight=FontWeight.Bold);Text("الحاسبات / ${def.group}",style=MaterialTheme.typography.labelSmall)}},navigationIcon={TextButton(onClick={if(stage==1){stage=0;error=null}else onBack()}){Text("رجوع")}})},
+        bottomBar={Surface(shadowElevation=8.dp){Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
+            error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
+            Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
+                if(stage==1)OutlinedButton(onClick={stage=0},modifier=Modifier.weight(1f)){Text("تعديل المدخلات")}
+                Button(onClick={if(stage==0)showResult() else saveResult()},modifier=Modifier.weight(1f)){Text(if(stage==0)"احسب واعرض النتيجة" else "حفظ النتيجة")}
+            }
+        }}}
+    ){padding->Column(Modifier.fillMaxSize().padding(padding)){
+        StageNavigation(stage,listOf("إدخال البيانات","النتيجة")){i->if(i==0){stage=0;error=null}else showResult()}
+        LazyColumn(state=listState,modifier=Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+            if(stage==0){
+                item{BoxCard{
+                    TextFieldX("اسم الحساب",label,{label=it})
+                    if(project!=null){
+                        Text("المشروع: ${project.name}",fontWeight=FontWeight.Bold)
+                        ChoiceFieldX("مكان الحفظ ومصدر الحصر",source,sources.map{it.first},{x->source=x;val target=sources.first{it.first==x};sectionId=target.second;spaceId=target.third;sourceItem=""})
+                        if(source!="حساب مستقل"&&summary.isNotEmpty())ChoiceFieldX("تعبئة كمية من بند",sourceItem.ifBlank{"اختار بندًا"},summary.map{"${it.name} (${it.unit.label})"},::chooseSource)
+                    }
+                }}
+                item{Text("البيانات المطلوبة",fontWeight=FontWeight.Bold);Text("الأسعار اختيارية؛ يمكن استخراج الكميات قبل التسعير.",style=MaterialTheme.typography.bodySmall)}
+                item{TextButton(onClick={detailed=!detailed}){Text(if(detailed)"إخفاء المواصفات الإضافية" else "مواصفات إضافية")}}
+                val visible=def.fields.filter{detailed||it.key !in setOf("dry","density","extraRate","extraPrice")}
+                items(visible.size){i->val field=visible[i];BoxCard{
+                    CalcInputField(field,raw[field.key].orEmpty(),{raw[field.key]=it;error=null})
+                    if(error.orEmpty().contains(field.label)&&error!=null)Text(error.orEmpty(),color=MaterialTheme.colorScheme.error)
+                }}
+                if(!detailed)item{Text("مواصفات مستخدمة: "+def.fields.filter{it.key in setOf("dry","density","extraRate","extraPrice")}.joinToString(" • "){"${it.label}: ${raw[it.key]} ${it.unit}"},style=MaterialTheme.typography.bodySmall)}
+                item{OutlinedButton(onClick={def.fields.forEach{raw[it.key]=it.default};error=null},modifier=Modifier.fillMaxWidth()){Text("استعادة القيم الأصلية")}}
+            }else if(answer!=null&&result!=null){
+                item{CalculatorResultCards(def,raw.toMap(),answer,"$label • $source")}
+                item{OutlinedButton(onClick={
+                    val text=buildString{appendLine(label);appendLine(source);result.lines.forEach{appendLine("${it.label}: ${it.value}")};appendLine("تكلفة الشراء: ${fmt(result.cost)} جنيه");val missing=com.fayroz.sitecalculator.domain.MaterialReview.missing(def,raw);if(missing.isNotEmpty())appendLine("التكلفة غير مكتملة: "+missing.joinToString("، "));appendLine(result.explanation)}
+                    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_TEXT,text)},"مشاركة النتيجة"))
+                },modifier=Modifier.fillMaxWidth()){Text("تصدير / مشاركة النتيجة")}}
+                item{BoxCard{
+                    baseline?.let{old->Text("مقارنة البديل",fontWeight=FontWeight.Bold);old.lines.forEach{MetricRow("سابق: ${it.label}",it.value)};MetricRow("فرق تكلفة الشراء","${fmt(result.cost-old.cost)} جنيه")}
+                    TextButton(onClick={baseline=result}){Text("ثبّت النتيجة للمقارنة")}
+                    if(baseline!=null)TextButton(onClick={baseline=null}){Text("مسح المقارنة")}
+                }}
+            }else item{Text("عدّل البيانات لإظهار نتيجة صالحة.",color=MaterialTheme.colorScheme.error)}
+        }
+    }}
 }

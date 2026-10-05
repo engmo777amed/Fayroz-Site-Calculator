@@ -8,6 +8,8 @@ import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.HelpOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -89,7 +91,7 @@ fun TextFieldX(
         OutlinedTextField(
             value=value,
             onValueChange=onChange,
-            modifier=Modifier.fillMaxWidth(),
+            modifier=Modifier.fillMaxWidth().semantics{contentDescription="إدخال $label"},
             singleLine=true,
             placeholder={if(placeholder.isNotBlank())Text(placeholder)},
             trailingIcon=if(help!=null){{HelpDot(label,help)}}else null,
@@ -105,15 +107,18 @@ fun NumberFieldX(
     onChange:(String)->Unit,
     unit:String,
     modifier:Modifier=Modifier,
-    help:String?=null
+    help:String?=null,
+    error:String?=null
 ){
     Column(modifier,verticalArrangement=Arrangement.spacedBy(3.dp)){
         Text(label,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedTextField(
             value=value,
             onValueChange={raw->onChange(raw.filter{it.isDigit()||it=='.'||it==','||it=='٫'||it=='-'} )},
-            modifier=Modifier.fillMaxWidth(),
+            modifier=Modifier.fillMaxWidth().semantics{contentDescription="إدخال $label"},
             singleLine=true,
+            isError=error!=null,
+            supportingText=if(error!=null){{Text(error)}}else null,
             keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
             suffix={Text(unit,style=MaterialTheme.typography.labelSmall)},
             trailingIcon=if(help!=null){{HelpDot(label,help)}}else null,
@@ -138,8 +143,8 @@ fun NumberUnitField(
         Box{
             OutlinedTextField(
                 value=value,
-                onValueChange={raw->onValue(raw.filter{it.isDigit()||it=='.'||it==','||it=='٫'})},
-                modifier=Modifier.fillMaxWidth(),
+                onValueChange={raw->onValue(raw.filter{it.isDigit()||it=='.'||it==','||it=='٫'||it=='-'})},
+                modifier=Modifier.fillMaxWidth().semantics{contentDescription="إدخال $label"},
                 singleLine=true,
                 keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
                 suffix={
@@ -209,6 +214,8 @@ fun MetricRow(label:String,value:String,highlight:Boolean=false){
             Text(label,Modifier.weight(1f),style=MaterialTheme.typography.bodyMedium)
             Text(
                 value,
+                modifier=Modifier.weight(1f),
+                textAlign=androidx.compose.ui.text.style.TextAlign.End,
                 style=if(highlight)MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleSmall,
                 color=MaterialTheme.colorScheme.primary,
                 fontWeight=FontWeight.Black

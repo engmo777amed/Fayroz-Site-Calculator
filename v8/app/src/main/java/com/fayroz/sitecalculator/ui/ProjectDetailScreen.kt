@@ -51,7 +51,11 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
     Scaffold(topBar={TopAppBar(title={Text(project.name,fontWeight=FontWeight.Bold)},navigationIcon={TextButton(onClick=onBack){Text("رجوع")}},actions={TextButton(onClick={renameProject=true}){Text("الاسم")}})}){padding->
         LazyColumn(Modifier.fillMaxSize().padding(padding),contentPadding=PaddingValues(12.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){
             item{Row{Text(project.type,Modifier.weight(1f));TextButton(onClick=onSetActive){Text(if(active)"المشروع النشط ✓" else "تعيين نشط")}}}
-            item{ChoiceFieldX("عرض",tab,listOf("الأدوار","الحصر والتكلفة","شراء الخامات","حسابات محفوظة","إعدادات المشروع والتصدير"),{tab=it})}
+            item{
+                val tabs=listOf("الأدوار","الحصر والتكلفة","شراء الخامات","حسابات محفوظة","إعدادات المشروع والتصدير")
+                val labels=listOf("الأدوار","النتائج","الشراء","المحفوظات","الإعدادات")
+                ScrollableTabRow(selectedTabIndex=tabs.indexOf(tab),edgePadding=0.dp){tabs.forEachIndexed{i,t->Tab(selected=tab==t,onClick={tab=t},text={Text(labels[i])})}}
+            }
             if(tab!="الأدوار"&&tab!="إعدادات المشروع والتصدير")item{BoxCard{
                 ChoiceFieldX("الدور / الجزء",project.sections.firstOrNull{it.id==sectionId}?.name?:"المشروع كله",listOf("المشروع كله")+project.sections.map{it.name},{name->sectionId=project.sections.firstOrNull{it.name==name}?.id;spaceId=null})
                 val spaces=project.sections.filter{sectionId==null||it.id==sectionId}.flatMap{it.spaces}
@@ -77,32 +81,24 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
                     }}
                 }
                 "الحصر والتكلفة"->{
-                    item{BoxCard{summary.forEach{MetricRow(it.name,"${fmt(it.quantity)} ${it.unit.label}")};MetricRow("تكلفة المواد","${fmt(rows.sumOf{it.materialCost})} جنيه");MetricRow("الإجمالي شامل التكاليف الإضافية","${fmt(rows.sumOf{it.total})} جنيه",true)}}
-                    items(rows.size){i->val row=rows[i];BoxCard{
-                        Text(row.item,fontWeight=FontWeight.Bold)
-                        Text("${row.location} / ${row.part}",style=MaterialTheme.typography.bodySmall)
-                        MetricRow("صافي","${fmt(row.quantity)} ${row.unit}")
-                        if(row.spec!=null){
-                            Text("سمك ${fmt(row.spec.thicknessMm)} مم • خلطة ${fmt(row.spec.cementParts)} : ${fmt(row.spec.sandParts)} • هالك خامات ${fmt(row.spec.waste)}%",style=MaterialTheme.typography.bodySmall)
-                            MetricRow("أسمنت","${fmt(row.cementKg)} كجم ≈ ${fmt(row.cementKg/row.spec.bagKg)} شيكارة")
-                            MetricRow("رمل","${fmt(row.sandM3)} م³")
-                            MetricRow("تكلفة المواد","${fmt(row.materialCost)} جنيه")
-                            MetricRow("مصنعية / نقل / معدات","${fmt(row.labor)} / ${fmt(row.transport)} / ${fmt(row.equipment)} جنيه")
-                            MetricRow("تكلفة الجزء","${fmt(row.total)} جنيه",true)
-                            if(row.quantity>0)MetricRow("تكلفة المواد للوحدة","${fmt(row.materialCost/row.quantity)} جنيه/${row.unit}")
-                        }
-                        row.materialLines.forEach{MetricRow(it.label,it.value)}
-                        if(row.spec==null)MetricRow("تكلفة مواد الجزء","${fmt(row.materialCost)} جنيه",true)
-                        var show by remember(row.itemId,row.partId){mutableStateOf(false)}
-                        TextButton(onClick={show=!show}){Text("طريقة الحساب")};if(show)Text(row.formula,style=MaterialTheme.typography.bodySmall)
-                        TextButton(onClick={onEditSource(row.sectionId,row.spaceId,row.itemId)}){Text("فتح المصدر للتعديل")}
+                    item{BoxCard{Text("ملخص النطاق المختار",fontWeight=FontWeight.Bold);summary.forEach{MetricRow(it.name,"${fmt(it.quantity)} ${it.unit.label}")}}}
+                    item{CostSummary(rows.sumOf{it.materialCost},rows.sumOf{it.labor},rows.sumOf{it.transport},rows.sumOf{it.equipment},rows.flatMap{MaterialReview.missing(it)}.distinct())}
+                    val groups=rows.groupBy{it.spaceId to it.itemId}.values.toList()
+                    items(groups.size){i->val group=groups[i];BoxCard{
+                        Text(group.first().item,fontWeight=FontWeight.Bold)
+                        Text(group.first().location,style=MaterialTheme.typography.bodySmall)
+                        group.forEach{MetricRow(it.part,"${fmt(it.quantity)} ${it.unit}")}
+                        var show by remember(group.first().itemId){mutableStateOf(false)}
+                        TextButton(onClick={show=!show}){Text(if(show)"إخفاء التفاصيل" else "عرض المواد والتكلفة")}
+                        if(show)WorkResultCards(group,"${group.first().location} / ${group.first().item}")
+                        TextButton(onClick={onEditSource(group.first().sectionId,group.first().spaceId,group.first().itemId)}){Text("تعديل البند")}
                     }}
+                    if(rows.isEmpty())item{EmptyState("لا يوجد حصر في النطاق المختار","اختار نطاقًا آخر أو أضف بنودًا للمكان.")}
                 }
                 "شراء الخامات"->{
-                    item{Text("تجميع خامات الأجزاء المتطابقة بالمواصفات والأسعار، ثم تقريب العبوات مرة واحدة.",style=MaterialTheme.typography.bodySmall)}
-                    val purchases=CostEngine.purchase(rows)
-                    items(purchases.size){i->val p=purchases[i];BoxCard{Text(p.material,fontWeight=FontWeight.Bold);MetricRow("احتياج فعلي","${fmt(p.amount)} ${p.unit}");p.packages?.let{MetricRow("شراء","$it عبوة")};MetricRow("تكلفة شراء","${fmt(p.cost)} جنيه",true)}}
-                    item{MetricRow("إجمالي شراء الخامات","${fmt(purchases.sumOf{it.cost})} جنيه",true)}
+                    item{PurchaseCards(CostEngine.purchase(rows),rows.flatMap{MaterialReview.missing(it)}.isEmpty())}
+                    val missing=rows.flatMap{MaterialReview.missing(it)}.distinct()
+                    if(missing.isNotEmpty())item{Text("التكلفة غير مكتملة: "+missing.joinToString("، "),color=MaterialTheme.colorScheme.error)}
                 }
                 "حسابات محفوظة"->{items(scoped.calculations.size){i->val c=scoped.calculations[i];BoxCard{Text(c.title,fontWeight=FontWeight.Bold);Text(c.summary);MetricRow("التكلفة عند الحفظ","${fmt(c.cost)} جنيه");TextButton(onClick={onOpenCalc(c)}){Text("فتح بنفس المدخلات")}}}}
                 else->{

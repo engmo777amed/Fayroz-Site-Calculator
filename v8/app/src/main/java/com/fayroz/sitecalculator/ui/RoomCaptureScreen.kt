@@ -358,25 +358,20 @@ fun RoomCaptureScreen(
                                                     Text(item.kind.label+" • "+(if(item.parts.isNotEmpty())"${item.parts.size} أجزاء" else "مسطح كامل"),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                                                 }
                                                 Text("${fmt(q.repeatedFinal)} ${item.unit.label}",fontWeight=FontWeight.Black,color=MaterialTheme.colorScheme.primary)
-                                                IconButton(onClick={editIndex=i}){Icon(Icons.Rounded.Tune,"ضبط")}
+                                                IconButton(onClick={editIndex=i}){Icon(Icons.Rounded.Tune,"فتح البند")}
                                             }
                                             if(space.repeatCount>1){
                                                 Text("المكان الواحد ${fmt(q.oneSpaceFinal)} × ${space.repeatCount}",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                                             }
                                             item.parts.forEach{part->Text("${part.name}: ${fmt(QuantityEngine.partValue(part,item.unit)*space.repeatCount)} ${item.unit.label}",style=MaterialTheme.typography.bodySmall)}
-                                            CostEngine.defaultSpec(item.name,defaults)?.let{default->
-                                                val previewProject=Project(name="",defaults=defaults,sections=listOf(Section(name="",spaces=listOf(space.copy(takeoffs=listOf(item))))))
-                                                val rows=CostEngine.rows(previewProject)
-                                                Text("أسمنت ${fmt(rows.sumOf{it.cementKg})} كجم • رمل ${fmt(rows.sumOf{it.sandM3})} م³",style=MaterialTheme.typography.bodySmall)
-                                                Text("مواد ${fmt(rows.sumOf{it.materialCost})} جنيه • الإجمالي ${fmt(rows.sumOf{it.total})} جنيه",style=MaterialTheme.typography.bodySmall)
-                                            }
+                                            Text("افتح البند لاختيار الأجزاء وحساب المواد والتكلفة.",style=MaterialTheme.typography.bodySmall)
                                             Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
                                                 if(i>0)TextButton(onClick={val previous=takeoffs[i-1];takeoffs[i-1]=takeoffs[i];takeoffs[i]=previous}){Text("↑")}
                                                 TextButton(modifier=Modifier.weight(1f),onClick={
                                                     val copy=item.copy(id=UUID.randomUUID().toString(),parts=item.parts.map{it.copy(id=UUID.randomUUID().toString())})
                                                     takeoffs.add(i+1,copy)
                                                 }){Text("نسخ البند")}
-                                                TextButton(modifier=Modifier.weight(1f),onClick={editIndex=i}){Text("ضبط / اتحسبت إزاي؟")}
+                                                TextButton(modifier=Modifier.weight(1f),onClick={editIndex=i}){Text("الكمية / المواد / النتيجة")}
                                                 IconButton(onClick={takeoffs.removeAt(i)}){Icon(Icons.Rounded.Delete,"حذف",tint=MaterialTheme.colorScheme.error)}
                                             }
                                             QuantityEngine.purchaseInfo(space,item)?.let{purchase->

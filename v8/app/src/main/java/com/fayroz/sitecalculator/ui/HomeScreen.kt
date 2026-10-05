@@ -30,7 +30,9 @@ fun HomeScreen(
     onNewRoom:()->Unit,
     onDirectItem:()->Unit,
     onSettings:()->Unit,
-    onOpenSaved:(SavedCalculation)->Unit = {}
+    onOpenSaved:(SavedCalculation)->Unit = {},
+    onSaved:()->Unit = onToday,
+    onPrices:()->Unit = onSettings
 ){
     val project=active?.let{a->projects.firstOrNull{it.id==a.projectId}}
     val section=project?.sections?.firstOrNull{it.id==active?.sectionId}
@@ -52,7 +54,7 @@ fun HomeScreen(
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)){
                             Text("FAYROZ SITE CALCULATOR",color=Color.White,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Black)
-                            Text("V9 • شغل الموقع من غير لف كتير",color=FayrozTurquoise,style=MaterialTheme.typography.bodySmall)
+                            Text("V9.1 • الحصر والخامات والتكلفة",color=FayrozTurquoise,style=MaterialTheme.typography.bodySmall)
                         }
                         IconButton(onClick=onSettings){Icon(Icons.Rounded.Settings,"الإعدادات",tint=Color.White)}
                     }
@@ -86,26 +88,17 @@ fun HomeScreen(
             }
         }
 
-        item{PageHeader("ابدأ بسرعة","الحاجات اللي بتستخدمها فعلاً في الموقع")}
-        item{
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                HomeAction("حصر حسب الفراغ","غرفة أو صالة أو حمام",Icons.Rounded.MeetingRoom,onNewRoom,Modifier.weight(1f))
-                HomeAction("حصر حسب البند","كمية جاهزة مباشرة",Icons.Rounded.Checklist,onDirectItem,Modifier.weight(1f))
-            }
-        }
-        item{
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                HomeAction("شغل اليوم","المفتوح وآخر الحسابات",Icons.Rounded.Today,onToday,Modifier.weight(1f))
-                HomeAction("احسب خامات","من حصر أو مساحة جاهزة",Icons.Rounded.Calculate,onTools,Modifier.weight(1f))
-            }
-        }
-        item{
-            OutlinedButton(onClick=onProjects,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){
-                Icon(Icons.Rounded.FolderOpen,null)
-                Spacer(Modifier.width(5.dp))
-                Text("المشروعات")
-            }
-        }
+        item{PageHeader("اختار اللي محتاجه","حساب سريع أو حصر مشروع")}
+        item{Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
+            HomeAction("مشروعاتي","إنشاء مشروع أو استكمال الحصر",Icons.Rounded.FolderOpen,onProjects,Modifier.weight(1f))
+            HomeAction("الحاسبات","أقسام للحسابات السريعة",Icons.Rounded.Calculate,onTools,Modifier.weight(1f))
+        }}
+        item{Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
+            HomeAction("الحسابات المحفوظة","نتائجك ومدخلاتك السابقة",Icons.Rounded.History,onSaved,Modifier.weight(1f))
+            HomeAction("أسعار الخامات","أسعار كل مشروع",Icons.Rounded.Payments,onPrices,Modifier.weight(1f))
+        }}
+        if(project!=null)item{OutlinedButton(onClick=onNewRoom,modifier=Modifier.fillMaxWidth()){Text("إضافة مكان للمشروع النشط")}}
+        item{TextButton(onClick=onToday){Text("شغل اليوم")}}
 
         if(recentCalcs.isNotEmpty()){
             item{PageHeader("آخر حساباتك")}

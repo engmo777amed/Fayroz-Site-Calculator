@@ -1,8 +1,11 @@
 package com.fayroz.sitecalculator.ui
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
@@ -19,31 +22,34 @@ val materialTools=CalculatorLibrary.all.map{ToolDef(it.id,it.title,it.group,Icon
 @Composable
 fun ToolsScreen(recent:List<SavedCalculation>,hasActiveProject:Boolean,onOpen:(String)->Unit,
     repository:V8Repository?=null,onOpenSaved:(SavedCalculation)->Unit={onOpen(it.toolId)}){
-    var search by remember{mutableStateOf("")}
-    var group by remember{mutableStateOf("الكل")}
+    var search by rememberSaveable{mutableStateOf("")}
+    var group by rememberSaveable{mutableStateOf<String?>(null)}
     var favorites by remember{mutableStateOf(repository?.pref("favorites","")?.split('|')?.filter{it.isNotBlank()}?.toSet().orEmpty())}
-    var hidden by remember{mutableStateOf(repository?.pref("hiddenGroups","")?.split('|')?.filter{it.isNotBlank()}?.toSet().orEmpty())}
-    var settings by remember{mutableStateOf(false)}
-    val filtered=CalculatorLibrary.all.filter{d->d.group !in hidden&&(group=="الكل"||group==d.group||(group=="المفضلة"&&d.id in favorites))&&(search.isBlank()||d.title.contains(search)||d.group.contains(search))}
-    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
-        item{PageHeader("مكتبة الحاسبات","${CalculatorLibrary.all.size+2} حاسبة • حساب مستقل أو من المشروع")}
-        item{TextFieldX("بحث",search,{search=it},placeholder="محارة، أسفلت، حديد…")}
-        item{ChoiceFieldX("المجموعة",group,listOf("الكل","المفضلة")+CalculatorLibrary.groups.filter{it !in hidden},{group=it})}
-        item{TextButton(onClick={settings=!settings}){Text("إظهار وإخفاء المجموعات")}}
-        if(settings)item{BoxCard{CalculatorLibrary.groups.forEach{g->Row{
-            Checkbox(g !in hidden,{yes->hidden=if(yes)hidden-g else hidden+g;repository?.setPref("hiddenGroups",hidden.joinToString("|"));group="الكل"});Text(g,Modifier.padding(top=12.dp))
-        }}}}
-        if(recent.isNotEmpty()&&search.isBlank()&&group=="الكل"){
-            item{PageHeader("حسابات محفوظة")}
-            items(recent.size){i->val c=recent[i];Surface(onClick={onOpenSaved(c)},tonalElevation=1.dp){Column(Modifier.fillMaxWidth().padding(10.dp)){Text(c.title,fontWeight=FontWeight.Bold);Text(c.summary,maxLines=2,style=MaterialTheme.typography.bodySmall);Text("${fmt(c.cost)} جنيه",style=MaterialTheme.typography.labelSmall)}}}
+    BackHandler(enabled=group!=null||search.isNotBlank()){group=null;search=""}
+    val filtered=CalculatorLibrary.all.filter{d->(group==null||group==d.group||(group=="المفضلة"&&d.id in favorites))&&(search.isBlank()||d.title.contains(search)||d.group.contains(search))}
+    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+        item{PageHeader(group?:"أقسام الحاسبات",if(group==null)"${CalculatorLibrary.all.size+2} حاسبة • اختار القسم ثم الحاسبة" else "الحاسبات / $group")}
+        if(group!=null)item{TextButton(onClick={group=null;search=""}){Text("رجوع للأقسام")}}
+        item{TextFieldX("بحث في الحاسبات",search,{search=it},placeholder="اسم الحاسبة أو نوع العمل")}
+        if(group==null&&search.isBlank()){
+            item{OutlinedButton(onClick={group="المفضلة"},modifier=Modifier.fillMaxWidth()){Text("المفضلة ★ (${favorites.size})")}}
+            val sections=CalculatorLibrary.groups.chunked(2)
+            items(sections.size){i->Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
+                sections[i].forEach{g->Surface(onClick={group=g},modifier=Modifier.weight(1f).heightIn(min=116.dp),shape=RoundedCornerShape(18.dp),tonalElevation=2.dp){Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+                    Text(g,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium)
+                    Text("${CalculatorLibrary.all.count{it.group==g}} حاسبة",style=MaterialTheme.typography.bodySmall)
+                    Text("فتح القسم ←",color=MaterialTheme.colorScheme.primary)
+                }}}
+            }}
+        }else{
+            items(filtered.size){i->val d=filtered[i];Surface(onClick={onOpen(d.id)},shape=RoundedCornerShape(16.dp),tonalElevation=1.dp){Row(Modifier.fillMaxWidth().padding(14.dp)){
+                Column(Modifier.weight(1f)){Text(d.title,fontWeight=FontWeight.Bold);Text(d.group,style=MaterialTheme.typography.bodySmall);Text("إدخال البيانات ← النتيجة",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary)}
+                TextButton(onClick={favorites=if(d.id in favorites)favorites-d.id else favorites+d.id;repository?.setPref("favorites",favorites.joinToString("|"))}){Text(if(d.id in favorites)"★" else "☆")}
+            }}}
+            if(filtered.isEmpty())item{EmptyState("مفيش نتائج","اختار قسمًا آخر أو غير البحث.")}
         }
-        if(group=="الكل"&&search.isBlank())item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-            utilityTools.forEach{d->OutlinedButton(onClick={onOpen(d.id)},modifier=Modifier.weight(1f)){Text(d.title)}}
-        }}
-        items(filtered.size){i->val d=filtered[i];Surface(onClick={onOpen(d.id)},tonalElevation=1.dp){Row(Modifier.fillMaxWidth().padding(10.dp)){
-            Column(Modifier.weight(1f)){Text(d.title,fontWeight=FontWeight.Bold);Text(d.group,style=MaterialTheme.typography.bodySmall)}
-            TextButton(onClick={favorites=if(d.id in favorites)favorites-d.id else favorites+d.id;repository?.setPref("favorites",favorites.joinToString("|"))}){Text(if(d.id in favorites)"★" else "☆")}
-        }}}
-        if(filtered.isEmpty())item{EmptyState("مفيش نتائج","غير البحث أو المجموعة.")}
+        if((group==null&&search.isBlank())||group==CalculatorLibrary.groups[4]||search.isNotBlank()){
+            utilityTools.filter{search.isBlank()||it.title.contains(search)}.forEach{d->item{OutlinedButton(onClick={onOpen(d.id)},modifier=Modifier.fillMaxWidth()){Text(d.title)}}}
+        }
     }
 }

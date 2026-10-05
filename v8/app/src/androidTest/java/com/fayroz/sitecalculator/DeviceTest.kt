@@ -38,10 +38,11 @@ class DeviceTest {
     ActivityScenario.launch(MainActivity::class.java).use{
        assertTrue(device.wait(Until.hasObject(By.text("الرئيسية")),10000));shot("home")
        device.findObject(By.text("الحاسبات")).click()
-       assertTrue(device.wait(Until.hasObject(By.text("مكتبة الحاسبات")),10000));shot("calculators")
+       assertTrue(device.wait(Until.hasObject(By.text("أقسام الحاسبات")),10000));shot("calculators")
+       device.findObject(By.text("المونة والتشطيبات")).click();device.waitForIdle()
        device.findObject(By.text("محارة حوائط / أسقف / واجهات")).click()
        assertTrue(device.wait(Until.hasObject(By.text("اسم الحساب")),10000));shot("mortar-calculator")
-       device.pressBack()
+       device.pressBack();device.pressBack()
        device.findObject(By.text("المشروعات")).click()
        assertTrue(device.wait(Until.hasObject(By.text("اختبار الحصر")),10000))
        device.findObject(By.text("اختبار الحصر")).click()
@@ -51,8 +52,67 @@ class DeviceTest {
        device.findObject(By.text("غرفة الاختبار")).click()
        assertTrue(device.wait(Until.hasObject(By.text("اسم المكان")),10000));shot("room-input")
        device.findObject(By.text("التالي")).click();device.waitForIdle();device.findObject(By.text("التالي")).click();device.waitForIdle()
-       assertTrue(device.wait(Until.hasObject(By.desc("ضبط")),10000));shot("room-results")
-       device.findObject(By.desc("ضبط")).click();device.waitForIdle();shot("part-editor");assertTrue(device.wait(Until.hasObject(By.text("حفظ")),10000))
+       assertTrue(device.wait(Until.hasObject(By.desc("فتح البند")),10000));shot("room-results")
+       device.findObject(By.desc("فتح البند")).click();device.waitForIdle();shot("part-editor");assertTrue(device.wait(Until.hasObject(By.text("التالي: المواد")),10000))
+       device.findObject(By.text("التالي: المواد")).click();device.waitForIdle();shot("item-materials")
+       device.findObject(By.text("كامل البند")).click();device.findObject(By.text("جزء السقف (1)")).click();device.waitForIdle()
+       device.findObject(By.clazz("android.widget.Switch")).click();device.waitForIdle()
+       field("متوسط السمك").text="20.5"
+       field("سعر شيكارة الأسمنت").text="250"
+       device.findObject(By.text("احسب واعرض النتيجة")).click();assertTrue(device.wait(Until.hasObject(By.text("حفظ البند")),10000));shot("item-result")
+       assertTrue(device.wait(Until.hasObject(By.text("6 م²")),10000))
+       device.findObject(By.text("حفظ البند")).click()
+       device.findObject(By.text("حفظ")).click();device.waitForIdle()
+       val saved=V8Repository(context).loadProjects().single().sections[0].spaces[0].takeoffs[0]
+       assertEquals(15.0,saved.material!!.thicknessMm,0.0)
+       assertEquals(200.0,saved.material!!.cementPrice,0.0)
+       assertEquals(20.5,saved.parts.single().material!!.thicknessMm,0.0)
+       assertEquals(250.0,saved.parts.single().material!!.cementPrice,0.0)
+    }
+ }
+ private fun field(label:String):androidx.test.uiautomator.UiObject2 {
+    val selector=By.desc("إدخال $label")
+    repeat(15){device.findObject(selector)?.let{return it};device.swipe(device.displayWidth/2,device.displayHeight*3/4,device.displayWidth/2,device.displayHeight/3,20);device.waitForIdle()}
+    fail("Field missing: $label");throw IllegalStateException()
+ }
+ @Test fun calculatorComputesSavesAndReopensDecimalInputs(){
+    val intent=Intent(context,MainActivity::class.java).putExtra("calculator","plaster")
+    ActivityScenario.launch<MainActivity>(intent).use{
+       assertTrue(device.wait(Until.hasObject(By.text("اسم الحساب")),10000))
+       field("اسم الحساب").text="اختبار محارة 12.5"
+       field("المساحة الصافية").text="12.5"
+       field("متوسط السمك").text="15.5"
+       field("سعر شيكارة الأسمنت").text="200"
+       field("سعر متر الرمل").text="300"
+       device.findObject(By.text("احسب واعرض النتيجة")).click()
+       assertTrue(device.wait(Until.hasObject(By.text("12.5 م²")),10000));shot("calculator-result")
+       device.findObject(By.text("حفظ النتيجة")).click()
+       val saved=V8Repository(context).recentCalcs().first()
+       assertEquals("12.5",saved.inputs["area"]);assertEquals("15.5",saved.inputs["thickness"]);assertTrue(saved.cost>0)
+    }
+    ActivityScenario.launch(MainActivity::class.java).use{
+       device.findObject(By.text("المحفوظات")).click()
+       assertTrue(device.wait(Until.hasObject(By.text("اختبار محارة 12.5")),10000));shot("saved-calculations")
+       device.findObject(By.text("اختبار محارة 12.5")).click()
+       assertTrue(device.wait(Until.hasObject(By.text("12.5 م²")),10000))
+       device.findObject(By.text("تعديل المدخلات")).click()
+       assertEquals("12.5",field("المساحة الصافية").text)
+       assertEquals("15.5",field("متوسط السمك").text)
+    }
+ }
+ @Test fun quantitiesWorkWithoutPricesAndErrorsAreVisible(){
+    V8Repository(context).setPref("calc.paint.area","10")
+    ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java).putExtra("calculator","paint")).use{
+       assertTrue(device.wait(Until.hasObject(By.text("اسم الحساب")),10000))
+       device.findObject(By.text("احسب واعرض النتيجة")).click()
+       assertTrue(device.wait(Until.hasObject(By.text("10 م²")),10000))
+       var found=false
+       repeat(6){if(device.findObject(By.text("التكلفة غير مكتملة"))!=null)found=true else device.swipe(device.displayWidth/2,device.displayHeight*3/4,device.displayWidth/2,device.displayHeight/3,20)}
+       assertTrue(found);shot("incomplete-prices")
+       device.findObject(By.text("تعديل المدخلات")).click()
+       field("المساحة الصافية").text="0"
+       device.findObject(By.text("احسب واعرض النتيجة")).click()
+       assertTrue(device.wait(Until.hasObject(By.textContains("المساحة الصافية يجب")),10000))
     }
  }
  @Test fun pdfPrintPreviewOpens(){

@@ -85,4 +85,19 @@ class DomainTest {
     val v=d.fields.associate{it.key to (it.default.ifBlank{when(it.key){"diameter"->"16";"pieceArea"->"0.02";"wall"->"12";else->"2"}})}
     val a=CalculatorLibrary.evaluate(d,v);assertTrue(d.id,a.outputs.all{it.value.isFinite()})
  }}
+ @Test fun materialReviewValidatesEachPartAndAllowsMissingPrices(){
+    val t=Takeoff(name="محارة الأسقف",unit=UnitType.AREA,kind=CalcKind.CEILING,material=MaterialSpec(),parts=listOf(WorkPart(name="جزء",length=2.0,width=3.0)))
+    val space=Space(name="غرفة",type="",length=4.0,width=3.0,takeoffs=listOf(t))
+    assertNull(com.fayroz.sitecalculator.domain.MaterialReview.itemError(space,t))
+    val row=CostEngine.rows(Project(name="",sections=listOf(Section(name="",spaces=listOf(space))))).single()
+    assertEquals(2,com.fayroz.sitecalculator.domain.MaterialReview.missing(row).size)
+    val invalid=t.copy(parts=t.parts.map{it.copy(material=MaterialSpec(thicknessMm=0.0))})
+    assertNotNull(com.fayroz.sitecalculator.domain.MaterialReview.itemError(space,invalid))
+    assertNotNull(com.fayroz.sitecalculator.domain.MaterialReview.specError(MaterialSpec(cementPrice=-1.0)))
+ }
+ @Test fun optionalUnusedAdditionPriceIsNotRequired(){
+    val def=CalculatorLibrary.all.first{it.id=="plaster"}
+    val raw=def.fields.associate{it.key to it.default}+mapOf("area" to "12.5","cementPrice" to "٢٠٠","sandPrice" to "٣٠٠")
+    assertTrue(com.fayroz.sitecalculator.domain.MaterialReview.missing(def,raw).isEmpty())
+ }
 }
