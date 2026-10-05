@@ -44,6 +44,21 @@ class DeviceTest {
        assertTrue(device.wait(Until.hasObject(By.text("اختبار الحصر")),10000))
        device.findObject(By.text("اختبار الحصر")).click()
        assertTrue(device.wait(Until.hasObject(By.text("الدور الأول")),10000));shot("project")
+       device.findObject(By.text("الدور الأول")).click()
+       assertTrue(device.wait(Until.hasObject(By.text("غرفة الاختبار")),10000));shot("section")
+       device.findObject(By.text("غرفة الاختبار")).click()
+       assertTrue(device.wait(Until.hasObject(By.text("اسم المكان")),10000));shot("room-input")
+       device.findObject(By.text("التالي")).click();device.findObject(By.text("التالي")).click()
+       assertTrue(device.wait(Until.hasObject(By.desc("ضبط")),10000));shot("room-results")
+       device.findObject(By.desc("ضبط")).click();assertTrue(device.wait(Until.hasObject(By.text("نطاق التنفيذ")),10000));shot("part-editor")
+    }
+ }
+ @Test fun pdfPrintPreviewOpens(){
+    ActivityScenario.launch(MainActivity::class.java).use{scenario->
+       assertTrue(device.wait(Until.hasObject(By.text("الرئيسية")),10000))
+       scenario.onActivity{ReportExport.printPdf(it,sample(),"حصر وتكلفة تفصيلي")}
+       assertTrue(device.wait(Until.hasObject(By.textContains("Save as PDF")),15000));shot("pdf-preview")
+       device.pressBack()
     }
  }
  @Test fun everyCalculatorOpensOnDevice(){
