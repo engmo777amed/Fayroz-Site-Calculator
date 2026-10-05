@@ -125,7 +125,7 @@ object CalculatorLibrary {
         else->""
     }}
     fun defaults(def:CalcDef,project:Map<String,String>):Map<String,String> = def.fields.associate{field->
-        field.key to (project["recipe.${def.id}.${field.key}"]?:field.default)
+        field.key to (project["recipe.${def.id}.${field.key}"]?:project[field.key]?.takeIf{field.key in setOf("cementPrice","sandPrice")}?:field.default)
     }
     fun recipe(def:CalcDef,inputs:Map<String,String>,quantity:Double):Map<String,String> = def.fields.associate{it.key to it.default}+inputs+
         ((if(def.fields.any{it.key=="area"})"area" else if(def.fields.any{it.key=="length"})"length" else "count") to quantity.toString())

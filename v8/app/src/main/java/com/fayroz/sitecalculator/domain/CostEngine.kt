@@ -4,6 +4,7 @@ import com.fayroz.sitecalculator.core.*
 import kotlin.math.ceil
 
 object CostEngine {
+    private fun numeric(raw:String?):Double?=raw.orEmpty().map{if(it.isDigit())it.digitToInt().digitToChar()else it}.joinToString("").replace('٫','.').replace(',','.').toDoubleOrNull()?.takeIf{it.isFinite()}
     data class Row(val sectionId:String,val spaceId:String,val itemId:String,val partId:String?,
         val location:String,val item:String,val part:String,val quantity:Double,val unit:String,
         val cementKg:Double=0.0,val sandM3:Double=0.0,val extra:Double=0.0,
@@ -14,7 +15,7 @@ object CostEngine {
     }
     fun defaultSpec(name:String,defaults:Map<String,String> = emptyMap()):MaterialSpec? {
         if(!isMortar(name))return null
-        fun d(k:String,f:Double)=defaults[k]?.toDoubleOrNull()?:f
+        fun d(k:String,f:Double)=numeric(defaults[k])?:f
         val splash=name.contains("طرطشة")
         val screed=name.contains("تسوية")
         return MaterialSpec(thicknessMm=d(if(splash)"splashThickness" else "plasterThickness",if(splash)5.0 else if(screed)50.0 else 15.0),
@@ -47,7 +48,7 @@ object CostEngine {
                 val cost=if(spec!=null)mat.first/spec.bagKg*spec.cementPrice+mat.second*spec.sandPrice+mat.third*spec.extraPrice else answer?.consumedCost?:0.0
                 add(Row(section.id,space.id,item.id,part?.id,"${section.name} / ${space.name}",item.name,
                     part?.name?:"كامل البند",qty,item.unit.label,mat.first,mat.second,mat.third,cost,
-                    qty*(spec?.laborRate?:inputs["_laborRate"]?.toDoubleOrNull()?:0.0),qty*(spec?.transportRate?:inputs["_transportRate"]?.toDoubleOrNull()?:0.0),qty*(spec?.equipmentRate?:inputs["_equipmentRate"]?.toDoubleOrNull()?:0.0),spec,q.explanation,def?.id,raw,
+                    qty*(spec?.laborRate?:numeric(inputs["_laborRate"])?:0.0),qty*(spec?.transportRate?:numeric(inputs["_transportRate"])?:0.0),qty*(spec?.equipmentRate?:numeric(inputs["_equipmentRate"])?:0.0),spec,q.explanation,def?.id,raw,
                     if(def!=null&&answer!=null)CalculatorLibrary.result(def,raw,answer).lines else emptyList()))
             }
         }}}

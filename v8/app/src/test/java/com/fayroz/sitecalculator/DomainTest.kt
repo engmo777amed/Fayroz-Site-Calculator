@@ -119,4 +119,16 @@ class DomainTest {
     assertEquals(7.5,rows.sumOf{it.labor},1e-9)
     assertEquals(100.0,CostEngine.purchase(rows).sumOf{it.cost},1e-9)
  }
+ @Test fun projectPricesAndLaborAcceptArabicNumbers(){
+    val defaults=mapOf("cementPrice" to "٢٠٠","sandPrice" to "٣٠٠")
+    assertEquals(200.0,CostEngine.defaultSpec("محارة الأسقف",defaults)!!.cementPrice,0.0)
+    val plaster=CalculatorLibrary.all.first{it.id=="plaster"}
+    assertEquals("٢٠٠",CalculatorLibrary.defaults(plaster,defaults)["cementPrice"])
+    val recipe=mapOf("tileW" to "50","tileH" to "50","pack" to "4","price" to "100","waste" to "0","_laborRate" to "١٠")
+    val item=Takeoff(name="الأرضيات",unit=UnitType.AREA,kind=CalcKind.FLOOR,calculatorInputs=recipe)
+    val space=Space(name="غرفة",type="",length=1.0,width=1.0,takeoffs=listOf(item))
+    assertNull(com.fayroz.sitecalculator.domain.MaterialReview.itemError(space,item))
+    val rows=CostEngine.rows(Project(name="",sections=listOf(Section(name="",spaces=listOf(space)))))
+    assertEquals(10.0,rows.single().labor,0.0)
+ }
 }

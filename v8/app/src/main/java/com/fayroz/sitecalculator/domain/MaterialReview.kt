@@ -1,7 +1,8 @@
 package com.fayroz.sitecalculator.domain
 import com.fayroz.sitecalculator.core.*
 object MaterialReview {
-    private fun number(raw:String?):Double=raw.orEmpty().map{if(it.isDigit())it.digitToInt().digitToChar()else it}.joinToString("").replace('٫','.').replace(',','.').toDoubleOrNull()?:0.0
+    private fun numberValue(raw:String?):Double?=raw.orEmpty().map{if(it.isDigit())it.digitToInt().digitToChar()else it}.joinToString("").replace('٫','.').replace(',','.').toDoubleOrNull()
+    private fun number(raw:String?):Double=numberValue(raw)?:0.0
     fun specError(s:MaterialSpec):String? {
         val values=listOf(s.thicknessMm,s.cementParts,s.sandParts,s.dryFactor,s.cementDensity,s.bagKg,s.waste,s.cementPrice,s.sandPrice,s.extraRate,s.extraPrice,s.laborRate,s.transportRate,s.equipmentRate)
         if(values.any{!it.isFinite()||it<0})return "اكتب قيمًا صحيحة صفر أو أكبر في مواصفات المواد والأسعار."
@@ -34,7 +35,7 @@ object MaterialReview {
                 val raw=item.calculatorInputs+(part?.calculatorInputs.orEmpty())
                 val message=runCatching{CalculatorLibrary.evaluate(def,CalculatorLibrary.recipe(def,raw,quantity))}.exceptionOrNull()?.message
                 if(message!=null)return "${part?.name?:item.name}: $message"
-                if(raw.filterKeys{it.startsWith("_")&&it.endsWith("Rate")}.values.any{it.isNotBlank()&&it.toDoubleOrNull()?.let{v->v.isFinite()&&v>=0}!=true})return "راجع المصنعية والنقل والمعدات."
+                if(raw.filterKeys{it.startsWith("_")&&it.endsWith("Rate")}.values.any{it.isNotBlank()&&numberValue(it)?.let{v->v.isFinite()&&v>=0}!=true})return "راجع المصنعية والنقل والمعدات."
             }
         }
         return null
