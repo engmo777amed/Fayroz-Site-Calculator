@@ -96,7 +96,7 @@ class DeviceTest {
  private fun clickText(text:String){
     Espresso.closeSoftKeyboard()
     compose.waitForIdle()
-    val node=compose.onNodeWithText(text)
+    val node=compose.onAllNodesWithText(text).onLast()
     runCatching{node.performScrollTo()}
     node.performClick();compose.waitForIdle()
  }
