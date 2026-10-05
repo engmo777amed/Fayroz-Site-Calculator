@@ -143,7 +143,7 @@ class MainActivity:ComponentActivity(){
                         is Route.ProjectDetail->Route.Root
                         is Route.SectionDetail->Route.ProjectDetail(r.projectId)
                         is Route.RoomEdit->Route.SectionDetail(r.projectId,r.sectionId)
-                        is Route.DirectItem->Route.Root
+                        is Route.DirectItem->Route.ProjectDetail(r.projectId)
                         is Route.Tool->if(r.returnToProject&&r.projectId!=null)Route.ProjectDetail(r.projectId) else Route.Root
                         Route.Root->Route.Root
                     }
@@ -372,11 +372,12 @@ class MainActivity:ComponentActivity(){
 
                     is Route.DirectItem->{
                         val p=projects.firstOrNull{it.id==r.projectId}
-                        if(p==null||p.sections.isEmpty())route=Route.ProjectDetail(r.projectId)
+                        if(p==null)route=Route.Root
+                        else if(p.sections.isEmpty())replaceProject(p.copy(sections=listOf(Section(name="الرئيسي"))))
                         else DirectItemScreen(
                             project=p,
                             initialSectionId=active?.sectionId,
-                            onBack={route=Route.Root},
+                            onBack={route=Route.ProjectDetail(p.id)},
                             onSave={sectionId,space->
                                 val section=p.sections.firstOrNull{it.id==sectionId} ?: return@DirectItemScreen
                                 val updatedSection=section.copy(spaces=section.spaces+space)

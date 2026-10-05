@@ -108,6 +108,7 @@ class DeviceTest {
     val imePackage=device.executeShellCommand("settings get secure default_input_method").trim().substringBefore("/")
     if(imePackage.isNotBlank()&&device.hasObject(By.pkg(imePackage))){device.pressBack();device.waitForIdle()}
     compose.waitForIdle()
+    assertText(text)
     val node=compose.onAllNodes(hasText(text) and hasClickAction()).onLast()
     runCatching{node.performScrollTo()}
     node.performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick){assertTrue(it())};compose.waitForIdle()
@@ -146,9 +147,7 @@ class DeviceTest {
        assertText("البيانات المطلوبة")
        clickText("احسب واعرض النتيجة")
        assertText("10 م²");clickText("التكلفة")
-       var found=false
-       repeat(6){if(device.findObject(By.text("التكلفة غير مكتملة"))!=null)found=true else device.swipe(device.displayWidth/2,device.displayHeight*3/4,device.displayWidth/2,device.displayHeight/3,20)}
-       assertTrue(found);shot("incomplete-prices")
+       assertText("التكلفة غير مكتملة");compose.onAllNodesWithText("التكلفة غير مكتملة").onFirst().assertIsDisplayed();shot("incomplete-prices")
        clickText("تعديل المدخلات")
        type("المساحة الصافية","0")
        clickText("احسب واعرض النتيجة")
@@ -202,6 +201,21 @@ class DeviceTest {
         assertText("طلب الخامات");assertText("1 شيكارة");shot("project-shopping")
         clickText("رجوع لملخص المشروع");clickText("التكلفة")
         assertText("تكلفة الاستهلاك");shot("project-cost")
+    }
+ }
+ @Test fun readyQuantitySavesNetAndCanReopenWithoutDimensions(){
+    val project=sample().copy(sections=listOf(Section(name="الرئيسي")))
+    V8Repository(context).saveProjects(listOf(project))
+    ActivityScenario.launch(MainActivity::class.java).use{
+        clickText("المشروعات");clickText("اختبار الحصر");clickText("إضافة كمية جاهزة")
+        type("الكمية الجاهزة","100")
+        clickText("الهالك والملاحظات — اختياري");type("الهالك","5")
+        assertText("100 م²");assertText("105 م²");shot("ready-quantity")
+        clickText("حفظ داخل المشروع")
+        val space=V8Repository(context).loadProjects().single().sections.single().spaces.single()
+        assertEquals(100.0,space.takeoffs.single().directValue,0.0)
+        assertEquals(5.0,space.takeoffs.single().waste,0.0)
+        clickText(space.name);assertText("الخامات والنتيجة");shot("ready-quantity-reopened")
     }
  }
  @Test fun backupIncludesPhotosAndRestoresSpecs(){

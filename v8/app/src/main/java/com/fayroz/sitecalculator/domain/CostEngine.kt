@@ -93,7 +93,7 @@ object CostEngine {
             "gypsum"->listOf(packageRow("ألواح جبس",out("مساحة تغطية بالهالك"),"م²",out("ألواح"),v("price"),"لوح"))
             "masonry","blocks"->listOf(
                 Purchase(if(def.id=="masonry")"طوب" else "بلوك","وحدة",out("وحدات شراء"),null,v("brickPrice")/1000,out("وحدات شراء")/1000*v("brickPrice")),
-                packageRow("أسمنت (50 كجم)",out("أسمنت")*50,"كجم",out("أسمنت"),v("cementPrice"),"شيكارة"),
+                packageRow("أسمنت (50 كجم)",out("أسمنت فعلي"),"كجم",out("أسمنت"),v("cementPrice"),"شيكارة"),
                 Purchase("رمل","م³",out("رمل"),null,v("sandPrice"),out("رمل")*v("sandPrice")))
             else->emptyList()
         }.filter{it.amount>0||it.packages?.let{n->n>0}==true}

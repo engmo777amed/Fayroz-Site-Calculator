@@ -216,7 +216,7 @@ fun MetricRow(label:String,value:String,highlight:Boolean=false){
                 value,
                 modifier=Modifier.weight(1f),
                 textAlign=androidx.compose.ui.text.style.TextAlign.End,
-                style=if(highlight)MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleSmall,
+                style=if(highlight)MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleSmall,
                 color=MaterialTheme.colorScheme.primary,
                 fontWeight=FontWeight.Black
             )

@@ -83,7 +83,11 @@ fun CalculatorResultCards(def:CalcDef,inputs:Map<String,String>,answer:CalcAnswe
     val mortar=def.id in CalculatorLibrary.mortarIds
     BoxCard{
         Text(scope,style=MaterialTheme.typography.bodySmall)
-        val main=if(mortar)lines.firstOrNull{it.label=="مونة منفذة"}else lines.firstOrNull()
+        val main=if(mortar)lines.firstOrNull{it.label=="مونة منفذة"}else
+            lines.firstOrNull{it.label.contains("شراء")&&!it.label.contains("فائض")}?:
+            lines.firstOrNull{it.label.contains("توريد")}?:
+            lines.firstOrNull{it.label in setOf("استهلاك دهان","كمية فعلية","عبوات","عبوات كاملة","ألواح","منسوب النهاية","الميل الموجّه","وزن","صافي الكسوة","المساحة","سعة")}?:
+            lines.firstOrNull{it.label.contains("صافي")}?:lines.firstOrNull{!it.unit.contains("/")}?:lines.firstOrNull()
         main?.let{MetricRow(it.label,"${fmt(it.value)} ${it.unit}",true)}
         if(mortar){
             MetricRow("الرمل المطلوب","${fmt(lines.first{it.label=="رمل"}.value)} م³",true)

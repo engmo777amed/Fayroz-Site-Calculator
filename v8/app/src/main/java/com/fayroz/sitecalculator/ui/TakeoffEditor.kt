@@ -29,10 +29,11 @@ fun TakeoffEditorDialog(
     defaultMaterial:MaterialSpec?=null,
     defaultRecipe:Map<String,String> = emptyMap(),
     onDismiss:()->Unit,
-    onSave:(Takeoff)->Unit
+    onSave:(Takeoff)->Unit,
+    initialStage:Int=0
 ){
     var recipe by remember{mutableStateOf(defaultRecipe+("waste" to item.waste.toString())+item.calculatorInputs)}
-    var stage by remember{mutableIntStateOf(0)}
+    var stage by remember{mutableIntStateOf(initialStage)}
     var selectedPartId by remember{mutableStateOf<String?>(null)}
     val recipeDef=CalculatorLibrary.forItem(item.name)
     var parts by remember{mutableStateOf(item.parts)}

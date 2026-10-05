@@ -79,7 +79,7 @@ object CalculatorLibrary {
                 val courses=max(1.0,round((t+j)/(w+j)));val net=v("area")/((l+j)*(h+j))*courses
                 val wet=(v("area")*t-net*l*w*h).coerceAtLeast(0.0);val dry=wet*v("dry")
                 val kg=dry*v("cement")/(v("cement")+v("sand"))*1440;val sm=dry*v("sand")/(v("cement")+v("sand"));val bricks=ceil(net*(1+v("waste")/100));val bags=ceil(kg/50)
-                CalcAnswer(listOf(o("طبقات عبر السمك",courses,"طبقة"),o("وحدات شراء",bricks,"وحدة"),o("مونة منفذة",wet,"م³"),o("أسمنت",bags,"شيكارة"),o("رمل",sm,"م³")),"تقدير لرص طولي منتظم؛ عدد الطبقات المدعوم يطابق عرض الوحدة. للرص المختلف استخدم مقاس وجه الرص الفعلي. البلوك المجوف محسوب بالأبعاد الخارجية.",bricks/1000*v("brickPrice")+bags*v("cementPrice")+sm*v("sandPrice"),net*(1+v("waste")/100)/1000*v("brickPrice")+kg/50*v("cementPrice")+sm*v("sandPrice"))
+                CalcAnswer(listOf(o("طبقات عبر السمك",courses,"طبقة"),o("وحدات شراء",bricks,"وحدة"),o("مونة منفذة",wet,"م³"),o("أسمنت",bags,"شيكارة"),o("رمل",sm,"م³"),o("أسمنت فعلي",kg,"كجم")),"تقدير لرص طولي منتظم؛ عدد الطبقات المدعوم يطابق عرض الوحدة. للرص المختلف استخدم مقاس وجه الرص الفعلي. البلوك المجوف محسوب بالأبعاد الخارجية.",bricks/1000*v("brickPrice")+bags*v("cementPrice")+sm*v("sandPrice"),net*(1+v("waste")/100)/1000*v("brickPrice")+kg/50*v("cementPrice")+sm*v("sandPrice"))
             }
         }
         masonry("masonry","طوب أحمر ومونة")

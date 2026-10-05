@@ -122,9 +122,9 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
                 else->{
                     item{BoxCard{
                         Text("إعدادات المونة الافتراضية",fontWeight=FontWeight.Bold)
-                        ExpandableSection("خلطات المونة والأسماك الافتراضية"){
+                        ExpandableSection("خلطات المونة والسمك الافتراضي"){
                         Text("تُستخدم للأجزاء بدون إعدادات خاصة. الحسابات المحفوظة بالخامات الخاصة تحتفظ بقيمها.",style=MaterialTheme.typography.bodySmall)
-                        listOf(Triple("cementPrice","سعر شيكارة الأسمنت 50 كجم","جنيه"),Triple("sandPrice","سعر متر الرمل","جنيه/م³"),Triple("plasterThickness","سمك المحارة","مم"),Triple("plasterSand","رمل مقابل جزء أسمنت للمحارة","جزء"),Triple("splashThickness","سمك الطرطشة","مم"),Triple("splashSand","رمل مقابل جزء أسمنت للطرطشة","جزء"),Triple("mortarWaste","هالك المونة","%")).forEach{(key,label,unit)->
+                        listOf(Triple("plasterThickness","سمك المحارة","مم"),Triple("plasterSand","رمل مقابل جزء أسمنت للمحارة","جزء"),Triple("splashThickness","سمك الطرطشة","مم"),Triple("splashSand","رمل مقابل جزء أسمنت للطرطشة","جزء"),Triple("mortarWaste","هالك المونة","%")).forEach{(key,label,unit)->
                             val default=when(key){"plasterThickness"->"15";"plasterSand"->"4";"splashThickness","mortarWaste"->"5";"splashSand"->"2";else->"0"}
                             NumberFieldX(label,defaults[key]?:default,{defaults=defaults+(key to it)},unit)
                         }
@@ -134,7 +134,7 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
                         ChoiceFieldX("إعدادات باقي خامات المشروع",recipes.first{it.id==defaultsTool}.title,recipes.map{it.title},{title->defaultsTool=recipes.first{it.title==title}.id})
                         val recipe=recipes.first{it.id==defaultsTool}
                         ExpandableSection("تعديل مواصفات الخامة المختارة"){
-                        recipe.fields.filter{it.key !in setOf("area","length","count")}.forEach{field->
+                        recipe.fields.filter{it.key !in setOf("area","length","count")&&!it.key.contains("price",true)}.forEach{field->
                             val key="recipe.${recipe.id}.${field.key}"
                             NumberFieldX(field.label,defaults[key]?:field.default,{defaults=defaults+(key to it)},field.unit)
                         }

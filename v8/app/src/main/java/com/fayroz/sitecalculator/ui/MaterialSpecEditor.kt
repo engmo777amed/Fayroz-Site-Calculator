@@ -14,11 +14,12 @@ fun MaterialSpecFields(value:MaterialSpec,onChange:(MaterialSpec)->Unit,rateUnit
     SpecNumber("متوسط السمك",value.thicknessMm,"مم"){onChange(value.copy(thicknessMm=it))}
     val reference=if(value.thicknessMm>0&&value.cementParts+value.sandParts>0&&value.bagKg>0)
         runCatching{CostEngine.measure(1000/value.thicknessMm,value.copy(waste=0.0))}.getOrNull()else null
+    ExpandableSection("مكونات ١ م³ مونة — قبل الهالك"){
     reference?.let{r->
-        Text("مكونات ١ م³ مونة — قبل الهالك",style=MaterialTheme.typography.labelLarge)
         MetricRow("رمل","${fmt(r.second)} م³")
         MetricRow("أسمنت","${fmt(r.first/value.bagKg)} شيكارة × ${fmt(value.bagKg)} كجم")
         MetricRow("تغطية عند السمك المدخل","${fmt(1000/value.thicknessMm)} م²")
+    }
     }
     Text("المكونات حسب الخلطة المستخدمة في الحساب.",style=MaterialTheme.typography.bodySmall)
     ExpandableSection("تغيير الخلطة والهالك"){

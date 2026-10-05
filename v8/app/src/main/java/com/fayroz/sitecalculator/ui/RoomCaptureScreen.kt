@@ -43,7 +43,7 @@ fun RoomCaptureScreen(
 
     val context=LocalContext.current
     var error by remember{mutableStateOf<String?>(null)}
-    var step by remember{mutableIntStateOf(0)}
+    var step by remember{mutableIntStateOf(if(restored!=null&&restored.takeoffs.isNotEmpty()&&restored.takeoffs.all{it.kind==CalcKind.DIRECT})2 else 0)}
     var name by remember{mutableStateOf(restored?.name ?: "")}
     var type by remember{mutableStateOf(restored?.type ?: "غرفة نوم")}
     var dimUnit by remember{mutableStateOf("م")}
@@ -65,6 +65,7 @@ fun RoomCaptureScreen(
     }
     var ceilingDetails by remember{mutableStateOf(restored?.ceilingSurfaces?.isNotEmpty()==true)}
     var editIndex by remember{mutableStateOf<Int?>(null)}
+    var editStage by remember{mutableIntStateOf(0)}
     var showCatalog by remember{mutableStateOf(false)}
     var selectedGroup by remember{mutableStateOf("كل البنود")}
 
@@ -130,7 +131,7 @@ fun RoomCaptureScreen(
                     LinearProgressIndicator(progress={(step+1)/3f},modifier=Modifier.fillMaxWidth())
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                         if(step>0)OutlinedButton(onClick={step--},modifier=Modifier.weight(1f).heightIn(min=48.dp)){Text("السابق")}
-                        if(step<2)Button(onClick={error=if(step==0&&geometryMode=="مستطيل بسيط"&&(lengthMeters(length,dimUnit)<=0||lengthMeters(width,dimUnit)<=0||lengthMeters(height,dimUnit)<=0))"أدخل طولًا وعرضًا وارتفاعًا أكبر من صفر." else null;if(error==null)step++},modifier=Modifier.weight(1f).heightIn(min=48.dp)){Text("التالي")}
+                        if(step<2)Button(onClick={error=if(step==0&&takeoffs.any{it.kind!=CalcKind.DIRECT&&it.manualValue==null&&it.parts.isEmpty()}&&geometryMode=="مستطيل بسيط"&&(lengthMeters(length,dimUnit)<=0||lengthMeters(width,dimUnit)<=0||lengthMeters(height,dimUnit)<=0))"أدخل طولًا وعرضًا وارتفاعًا أكبر من صفر." else null;if(error==null)step++},modifier=Modifier.weight(1f).heightIn(min=48.dp)){Text("التالي")}
                         else Button(
                             onClick={
                                 val value=current()
@@ -364,15 +365,15 @@ fun RoomCaptureScreen(
                                                     Text(item.kind.label+" • "+(if(item.parts.isNotEmpty())"${item.parts.size} أجزاء" else "مسطح كامل"),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                                                 }
                                                 Text("${fmt(q.repeatedFinal)} ${item.unit.label}",fontWeight=FontWeight.Black,color=MaterialTheme.colorScheme.primary)
-                                                IconButton(onClick={editIndex=i}){Icon(Icons.Rounded.Tune,"فتح البند")}
+                                                IconButton(onClick={editStage=0;editIndex=i}){Icon(Icons.Rounded.Tune,"فتح البند")}
                                             }
                                             if(space.repeatCount>1){
                                                 Text("المكان الواحد ${fmt(q.oneSpaceFinal)} × ${space.repeatCount}",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                                             }
                                             Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                                                FilledTonalButton(modifier=Modifier.weight(1f),onClick={editIndex=i}){Text("الخامات والنتيجة")}
+                                                FilledTonalButton(modifier=Modifier.weight(1f),onClick={editStage=1;editIndex=i}){Text("الخامات والنتيجة")}
                                                 ActionMenu(buildList{
-                                                    add("تعديل الكمية والأجزاء" to {editIndex=i})
+                                                    add("تعديل الكمية والأجزاء" to {editStage=0;editIndex=i})
                                                     add("نسخ البند" to {takeoffs.add(i+1,item.copy(id=UUID.randomUUID().toString(),parts=item.parts.map{it.copy(id=UUID.randomUUID().toString())}))})
                                                     if(i>0)add("تحريك لأعلى" to {val previous=takeoffs[i-1];takeoffs[i-1]=takeoffs[i];takeoffs[i]=previous})
                                                     add("حذف البند" to {takeoffs.removeAt(i);Unit})
@@ -395,7 +396,7 @@ fun RoomCaptureScreen(
     editIndex?.let{i->
         if(i in takeoffs.indices){
             TakeoffEditorDialog(
-                item=takeoffs[i],
+                item=takeoffs[i],initialStage=editStage,
                 walls=QuantityEngine.effectiveWalls(current()),
                 space=current(),
                 defaultMaterial=CostEngine.defaultSpec(takeoffs[i].name,defaults),
