@@ -176,3 +176,4 @@ object LegacyMigration {
     private fun normalize(name:String)=
         if(name=="سكريد / مونة تسوية")"مونة تسوية الأرضيات" else name
 }
+

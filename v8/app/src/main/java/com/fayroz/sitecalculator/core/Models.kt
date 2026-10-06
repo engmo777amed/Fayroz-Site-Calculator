@@ -171,5 +171,7 @@ data class MaterialSpec(
     val dryFactor:Double=1.33,val cementDensity:Double=1440.0,val bagKg:Double=50.0,
     val waste:Double=5.0,val cementPrice:Double=0.0,val sandPrice:Double=0.0,
     val extraRate:Double=0.0,val extraPrice:Double=0.0,val extraName:String="إضافات",
-    val laborRate:Double=0.0,val transportRate:Double=0.0,val equipmentRate:Double=0.0
+    val laborRate:Double=0.0,val transportRate:Double=0.0,val equipmentRate:Double=0.0,
+    val cementName:String="أسمنت",val sandName:String="رمل"
 )
+

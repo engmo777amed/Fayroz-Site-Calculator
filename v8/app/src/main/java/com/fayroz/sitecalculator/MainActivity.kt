@@ -30,7 +30,7 @@ private sealed interface Route{
     data object Prices:Route
     data class ProjectDetail(val projectId:String):Route
     data class SectionDetail(val projectId:String,val sectionId:String):Route
-    data class RoomEdit(val projectId:String,val sectionId:String,val spaceId:String?,val session:Long=System.nanoTime()):Route
+    data class RoomEdit(val projectId:String,val sectionId:String,val spaceId:String?,val session:Long=System.nanoTime(),val itemId:String?=null):Route
     data class DirectItem(val projectId:String):Route
     data class Tool(val toolId:String,val seed:MaterialResult?=null,val projectId:String?=null,val returnToProject:Boolean=false):Route
 }
@@ -99,6 +99,7 @@ class MainActivity:ComponentActivity(){
             ){
                 val summary=result.lines.joinToString(" • "){"${it.label}: ${it.value}"}
                 val calc=SavedCalculation(
+                    id=result.inputs["_savedId"]?:java.util.UUID.randomUUID().toString(),
                     toolId=result.toolId,
                     title=result.title,
                     summary=summary,
@@ -110,14 +111,14 @@ class MainActivity:ComponentActivity(){
                 repository.saveRecentCalc(calc)
                 val p=projects.firstOrNull{it.id==targetProjectId}?:return
                 replaceProject(p.copy(
-                    calculations=listOf(calc)+p.calculations,
+                    calculations=listOf(calc)+p.calculations.filterNot{it.id==calc.id},
                     updatedAt=System.currentTimeMillis()
                 ))
             }
 
             fun openSaved(calc:SavedCalculation){
                 val pid=projects.firstOrNull{p->p.calculations.any{it.id==calc.id}}?.id
-                route=Route.Tool(calc.toolId,MaterialResult(calc.toolId,calc.title,calc.sourceQuantity,calc.unit,emptyList(),calc.explanation,calc.inputs,calc.cost),pid)
+                route=Route.Tool(calc.toolId,MaterialResult(calc.toolId,calc.title,calc.sourceQuantity,calc.unit,emptyList(),calc.explanation,calc.inputs+("_savedId" to calc.id),calc.cost),pid)
             }
 
             fun shareProject(p:Project){
@@ -225,13 +226,17 @@ class MainActivity:ComponentActivity(){
                                             route=Route.RoomEdit(pid,sid,spid)
                                         },
                                         onOpenCalc={calc->
-                                            route=Route.Tool(calc.toolId,MaterialResult(calc.toolId,calc.title,calc.sourceQuantity,calc.unit,emptyList(),calc.explanation,calc.inputs,calc.cost),active?.projectId)
+                                            route=Route.Tool(calc.toolId,MaterialResult(calc.toolId,calc.title,calc.sourceQuantity,calc.unit,emptyList(),calc.explanation,calc.inputs+("_savedId" to calc.id),calc.cost),active?.projectId)
                                         }
                                     )
 
-                                    RootTab.SAVED->SavedCalculationsScreen(repository.recentCalcs()){calc->
+                                    RootTab.SAVED->SavedCalculationsScreen(repository.recentCalcs(),onDelete={id->
+                                        repository.deleteRecentCalc(id)
+                                        projects.toList().filter{p->p.calculations.any{it.id==id}}.forEach{p->replaceProject(p.copy(calculations=p.calculations.filterNot{it.id==id}))}
+                                        route=Route.Root
+                                    }){calc->
                                         val pid=projects.firstOrNull{p->p.calculations.any{it.id==calc.id}}?.id
-                                        route=Route.Tool(calc.toolId,MaterialResult(calc.toolId,calc.title,calc.sourceQuantity,calc.unit,emptyList(),calc.explanation,calc.inputs,calc.cost),pid)
+                                        route=Route.Tool(calc.toolId,MaterialResult(calc.toolId,calc.title,calc.sourceQuantity,calc.unit,emptyList(),calc.explanation,calc.inputs+("_savedId" to calc.id),calc.cost),pid)
                                     }
                                     RootTab.TOOLS->ToolsScreen(
                                         recent=repository.recentCalcs(),
@@ -282,8 +287,9 @@ class MainActivity:ComponentActivity(){
                             onDirectItem={route=Route.DirectItem(p.id)},
                             onShare={shareProject(p)},
                             onUpdate={replaceProject(it)},
-                            onEditSource={sid,spid,itemId->route=Route.RoomEdit(p.id,sid,spid)},
-                            onOpenCalc={calc->route=Route.Tool(calc.toolId,MaterialResult(calc.toolId,calc.title,calc.sourceQuantity,calc.unit,emptyList(),calc.explanation,calc.inputs,calc.cost),p.id,true)}
+                            onEditSource={sid,spid,itemId->route=if(itemId in p.calculations.map{it.id}){val c=p.calculations.first{it.id==itemId};Route.Tool(c.toolId,MaterialResult(c.toolId,c.title,c.sourceQuantity,c.unit,emptyList(),c.explanation,c.inputs+("_savedId" to c.id),c.cost),p.id)}else Route.RoomEdit(p.id,sid,spid,itemId=itemId)},
+                            onAddPlace={sid->route=Route.RoomEdit(p.id,sid,null)},
+                            onOpenCalc={calc->route=Route.Tool(calc.toolId,MaterialResult(calc.toolId,calc.title,calc.sourceQuantity,calc.unit,emptyList(),calc.explanation,calc.inputs+("_savedId" to calc.id),calc.cost),p.id,true)}
                         )
                     }
 
@@ -363,7 +369,7 @@ class MainActivity:ComponentActivity(){
                             }
                             key(r.session){RoomCaptureScreen(
                                 title=initial?.name?:"حصر مكان جديد",
-                                draftKey="${p.id}.${section.id}.${r.spaceId?:"new"}",repository=repository,initial=initial,defaults=p.defaults,
+                                draftKey="${p.id}.${section.id}.${r.spaceId?:"new"}",repository=repository,initial=initial,defaults=p.defaults,initialItemId=r.itemId,
                                 onBack={route=Route.SectionDetail(p.id,section.id)},
                                 onSave={saveSpace(it,false)},onSaveNext={saveSpace(it,true)}
                             )}

@@ -186,3 +186,4 @@ object MaterialEngine {
 
     private fun f(v:Double)=String.format(java.util.Locale.US,"%.2f",v).trimEnd('0').trimEnd('.')
 }
+

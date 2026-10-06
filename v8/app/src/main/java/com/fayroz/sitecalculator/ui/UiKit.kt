@@ -20,6 +20,10 @@ import java.util.Locale
 
 fun n(raw:String):Double = raw.map{c->if(c.isDigit())c.digitToInt().digitToChar() else c}.joinToString("")
     .replace(',','.').replace('٫','.').replace("٬","").toDoubleOrNull()?.takeIf{it.isFinite()}?:0.0
+fun money(v:Double):String=String.format(Locale.US,"%.2f",v)
+fun dated(time:Long):String=java.text.SimpleDateFormat("dd/MM/yyyy HH:mm",Locale.US).format(java.util.Date(time))
+fun selectionLabels(names:List<String>):List<String> = names.mapIndexed{i,name->if(names.count{it==name}>1)"$name (${i+1})"else name}
+
 fun exact(v:Double):String = java.math.BigDecimal.valueOf(v).stripTrailingZeros().toPlainString()
 fun fmt(v:Double):String=String.format(Locale.US,"%.3f",v).trimEnd('0').trimEnd('.')
 

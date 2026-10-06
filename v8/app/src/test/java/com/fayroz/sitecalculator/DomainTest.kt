@@ -157,5 +157,71 @@ class DomainTest {
     val q=QuantityEngine.calculateOne(Space(name="",type="",takeoffs=listOf(t)),t)
     assertEquals(100.0,q.repeatedFinal,0.0);assertEquals(105.0,q.repeatedFinal+q.waste,0.0)
  }
+
+ @Test fun screedDoesNotInheritPlasterThickness(){
+    val spec=CostEngine.defaultSpec("مونة تسوية الأرضيات",mapOf("plasterThickness" to "15"))!!
+    assertEquals(50.0,spec.thicknessMm,0.0)
+    assertEquals(50.0,CostEngine.defaultSpec("مونة تسوية الأرضيات",mapOf("plasterThickness" to "15","screedThickness" to "50"))!!.thicknessMm,0.0)
+ }
+ @Test fun groutSeparatesUsedMaterialFromWholePackage(){
+    val answer=calc("grout","area" to "10","price" to "100")
+    assertEquals(26.88,answer.consumedCost,1e-9);assertEquals(100.0,answer.cost,1e-9)
+ }
+ @Test fun mortarAndMasonryCementAreRoundedOnce(){
+    val item=Takeoff(name="مباني",unit=UnitType.AREA,kind=CalcKind.DIRECT,directValue=1.0,calculatorInputs=mapOf("cementPrice" to "100","sandPrice" to "200"))
+    val rows=CostEngine.rows(Project(name="",sections=listOf(Section(name="",spaces=listOf(Space(name="",type="",takeoffs=listOf(item)))))))
+    val cement=CostEngine.purchase(rows).first{it.material.contains("أسمنت")}
+    val mortar=CostEngine.Purchase("أسمنت (50 كجم)","كجم",20.0,1,100.0,100.0,"شيكارة",50.0)
+    val total=CostEngine.consolidate(listOf(cement,mortar)).filter{it.material.contains("أسمنت")}
+    assertEquals(1,total.size);assertEquals(kotlin.math.ceil((cement.amount+20)/50).toInt(),total.single().packages)
+ }
+ @Test fun differentStockNamesAreNeverMerged(){
+    val a=CostEngine.Purchase("دهان أبيض","لتر",1.0,1,100.0,100.0,"عبوة",10.0)
+    assertEquals(2,CostEngine.consolidate(listOf(a,a.copy(material="دهان بيج"))).size)
+    assertEquals(1,CostEngine.consolidate(listOf(a,a)).single().packages)
+ }
+ @Test fun repricingPreservesGeometryAndReferenceSnapshots(){
+    val spec=MaterialSpec(thicknessMm=22.0,cementPrice=100.0,sandPrice=200.0)
+    val item=Takeoff(name="محارة الحوائط",unit=UnitType.AREA,kind=CalcKind.DIRECT,directValue=10.0,material=spec,parts=listOf(WorkPart(length=2.0,width=5.0,material=spec)))
+    val ref=SavedCalculation(toolId="plaster",title="مرجع",summary="",cost=77.0)
+    val project=Project(name="",defaults=mapOf("cementPrice" to "300","sandPrice" to "400"),calculations=listOf(ref),sections=listOf(Section(name="",spaces=listOf(Space(name="",type="",takeoffs=listOf(item))))))
+    val updated=CostEngine.reprice(project);val result=updated.sections.single().spaces.single().takeoffs.single()
+    assertEquals(300.0,result.material!!.cementPrice,0.0);assertEquals(22.0,result.material!!.thicknessMm,0.0)
+    assertEquals(300.0,result.parts.single().material!!.cementPrice,0.0);assertEquals(item.directValue,result.directValue,0.0)
+    assertEquals(ref,updated.calculations.single())
+ }
+ @Test fun onlyExplicitlyIncludedCalculationsAffectTotals(){
+    val def=CalculatorLibrary.all.first{it.id=="paint"}
+    val raw=def.fields.associate{it.key to it.default}+mapOf("area" to "10","price" to "100")
+    val ref=SavedCalculation(toolId="paint",title="دهان",summary="",inputs=raw)
+    val p=Project(name="",calculations=listOf(ref))
+    assertTrue(CostEngine.rows(p).isEmpty());assertTrue(QuantityEngine.summarize(p).isEmpty())
+    val included=p.copy(calculations=listOf(ref.copy(inputs=raw+("_includeInProject" to "true"))))
+    assertEquals(10.0,CostEngine.rows(included).single().quantity,0.0)
+    assertEquals(10.0,QuantityEngine.summarize(included).single().quantity,0.0)
+    assertEquals(1,CostEngine.purchase(CostEngine.rows(included)).single().packages)
+ }
+ @Test fun savedConcreteDoesNotReinterpretVolumeAsElementCount(){
+    val def=CalculatorLibrary.all.first{it.id=="footing"}
+    val raw=def.fields.associate{it.key to it.default}+mapOf("length" to "2","width" to "3","height" to "1","count" to "2","waste" to "0","price" to "100","_includeInProject" to "true")
+    val p=Project(name="",calculations=listOf(SavedCalculation(toolId=def.id,title="قواعد",summary="",inputs=raw)))
+    assertEquals(12.0,CostEngine.purchase(CostEngine.rows(p)).single().amount,0.0)
+    assertEquals(1200.0,CostEngine.rows(p).single().materialCost,0.0)
+ }
+ @Test fun sellingPriceShowsExplicitCompounding(){
+    val row=CostEngine.Row("","","",null,"","","",10.0,"م²",materialCost=1000.0)
+    val result=CostEngine.selling(Project(name="",defaults=mapOf("overheadPercent" to "10","profitPercent" to "20","taxPercent" to "14")),listOf(row))
+    assertEquals(100.0,result.overhead,0.0);assertEquals(220.0,result.profit,0.0);assertEquals(1504.8,result.total,1e-9)
+ }
+ @Test fun stockIdentitySurvivesBackupCodec(){
+    val spec=MaterialSpec(cementName="أسمنت مقاوم",sandName="رمل مغسول")
+    assertEquals(spec,com.fayroz.sitecalculator.data.V8Codec.materialFrom(com.fayroz.sitecalculator.data.V8Codec.materialObj(spec)))
+ }
+ @Test fun openingDeductionCanFollowProjectMeasurementRule(){
+    val item=Takeoff(name="محارة",unit=UnitType.AREA,kind=CalcKind.WALLS)
+    val room=Space(name="",type="",length=4.0,width=3.0,height=3.0,openings=listOf(Opening(width=1.0,height=2.0,wallId="rect_1")))
+    assertEquals(40.0,QuantityEngine.calculateOne(room,item).repeatedFinal,0.0)
+    assertEquals(42.0,QuantityEngine.calculateOne(room,item.copy(calculatorInputs=mapOf("_deductOpenings" to "false"))).repeatedFinal,0.0)
+ }
 }
 

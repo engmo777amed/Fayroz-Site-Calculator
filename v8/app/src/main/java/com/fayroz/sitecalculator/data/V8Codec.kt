@@ -24,14 +24,14 @@ object V8Codec {
         put("dryFactor",m.dryFactor);put("cementDensity",m.cementDensity);put("bagKg",m.bagKg)
         put("waste",m.waste);put("cementPrice",m.cementPrice);put("sandPrice",m.sandPrice)
         put("extraRate",m.extraRate);put("extraPrice",m.extraPrice);put("extraName",m.extraName)
-        put("laborRate",m.laborRate);put("transportRate",m.transportRate);put("equipmentRate",m.equipmentRate)
+        put("cementName",m.cementName);put("sandName",m.sandName);put("laborRate",m.laborRate);put("transportRate",m.transportRate);put("equipmentRate",m.equipmentRate)
     }
     fun materialFrom(o:JSONObject?):MaterialSpec? = o?.let{MaterialSpec(
         it.optDouble("thicknessMm",15.0),it.optDouble("cementParts",1.0),it.optDouble("sandParts",4.0),
         it.optDouble("dryFactor",1.33),it.optDouble("cementDensity",1440.0),it.optDouble("bagKg",50.0),
         it.optDouble("waste",5.0),it.optDouble("cementPrice",0.0),it.optDouble("sandPrice",0.0),
         it.optDouble("extraRate",0.0),it.optDouble("extraPrice",0.0),it.optString("extraName","إضافات"),
-        it.optDouble("laborRate",0.0),it.optDouble("transportRate",0.0),it.optDouble("equipmentRate",0.0)
+        it.optDouble("laborRate",0.0),it.optDouble("transportRate",0.0),it.optDouble("equipmentRate",0.0),it.optString("cementName","أسمنت"),it.optString("sandName","رمل")
     )}
     private fun projectObj(p:Project)=JSONObject().apply{
         put("id",p.id);put("name",p.name);put("type",p.type)
@@ -233,3 +233,4 @@ object V8Codec {
         )
     }
 }
+

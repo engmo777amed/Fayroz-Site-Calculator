@@ -43,7 +43,7 @@ fun ToolsScreen(recent:List<SavedCalculation>,hasActiveProject:Boolean,onOpen:(S
             }}
         }else{
             items(filtered.size){i->val d=filtered[i];Surface(onClick={onOpen(d.id)},shape=RoundedCornerShape(16.dp),tonalElevation=1.dp){Row(Modifier.fillMaxWidth().padding(12.dp)){
-                Column(Modifier.weight(1f)){Text(d.title,fontWeight=FontWeight.Bold);Text(d.group,style=MaterialTheme.typography.bodySmall);}
+                Column(Modifier.weight(1f)){Text(d.title,fontWeight=FontWeight.Bold);Text(CalculatorLibrary.all.first{it.id==d.id}.fields.filter{it.required}.take(3).joinToString(" • "){it.label},style=MaterialTheme.typography.bodySmall);}
                 TextButton(onClick={favorites=if(d.id in favorites)favorites-d.id else favorites+d.id;repository?.setPref("favorites",favorites.joinToString("|"))}){Text(if(d.id in favorites)"★" else "☆")}
             }}}
             if(filtered.isEmpty())item{EmptyState("مفيش نتائج","اختار قسمًا آخر أو غير البحث.")}

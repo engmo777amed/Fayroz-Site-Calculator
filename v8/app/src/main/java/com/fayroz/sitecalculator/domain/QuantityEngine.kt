@@ -50,26 +50,26 @@ object QuantityEngine {
         return (vertical+horizontal)*depth*o.count
     }
 
-    fun wallAreaOne(space:Space,includeReveals:Boolean=false,wallIds:Set<String> = emptySet()):Double{
+    fun wallAreaOne(space:Space,includeReveals:Boolean=false,wallIds:Set<String> = emptySet(),deductOpenings:Boolean=true):Double{
         val all=effectiveWalls(space)
         val selected=if(wallIds.isEmpty())all else all.filter{it.id in wallIds}
         return selected.mapIndexed{index,wall->
             val gross=wall.length*wall.height
             val ops=openingsForWall(space,wall.id,all.indexOfFirst{it.id==wall.id})
-            val deduct=ops.sumOf(::openingArea)
+            val deduct=if(deductOpenings)ops.sumOf(::openingArea)else 0.0
             val reveals=if(includeReveals)ops.sumOf{revealArea(it)}else 0.0
             (gross-deduct+reveals).coerceAtLeast(0.0)
         }.sum()
     }
 
-    fun wallTilesOne(space:Space,tileHeight:Double,includeReveals:Boolean=false,wallIds:Set<String> = emptySet()):Double{
+    fun wallTilesOne(space:Space,tileHeight:Double,includeReveals:Boolean=false,wallIds:Set<String> = emptySet(),deductOpenings:Boolean=true):Double{
         val all=effectiveWalls(space)
         val selected=if(wallIds.isEmpty())all else all.filter{it.id in wallIds}
         return selected.mapIndexed{index,wall->
             val level=min(tileHeight.coerceAtLeast(0.0),wall.height)
             val gross=wall.length*level
             val ops=openingsForWall(space,wall.id,all.indexOfFirst{it.id==wall.id})
-            val deduct=ops.sumOf{openingOverlapBelow(it,level)}
+            val deduct=if(deductOpenings)ops.sumOf{openingOverlapBelow(it,level)}else 0.0
             val reveals=if(includeReveals)ops.sumOf{revealArea(it,level)}else 0.0
             (gross-deduct+reveals).coerceAtLeast(0.0)
         }.sum()
@@ -92,12 +92,12 @@ object QuantityEngine {
         floorAreaOne(space)+perimeterOne(space)*upstand.coerceAtLeast(0.0)
 
     private fun baseValue(space:Space,item:Takeoff):Pair<Double,String> = when(item.kind){
-        CalcKind.WALLS -> wallAreaOne(space,item.includeOpeningReveals,item.wallIds.toSet()) to
-            ("صافي الحوائط بعد خصم الأبواب والشبابيك"+if(item.includeOpeningReveals)" وإضافة جوانب الفتحات" else "")
+        CalcKind.WALLS -> wallAreaOne(space,item.includeOpeningReveals,item.wallIds.toSet(),item.calculatorInputs["_deductOpenings"]!="false") to
+            ((if(item.calculatorInputs["_deductOpenings"]=="false")"مساحة الحوائط دون خصم الفتحات"else "صافي الحوائط بعد خصم الأبواب والشبابيك")+if(item.includeOpeningReveals)" وإضافة جوانب الفتحات" else "")
         CalcKind.CEILING -> ceilingAreaOne(space) to "مساحة السقف بعد خصم أي أجزاء مستبعدة"
         CalcKind.FLOOR -> floorAreaOne(space) to "مساحة الأرضية بعد خصم أي أجزاء مستبعدة"
-        CalcKind.WALL_TILES -> wallTilesOne(space,item.tileHeight,item.includeOpeningReveals,item.wallIds.toSet()) to
-            "سيراميك الحوائط لحد ارتفاع ${f(item.tileHeight)} م مع خصم الجزء اللي داخل الارتفاع من الفتحات"
+        CalcKind.WALL_TILES -> wallTilesOne(space,item.tileHeight,item.includeOpeningReveals,item.wallIds.toSet(),item.calculatorInputs["_deductOpenings"]!="false") to
+            "سيراميك الحوائط لحد ارتفاع ${f(item.tileHeight)} م"+(if(item.calculatorInputs["_deductOpenings"]=="false")" دون خصم الفتحات"else " مع خصم الفتحات داخل الارتفاع")
         CalcKind.SKIRTING -> skirtingOne(space) to "محيط الحوائط ناقص عروض الأبواب"
         CalcKind.WATERPROOF -> waterproofOne(space,item.upstand) to
             "مساحة الأرضية + رجوع العزل ${f(item.upstand)} م على الحوائط"
@@ -158,6 +158,10 @@ object QuantityEngine {
             val key=item.name to item.unit
             map[key]=(map[key]?:0.0)+calculateOne(space,item).repeatedFinal
         }}}
+        CostEngine.rows(project.copy(sections=emptyList())).forEach{r->
+            val unit=UnitType.entries.firstOrNull{it.label==r.unit}?:if(r.unit=="م")UnitType.LENGTH else null
+            if(unit!=null){val key=r.item to unit;map[key]=(map[key]?:0.0)+r.quantity}
+        }
         return map.map{SummaryLine(it.key.first,it.key.second,it.value)}
     }
 
@@ -182,3 +186,4 @@ object QuantityEngine {
 
     private fun f(v:Double)=String.format(java.util.Locale.US,"%.2f",v).trimEnd('0').trimEnd('.')
 }
+

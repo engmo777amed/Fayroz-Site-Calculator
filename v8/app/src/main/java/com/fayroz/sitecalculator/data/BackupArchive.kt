@@ -28,6 +28,14 @@ object BackupArchive {
        zip.putNextEntry(ZipEntry("backup.json"));zip.write(root.toString().toByteArray());zip.closeEntry()
     }
  }
+ fun preview(bytes:ByteArray):String=runCatching{
+    val raw=if(bytes.firstOrNull()=='P'.code.toByte())ZipInputStream(bytes.inputStream()).use{zip->
+        var entry=zip.nextEntry;var result:String?=null
+        while(entry!=null){if(entry.name=="backup.json"){result=zip.readBytes().toString(Charsets.UTF_8);break};entry=zip.nextEntry};result?:error("بيانات مفقودة")
+    }else bytes.toString(Charsets.UTF_8)
+    val projects=V8Codec.decodeProjects(JSONObject(raw).getJSONArray("projects").toString())
+    "${projects.size} مشروع • ${projects.sumOf{it.sections.sumOf{s->s.spaces.size}}} مكان • ${projects.sumOf{it.calculations.size}} حساب محفوظ"
+ }.getOrDefault("تعذر معاينة النسخة؛ لن تُقبل نسخة غير صالحة.")
  fun restore(context:Context,repository:V8Repository,bytes:ByteArray,merge:Boolean):Boolean {
     val staged=mutableListOf<File>()
     return runCatching{
@@ -63,3 +71,4 @@ object BackupArchive {
     }.getOrElse{staged.forEach{it.delete()};false}
  }
 }
+

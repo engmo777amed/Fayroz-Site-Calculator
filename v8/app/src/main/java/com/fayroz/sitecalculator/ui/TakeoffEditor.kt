@@ -104,11 +104,19 @@ fun TakeoffEditorDialog(
             }}}
         ){padding->Column(Modifier.fillMaxSize().padding(padding)){
             StageNavigation(stage,listOf("الكمية","المواد","النتيجة"),::go)
-            Text("صافي التنفيذ: ${fmt(q.repeatedFinal)} ${item.unit.label}",Modifier.padding(horizontal=16.dp,vertical=8.dp),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+            if(stage==0)Text("صافي التنفيذ: ${fmt(q.repeatedFinal)} ${item.unit.label}",Modifier.padding(horizontal=16.dp,vertical=8.dp),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
             val listState=rememberLazyListState()
             LaunchedEffect(stage){listState.scrollToItem(0)}
             androidx.compose.foundation.lazy.LazyColumn(state=listState,contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.fillMaxSize()){
                 if(stage==0){
+                item{BoxCard{ExpandableSection("خطوات حصر الكمية"){
+                    MetricRow("الكمية الأساسية", "${fmt(q.base)} ${item.unit.label}")
+                    MetricRow("الإضافات", "${fmt(q.additions)} ${item.unit.label}")
+                    MetricRow("الخصومات", "${fmt(q.deductions)} ${item.unit.label}")
+                    MetricRow("صافي المكان الواحد", "${fmt(q.oneSpaceFinal)} ${item.unit.label}")
+                    if(space.repeatCount>1)MetricRow("التكرار",space.repeatCount.toString())
+                    Text(q.explanation,style=MaterialTheme.typography.bodySmall)
+                }}}
                 item{
                     ChoiceFieldX(
                         "هتحسب البند إزاي؟",
@@ -176,6 +184,7 @@ fun TakeoffEditorDialog(
 
 
                 if(kind in listOf(CalcKind.WALLS,CalcKind.WALL_TILES)){
+                    item{Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("خصم الفتحات من البند");Text("يمكن إيقاف الخصم حسب قواعد المقايسة، أو إدخال خصومات محددة يدويًا.",style=MaterialTheme.typography.bodySmall)};Switch(recipe["_deductOpenings"]!="false",{recipe=recipe+("_deductOpenings" to it.toString())})}}
                     item{
                         Row(verticalAlignment=Alignment.CenterVertically){
                             Column(Modifier.weight(1f)){
@@ -283,7 +292,7 @@ fun TakeoffEditorDialog(
                     material?.let{m->
                         if(selectedPart==null||selectedPart.material!=null)item{BoxCard{key(selectedPartId){MaterialSpecFields(selectedPart?.material?:m,{next->if(selectedPart==null)material=next else parts=parts.map{if(it.id==selectedPart.id)it.copy(material=next)else it};error=null},item.unit.label)}}}
                     }
-                    if(material==null&&recipeDef!=null&&(selectedPart==null||selectedPart.calculatorInputs.isNotEmpty()))item{BoxCard{key(selectedPartId){RecipeFields(recipeDef,if(selectedPart==null)q.repeatedFinal else QuantityEngine.partValue(selectedPart,item.unit)*space.repeatCount,selectedPart?.calculatorInputs?.takeIf{it.isNotEmpty()}?:recipe,{next->if(selectedPart==null)recipe=next else parts=parts.map{if(it.id==selectedPart.id)it.copy(calculatorInputs=next)else it};error=null})}}}
+                    if(material==null&&recipeDef!=null&&(selectedPart==null||selectedPart.calculatorInputs.isNotEmpty()))item{BoxCard{key(selectedPartId){RecipeFields(recipeDef,selectedQuantity,selectedPart?.calculatorInputs?.takeIf{it.isNotEmpty()}?:recipe,{next->if(selectedPart==null)recipe=next else parts=parts.map{if(it.id==selectedPart.id)it.copy(calculatorInputs=next)else it};error=null})}}}
                     if(material==null&&recipeDef==null)item{BoxCard{Text("هذا البند له حصر كمية فقط. اضغط احسب لعرض الكمية.")}}
                 }
                 if(stage==2){

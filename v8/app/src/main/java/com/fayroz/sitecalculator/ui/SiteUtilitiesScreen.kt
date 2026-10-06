@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.dp
 import com.fayroz.sitecalculator.core.*
 import com.fayroz.sitecalculator.data.V8Repository
 
-private data class AreaPart(val length:String="",val width:String="",val deduct:Boolean=false)
+private data class AreaPart(val length:String="",val width:String="",val deduct:Boolean=false,val name:String="")
 @Composable
 fun SiteUtilityScreen(toolId:String,onBack:()->Unit,repository:V8Repository?=null,seed:MaterialResult?=null){
     val context=LocalContext.current
@@ -24,9 +24,9 @@ fun SiteUtilityScreen(toolId:String,onBack:()->Unit,repository:V8Repository?=nul
     var value by remember{mutableStateOf(saved["value"].orEmpty())}
     var type by remember{mutableStateOf(saved["type"]?:"طول")}
     var unit by remember{mutableStateOf(saved["unit"]?:"م")}
-    val parts=remember{mutableStateListOf<AreaPart>().apply{repeat(saved["parts"]?.toIntOrNull()?:1){i->add(AreaPart(saved["length.$i"].orEmpty(),saved["width.$i"].orEmpty(),saved["deduct.$i"]=="true"))}}}
+    val parts=remember{mutableStateListOf<AreaPart>().apply{repeat(saved["parts"]?.toIntOrNull()?:1){i->add(AreaPart(saved["length.$i"].orEmpty(),saved["width.$i"].orEmpty(),saved["deduct.$i"]=="true",saved["name.$i"].orEmpty()))}}}
     val total=parts.sumOf{val a=lengthMeters(it.length,unit)*lengthMeters(it.width,unit);if(it.deduct)-a else a}
-    val inputs=buildMap{put("_label",label);put("value",value);put("type",type);put("unit",unit);put("parts",parts.size.toString());parts.forEachIndexed{i,p->put("length.$i",p.length);put("width.$i",p.width);put("deduct.$i",p.deduct.toString())}}
+    val inputs=buildMap{put("_label",label);put("value",value);put("type",type);put("unit",unit);put("parts",parts.size.toString());parts.forEachIndexed{i,p->put("name.$i",p.name);put("length.$i",p.length);put("width.$i",p.width);put("deduct.$i",p.deduct.toString())}}
     val lines=if(toolId=="area")listOf(MaterialLine("المساحة الصافية","${fmt(total)} م²"))else buildList{
         val x=n(value)
         when(type){
@@ -47,7 +47,7 @@ fun SiteUtilityScreen(toolId:String,onBack:()->Unit,repository:V8Repository?=nul
         error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
         Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
             if(stage==1)OutlinedButton(onClick={stage=0},modifier=Modifier.weight(1f)){Text("تعديل المدخلات")}
-            Button(onClick={if(stage==0)calculate()else{repository?.saveRecentCalc(SavedCalculation(toolId=toolId,title=label,summary=lines.joinToString(" • "){"${it.label}: ${it.value}"},sourceQuantity=if(toolId=="area")total else n(value),unit=if(toolId=="area")"م²" else unit,inputs=inputs,explanation=if(toolId=="area")"جمع المساحات المضافة وطرح أجزاء الخصم." else "تحويل الوحدات ضمن نفس النوع."));Toast.makeText(context,"تم حفظ النتيجة ✓",Toast.LENGTH_SHORT).show()}},modifier=Modifier.weight(1f)){Text(if(stage==0)"احسب واعرض النتيجة" else "حفظ النتيجة")}
+            Button(onClick={if(stage==0)calculate()else{repository?.saveRecentCalc(SavedCalculation(id=saved["_savedId"]?:java.util.UUID.randomUUID().toString(),toolId=toolId,title=label,summary=lines.joinToString(" • "){"${it.label}: ${it.value}"},sourceQuantity=if(toolId=="area")total else n(value),unit=if(toolId=="area")"م²" else unit,inputs=inputs,explanation=if(toolId=="area")"جمع المساحات المضافة وطرح أجزاء الخصم." else "تحويل الوحدات ضمن نفس النوع."));Toast.makeText(context,"تم حفظ النتيجة ✓",Toast.LENGTH_SHORT).show()}},modifier=Modifier.weight(1f)){Text(if(stage==0)"احسب واعرض النتيجة" else "حفظ النتيجة")}
         }
     }}}){padding->Column(Modifier.fillMaxSize().padding(padding)){
         StageNavigation(stage,listOf("إدخال البيانات","النتيجة")){if(it==0)stage=0 else calculate()}
@@ -61,6 +61,7 @@ fun SiteUtilityScreen(toolId:String,onBack:()->Unit,repository:V8Repository?=nul
                 }}else{
                     item{ChoiceFieldX("وحدة الأبعاد",unit,listOf("م","سم","مم"),{next->parts.indices.forEach{i->val p=parts[i];parts[i]=p.copy(length=convertLength(p.length,unit,next),width=convertLength(p.width,unit,next))};unit=next})}
                     items(parts.size){i->val part=parts[i];BoxCard{
+                        TextFieldX("اسم الجزء ${i+1}",part.name,{parts[i]=part.copy(name=it)},placeholder="غرفة / منور / خصم عمود")
                         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                         NumberFieldX("طول ${i+1}",part.length,{parts[i]=part.copy(length=it);error=null},unit,Modifier.weight(1f))
                         NumberFieldX("عرض ${i+1}",part.width,{parts[i]=part.copy(width=it);error=null},unit,Modifier.weight(1f))
@@ -71,7 +72,7 @@ fun SiteUtilityScreen(toolId:String,onBack:()->Unit,repository:V8Repository?=nul
                 }
             }else{
                 item{BoxCard{Text("ملخص الحساب");Text(label);Text("حساب مستقل");lines.forEach{MetricRow(it.label,it.value,true)}}}
-                if(toolId=="area")item{BoxCard{Text("الأجزاء والخصومات");parts.forEachIndexed{i,p->MetricRow("جزء ${i+1}"+(if(p.deduct)" — خصم" else " — إضافة"),"${fmt(lengthMeters(p.length,unit)*lengthMeters(p.width,unit))} م²")}}}
+                if(toolId=="area")item{BoxCard{Text("الأجزاء والخصومات");parts.forEachIndexed{i,p->MetricRow(p.name.ifBlank{"جزء ${i+1}"}+(if(p.deduct)" — خصم" else " — إضافة"),"${fmt(lengthMeters(p.length,unit)*lengthMeters(p.width,unit))} م²")}}}
                 item{OutlinedButton(onClick={context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_TEXT,label+"\n"+lines.joinToString("\n"){"${it.label}: ${it.value}"})},"مشاركة النتيجة"))},modifier=Modifier.fillMaxWidth()){Text("تصدير / مشاركة النتيجة")}}
             }
         }}

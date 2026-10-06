@@ -7,3 +7,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "FayrozSiteCalculatorV8"
 include(":app")
+

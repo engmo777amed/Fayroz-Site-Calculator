@@ -36,14 +36,15 @@ fun RoomCaptureScreen(
     onBack:()->Unit,
     onSave:(Space)->Unit,
     defaults:Map<String,String> = emptyMap(),
-    onSaveNext:(Space)->Unit = onSave
+    onSaveNext:(Space)->Unit = onSave,
+    initialItemId:String?=null
 ){
     val restored=remember(draftKey,initial?.id){repository.loadDraft(draftKey) ?: initial}
     val stableId=remember(draftKey,initial?.id){initial?.id ?: restored?.id ?: UUID.randomUUID().toString()}
 
     val context=LocalContext.current
     var error by remember{mutableStateOf<String?>(null)}
-    var step by remember{mutableIntStateOf(if(restored!=null&&restored.takeoffs.isNotEmpty()&&restored.takeoffs.all{it.kind==CalcKind.DIRECT})2 else 0)}
+    var step by remember{mutableIntStateOf(if(initialItemId!=null)2 else if(restored!=null&&restored.takeoffs.isNotEmpty()&&restored.takeoffs.all{it.kind==CalcKind.DIRECT})2 else 0)}
     var name by remember{mutableStateOf(restored?.name ?: "")}
     var type by remember{mutableStateOf(restored?.type ?: "غرفة نوم")}
     var dimUnit by remember{mutableStateOf("م")}
@@ -64,7 +65,7 @@ fun RoomCaptureScreen(
         )
     }
     var ceilingDetails by remember{mutableStateOf(restored?.ceilingSurfaces?.isNotEmpty()==true)}
-    var editIndex by remember{mutableStateOf<Int?>(null)}
+    var editIndex by remember{mutableStateOf<Int?>(restored?.takeoffs?.indexOfFirst{it.id==initialItemId}?.takeIf{it>=0})}
     var editStage by remember{mutableIntStateOf(0)}
     var showCatalog by remember{mutableStateOf(false)}
     var selectedGroup by remember{mutableStateOf("كل البنود")}
@@ -130,7 +131,7 @@ fun RoomCaptureScreen(
                 Column(Modifier.fillMaxWidth().imePadding().padding(10.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
                     LinearProgressIndicator(progress={(step+1)/3f},modifier=Modifier.fillMaxWidth())
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                        if(step>0)OutlinedButton(onClick={step--},modifier=Modifier.weight(1f).heightIn(min=48.dp)){Text("السابق")}
+                        if(step>0)TextButton(onClick={step--},modifier=Modifier.weight(1f).heightIn(min=48.dp)){Text("السابق")}
                         if(step<2)Button(onClick={error=if(step==0&&takeoffs.any{it.kind!=CalcKind.DIRECT&&it.manualValue==null&&it.parts.isEmpty()}&&geometryMode=="مستطيل بسيط"&&(lengthMeters(length,dimUnit)<=0||lengthMeters(width,dimUnit)<=0||lengthMeters(height,dimUnit)<=0))"أدخل طولًا وعرضًا وارتفاعًا أكبر من صفر." else null;if(error==null)step++},modifier=Modifier.weight(1f).heightIn(min=48.dp)){Text("التالي")}
                         else Button(
                             onClick={
@@ -145,7 +146,7 @@ fun RoomCaptureScreen(
                         if(step==2)OutlinedButton(onClick={
                             val value=current();error=Validation.space(value)
                             if(error==null){onSaveNext(value);repository.clearDraft(draftKey);Toast.makeText(context,"تم الحفظ — مكان جديد",Toast.LENGTH_SHORT).show()}
-                        },modifier=Modifier.weight(1f)){Text("حفظ وإضافة")}
+                        },modifier=Modifier.weight(1f)){Text("حفظ وإضافة",maxLines=1,style=MaterialTheme.typography.labelSmall)}
                     }
                     error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
                     Row {
@@ -163,6 +164,7 @@ fun RoomCaptureScreen(
                 0->item{
                     BoxCard{
                         TextFieldX("اسم المكان",name,{name=it},placeholder="مثال: حمام رئيسي")
+                        Text("$type • المقاسات بالـ$dimUnit",style=MaterialTheme.typography.bodySmall)
                         ExpandableSection("نوع المكان والوحدة"){
                         ChoiceFieldX("نوع المكان",type,Catalog.roomTypes,{newType->
                             val oldSuggested=Catalog.suggested(type)
@@ -455,7 +457,6 @@ private fun OpeningRow(
                 Text("${fmt(opening.width*opening.height*opening.count)} م²",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Black)
                 IconButton(onClick=onDelete,modifier=Modifier.size(40.dp)){Icon(Icons.Rounded.Delete,"حذف")}
             }
-            ExpandableSection("الحائط والجوانب وجلسة الشباك"){
             if(walls.isNotEmpty()){
                 ChoiceFieldX(
                     "الحائط",
@@ -465,6 +466,7 @@ private fun OpeningRow(
                     help="اربط الفتحة بالحائط الصحيح."
                 )
             }
+            ExpandableSection("الجوانب وجلسة الشباك"){
             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                 NumberFieldX("جلسة الشباك",sill,{sill=it;onChange(opening.copy(sill=n(it)))},"م",Modifier.weight(1f),help="من الأرض لأسفل الفتحة.")
                 NumberFieldX("عمق الجنب",reveal,{reveal=it;onChange(opening.copy(revealDepth=n(it)))},"م",Modifier.weight(1f),help="لو هتحسب جوانب الباب أو الشباك.")
@@ -473,6 +475,21 @@ private fun OpeningRow(
             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                 NumberFieldX("العرض",width,{width=it;onChange(opening.copy(width=n(it)))},"م",Modifier.weight(1f))
                 NumberFieldX("الارتفاع",height,{height=it;onChange(opening.copy(height=n(it)))},"م",Modifier.weight(1f))
+            }
+            val wall=walls.firstOrNull{it.id==opening.wallId}?:walls.firstOrNull()
+            if(wall!=null&&wall.length>0&&wall.height>0){
+                val lineColor=MaterialTheme.colorScheme.primary
+                androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(80.dp)){
+                    val scale=kotlin.math.min(size.width/wall.length.toFloat(),size.height/wall.height.toFloat())*.85f
+                    val wallSize=androidx.compose.ui.geometry.Size(wall.length.toFloat()*scale,wall.height.toFloat()*scale)
+                    val origin=androidx.compose.ui.geometry.Offset((size.width-wallSize.width)/2,(size.height-wallSize.height)/2)
+                    drawRect(lineColor.copy(alpha=.12f),origin,wallSize)
+                    drawRect(lineColor,origin,wallSize,style=androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
+                    val holeSize=androidx.compose.ui.geometry.Size(opening.width.toFloat()*scale,opening.height.toFloat()*scale)
+                    val hole=androidx.compose.ui.geometry.Offset(origin.x+(wallSize.width-holeSize.width)/2,origin.y+wallSize.height-(opening.sill+opening.height).toFloat()*scale)
+                    drawRect(lineColor.copy(alpha=.5f),hole,holeSize)
+                }
+                Text("معاينة المقاس والارتفاع فقط؛ موضع الفتحة الأفقي غير مسجل.",style=MaterialTheme.typography.labelSmall)
             }
             NumberFieldX("العدد",count,{count=it;onChange(opening.copy(count=n(it).toInt().coerceAtLeast(1)))},"عدد")
         }

@@ -41,3 +41,4 @@ fun FayrozTheme(mode:String,content:@Composable ()->Unit){
         content=content
     )
 }
+

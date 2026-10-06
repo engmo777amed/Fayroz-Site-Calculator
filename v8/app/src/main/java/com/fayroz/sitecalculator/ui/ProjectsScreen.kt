@@ -87,7 +87,7 @@ fun ProjectsScreen(
                             ))
                         }
                         if(total>0){
-                            Text("خلص $done من $total",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("اكتمل حصر $done من $total مكان",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }

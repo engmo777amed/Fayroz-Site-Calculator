@@ -11,6 +11,7 @@ import com.fayroz.sitecalculator.domain.CostEngine
 @Composable
 fun MaterialSpecFields(value:MaterialSpec,onChange:(MaterialSpec)->Unit,rateUnit:String="م²"){
     Text("إعداد المونة",style=MaterialTheme.typography.titleMedium)
+    Text("الخلطة الحجمية: أسمنت ${fmt(value.cementParts)} : رمل ${fmt(value.sandParts)} • هالك ${fmt(value.waste)}%",style=MaterialTheme.typography.bodySmall)
     SpecNumber("متوسط السمك",value.thicknessMm,"مم"){onChange(value.copy(thicknessMm=it))}
     val reference=if(value.thicknessMm>0&&value.cementParts+value.sandParts>0&&value.bagKg>0)
         runCatching{CostEngine.measure(1000/value.thicknessMm,value.copy(waste=0.0))}.getOrNull()else null
@@ -31,6 +32,8 @@ fun MaterialSpecFields(value:MaterialSpec,onChange:(MaterialSpec)->Unit,rateUnit
         SpecNumber("وزن شيكارة الأسمنت",value.bagKg,"كجم"){onChange(value.copy(bagKg=it))}
     }
     ExpandableSection("الأسعار — اختيارية"){
+        TextFieldX("نوع الأسمنت وماركته",value.cementName,{onChange(value.copy(cementName=it))})
+        TextFieldX("نوع الرمل",value.sandName,{onChange(value.copy(sandName=it))})
         SpecNumber("سعر شيكارة الأسمنت",value.cementPrice,"جنيه"){onChange(value.copy(cementPrice=it))}
         SpecNumber("سعر متر الرمل",value.sandPrice,"جنيه/م³"){onChange(value.copy(sandPrice=it))}
     }

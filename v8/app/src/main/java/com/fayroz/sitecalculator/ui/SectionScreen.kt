@@ -96,7 +96,9 @@ fun SectionScreen(
                             }
 
                             Row{
-                                Text(space.status.label,Modifier.weight(1f),style=MaterialTheme.typography.bodySmall)
+                                val roomRows=costRows.filter{it.spaceId==space.id}
+                                val issue=com.fayroz.sitecalculator.domain.Validation.space(space)
+                                Text(if(issue!=null)"حصر يحتاج مراجعة" else if(roomRows.any{com.fayroz.sitecalculator.domain.MaterialReview.missing(it).isNotEmpty()})"الحصر جاهز • أسعار ناقصة"else space.status.label,Modifier.weight(1f),style=MaterialTheme.typography.bodySmall)
                                 ActionMenu(buildList{
                                     add("تعيين مكان نشط" to {onSetActiveRoom(space.id)})
                                     add("نسخ المكان" to {onDuplicateRoom(space.id)})

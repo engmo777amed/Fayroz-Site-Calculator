@@ -29,6 +29,7 @@ fun SettingsScreen(
     val context=LocalContext.current
     var importMessage by remember{mutableStateOf<String?>(null)}
     var pending by remember{mutableStateOf<ByteArray?>(null)}
+    var replaceConfirmed by remember{mutableStateOf(false)}
     val saveLauncher=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")){uri->
         if(uri!=null){
             importMessage=runCatching{
@@ -46,10 +47,13 @@ fun SettingsScreen(
             }?:error("تعذر فتح الملف")}.onSuccess{pending=it}.onFailure{importMessage="تعذر قراءة النسخة أو حجمها أكبر من 128 ميجابايت."}
         }
     }
-    pending?.let{bytes->AlertDialog(onDismissRequest={pending=null},title={Text("استرجاع نسخة احتياطية")},
-        text={Text("دمج يضيف المشروعات والأماكن والحسابات غير الموجودة، ويحافظ على النسخة الحالية عند تكرارها. استبدال يرجّع بيانات النسخة مكان المشروعات الحالية.")},
-        confirmButton={TextButton(onClick={val ok=BackupArchive.restore(context,repository,bytes,true);importMessage=if(ok)"تم الدمج بنجاح." else "النسخة غير صالحة؛ لم تُستبدل بياناتك.";pending=null;if(ok)onReload()}){Text("دمج")}},
-        dismissButton={TextButton(onClick={val ok=BackupArchive.restore(context,repository,bytes,false);importMessage=if(ok)"تم الاستبدال بنجاح." else "النسخة غير صالحة؛ لم تُستبدل بياناتك.";pending=null;if(ok)onReload()}){Text("استبدال")}})}
+    pending?.let{bytes->AlertDialog(onDismissRequest={pending=null;replaceConfirmed=false},title={Text(if(replaceConfirmed)"تأكيد استبدال البيانات"else "استرجاع نسخة احتياطية")},
+        text={Column{Text(remember(bytes){BackupArchive.preview(bytes)});Text(if(replaceConfirmed)"سيحل محتوى النسخة محل المشروعات الحالية. يمكنك الإلغاء أو الرجوع لاختيار الدمج."else "الدمج يضيف البيانات غير الموجودة ويحافظ على الموجود. الاستبدال يرجّع النسخة مكان البيانات الحالية.")}},
+        confirmButton={Column{
+            TextButton(onClick={if(!replaceConfirmed){val ok=BackupArchive.restore(context,repository,bytes,true);importMessage=if(ok)"تم الدمج بنجاح."else "النسخة غير صالحة؛ لم تُستبدل بياناتك.";pending=null;if(ok)onReload()}else{val ok=BackupArchive.restore(context,repository,bytes,false);importMessage=if(ok)"تم الاستبدال بنجاح."else "النسخة غير صالحة؛ لم تُستبدل بياناتك.";pending=null;replaceConfirmed=false;if(ok)onReload()}}){Text(if(replaceConfirmed)"تأكيد الاستبدال"else "دمج مع الموجود")}
+            if(!replaceConfirmed)TextButton(onClick={replaceConfirmed=true}){Text("استبدال البيانات الحالية",color=MaterialTheme.colorScheme.error)}
+        }},dismissButton={TextButton(onClick={pending=null;replaceConfirmed=false}){Text("إلغاء")}})}
+
 
     Scaffold(
         topBar={
@@ -117,7 +121,7 @@ fun SettingsScreen(
             item{PageHeader("عن الحسابات")}
             item{
                 BoxCard{
-                    Text("Fayroz Site Calculator 9.2.0",fontWeight=FontWeight.Black)
+                    Text("Fayroz Site Calculator 9.3.0",fontWeight=FontWeight.Black)
                     ExpandableSection("ملاحظات الحسابات"){
                     Text("""• التكرار بيتطبق مرة واحدة فقط في التجميع.
 • صافي الحصر منفصل عن هالك الخامات والشراء.

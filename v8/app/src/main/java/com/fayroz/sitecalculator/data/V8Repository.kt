@@ -138,10 +138,12 @@ class V8Repository(context:Context){
     fun clearDraft(key:String)=prefs.edit().remove("draft_$key").apply()
 
     fun saveRecentCalc(calc:SavedCalculation){
-        val next=listOf(calc)+recentCalcs()
+        val next=listOf(calc)+recentCalcs().filterNot{it.id==calc.id}
         val holder=Project(name="_recent",calculations=next)
         prefs.edit().putString("recent_calcs",V8Codec.encodeProjects(listOf(holder))).apply()
     }
+
+    fun deleteRecentCalc(id:String){val holder=Project(name="_recent",calculations=recentCalcs().filterNot{it.id==id});prefs.edit().putString("recent_calcs",V8Codec.encodeProjects(listOf(holder))).apply()}
 
     fun recentCalcs():List<SavedCalculation>{
         val raw=prefs.getString("recent_calcs",null)?:return emptyList()
@@ -197,3 +199,4 @@ class V8Repository(context:Context){
     fun pref(key:String,default:String):String=prefs.getString("pref_$key",default)?:default
     fun setPref(key:String,value:String)=prefs.edit().putString("pref_$key",value).apply()
 }
+

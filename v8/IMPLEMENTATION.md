@@ -25,3 +25,4 @@ Base: V8.1.0 from commit 4432a732157b8825067bedb0f3ecdee2c9a3b3db, v8 module.
 
 ## Verification
 GitHub Actions runs unit tests, Android lint, instrumented emulator tests, and debug/release assembly. Instrumented tests cover navigation, calculator opening, backup with photos, merge safety and XLSX contents. Artifact screenshots support visual review. Release signing is performed privately; signing keys are never committed to the public repository.
+

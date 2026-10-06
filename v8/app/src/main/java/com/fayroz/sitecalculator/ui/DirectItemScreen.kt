@@ -68,9 +68,9 @@ fun DirectItemScreen(
                     if(project.sections.isNotEmpty()){
                         ChoiceFieldX(
                             "الدور / الجزء",
-                            project.sections.firstOrNull{it.id==sectionId}?.name ?: project.sections.first().name,
-                            project.sections.map{it.name},
-                            {label->sectionId=project.sections.first{it.name==label}.id}
+                            selectionLabels(project.sections.map{it.name})[project.sections.indexOfFirst{it.id==sectionId}.coerceAtLeast(0)],
+                            selectionLabels(project.sections.map{it.name}),
+                            {label->sectionId=project.sections[selectionLabels(project.sections.map{it.name}).indexOf(label)].id}
                         )
                     }
                     NumberFieldX("الكمية الجاهزة",quantity,{quantity=it},def.unit.label,help="اكتب الكمية اللي معاك من الموقع مباشرة.")
@@ -81,7 +81,7 @@ fun DirectItemScreen(
                 }
             }
 
-            if(n(quantity)>0){
+            if(n(quantity)>0&&n(waste)>=0){
                 item{
                     BoxCard{
                         MetricRow("صافي التنفيذ","${fmt(result.repeatedFinal)} ${def.unit.label}",true)

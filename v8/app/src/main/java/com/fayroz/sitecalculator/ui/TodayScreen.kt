@@ -46,7 +46,7 @@ fun TodayScreen(
         contentPadding=PaddingValues(12.dp),
         verticalArrangement=Arrangement.spacedBy(9.dp)
     ){
-        item{PageHeader("شغل اليوم","المفتوح وآخر الحسابات في مكان واحد")}
+        item{PageHeader("الحصر الجاري","المفتوح وآخر الحسابات في مكان واحد")}
 
         val exact=active?.let{a->
             activeItems.firstOrNull{it.projectId==a.projectId&&it.sectionId==a.sectionId&&it.spaceId==a.spaceId}
