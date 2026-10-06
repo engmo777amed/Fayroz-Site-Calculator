@@ -23,12 +23,12 @@ object CostEngine {
             waste=d("mortarWaste",5.0),cementPrice=d("cementPrice",0.0),sandPrice=d("sandPrice",0.0),cementName=defaults["cementName"]?:"أسمنت",sandName=defaults["sandName"]?:"رمل")
     }
     fun reprice(project:Project):Project {
-        fun spec(s:MaterialSpec)=s.copy(cementPrice=numeric(project.defaults["cementPrice"])?:s.cementPrice,sandPrice=numeric(project.defaults["sandPrice"])?:s.sandPrice)
+        fun spec(s:MaterialSpec)=s.copy(cementPrice=numeric(project.defaults["cementPrice"])?.let{it*s.bagKg/50}?:s.cementPrice,sandPrice=numeric(project.defaults["sandPrice"])?:s.sandPrice)
         fun inputs(id:String?,raw:Map<String,String>):Map<String,String> {
             val def=CalculatorLibrary.all.firstOrNull{it.id==id}?:return raw
             val prices=def.fields.filter{it.key.contains("price",true)}.mapNotNull{f->
                 val value=project.defaults["recipe.${def.id}.${f.key}"]?:project.defaults[f.key]?.takeIf{f.key in setOf("cementPrice","sandPrice")}
-                value?.let{f.key to it}
+                value?.let{v->f.key to if(f.key=="cementPrice"&&def.id in CalculatorLibrary.mortarIds&&project.defaults["recipe.${def.id}.${f.key}"]==null) ((numeric(v)?:0.0)*(numeric(raw["bag"])?:50.0)/50).toString()else v}
             }.toMap()
             return raw+prices
         }

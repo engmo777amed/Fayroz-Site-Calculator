@@ -225,5 +225,15 @@ class DomainTest {
     assertEquals(40.0,QuantityEngine.calculateOne(room,item).repeatedFinal,0.0)
     assertEquals(42.0,QuantityEngine.calculateOne(room,item.copy(calculatorInputs=mapOf("_deductOpenings" to "false"))).repeatedFinal,0.0)
  }
+
+ @Test fun globalCementPriceUsesFiftyKilogramBasisWhenRepricing(){
+    val item=Takeoff(name="محارة",unit=UnitType.AREA,kind=CalcKind.DIRECT,directValue=10.0,material=MaterialSpec(bagKg=25.0,cementPrice=80.0))
+    val def=CalculatorLibrary.all.first{it.id=="plaster"}
+    val raw=def.fields.associate{it.key to it.default}+mapOf("area" to "10","bag" to "25","_includeInProject" to "true")
+    val project=Project(name="",defaults=mapOf("cementPrice" to "300"),sections=listOf(Section(name="",spaces=listOf(Space(name="",type="",takeoffs=listOf(item))))),calculations=listOf(SavedCalculation(toolId="plaster",title="",summary="",inputs=raw)))
+    val updated=CostEngine.reprice(project)
+    assertEquals(150.0,updated.sections.single().spaces.single().takeoffs.single().material!!.cementPrice,0.0)
+    assertEquals(150.0,updated.calculations.single().inputs["cementPrice"]!!.toDouble(),0.0)
+ }
 }
 

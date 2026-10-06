@@ -273,6 +273,10 @@ class DeviceTest {
         assertEquals(10.0,com.fayroz.sitecalculator.domain.CostEngine.rows(updated).single().quantity,0.0)
         assertEquals(21.0,com.fayroz.sitecalculator.domain.CostEngine.rows(updated).single().materialCost,1e-9)
         shot("included-calculation")
+        clickText("المشروع كله");clickText("حساب مستقل");clickText("حفظ النتيجة")
+        val reference=repository.loadProjects().single()
+        assertEquals(1,reference.calculations.size)
+        assertTrue(com.fayroz.sitecalculator.domain.CostEngine.rows(reference).isEmpty())
     }
  }
  @Test fun repricingScreenUpdatesStoredPriceWithoutChangingThickness(){
