@@ -34,7 +34,7 @@ object CostEngine {
                 value?.let{v->f.key to if(f.key=="cementPrice"&&def.id in CalculatorLibrary.mortarIds&&project.defaults["recipe.${def.id}.${f.key}"]==null) ((numeric(v)?:0.0)*(numeric(raw["bag"])?:50.0)/50).toString()else v}
             }.toMap()
             val reset=raw.filterKeys{!it.startsWith("_priceOverride.")}
-            return PriceBook.apply(def,reset+prices,project.defaults)
+            return PriceBook.apply(def,reset+prices+listOf("_laborRate","_transportRate","_equipmentRate").mapNotNull{k->project.defaults["recipe.${def.id}.$k"]?.let{k to it}}.toMap(),project.defaults)
         }
         return project.copy(sections=project.sections.map{s->s.copy(spaces=s.spaces.map{sp->sp.copy(takeoffs=sp.takeoffs.map{t->
             val id=CalculatorLibrary.forItem(t.name)?.id

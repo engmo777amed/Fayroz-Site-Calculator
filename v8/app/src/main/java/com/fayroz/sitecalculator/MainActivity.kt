@@ -384,7 +384,7 @@ class MainActivity:ComponentActivity(){
                         if(p==null)route=Route.Root
                         else if(p.sections.isEmpty())replaceProject(p.copy(sections=listOf(Section(name="الرئيسي"))))
                         else DirectItemScreen(
-                            project=p,
+                            project=p.copy(defaults=repository.centralPrices()+p.defaults),
                             initialSectionId=active?.sectionId,
                             onBack={route=Route.ProjectDetail(p.id)},
                             onSave={sectionId,space->

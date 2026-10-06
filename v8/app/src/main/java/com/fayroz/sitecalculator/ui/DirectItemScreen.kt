@@ -29,7 +29,10 @@ fun DirectItemScreen(
     var waste by remember(itemName){mutableStateOf(fmt(def.waste))}
     var note by remember{mutableStateOf("")}
 
-    val takeoff=def.create().copy(kind=CalcKind.DIRECT,directValue=n(quantity),waste=n(waste),note=note)
+    val recipeDef=com.fayroz.sitecalculator.domain.CalculatorLibrary.forItem(itemName)
+    val takeoff=def.create().copy(kind=CalcKind.DIRECT,directValue=n(quantity),waste=n(waste),note=note,
+        material=com.fayroz.sitecalculator.domain.CostEngine.defaultSpec(itemName,project.defaults),
+        calculatorInputs=recipeDef?.let{com.fayroz.sitecalculator.domain.CalculatorLibrary.defaults(it,project.defaults)}.orEmpty())
     val space=Space(
         name="حصر بند - $itemName",
         type="حصر حسب البند",

@@ -28,7 +28,7 @@ object PriceBook {
                 specification(def,raw)==specification(def,CalculatorLibrary.baseDefaults(def,book))
             }
             val value=when(f.key){
-                "cementPrice"->legacy?:indexed?:book["cementPrice"]?.let{((MortarMix.number(it)?:0.0)*(MortarMix.number(raw["bag"])?:50.0)/50).toString()}
+                "cementPrice"->legacy?:indexed?:book["cementPrice"]?.let{if((MortarMix.number(raw["bag"])?:50.0)==50.0)it else ((MortarMix.number(it)?:0.0)*(MortarMix.number(raw["bag"])?:50.0)/50).toString()}
                 "sandPrice"->legacy?:indexed?:book["sandPrice"]
                 else->legacy?:indexed
             }

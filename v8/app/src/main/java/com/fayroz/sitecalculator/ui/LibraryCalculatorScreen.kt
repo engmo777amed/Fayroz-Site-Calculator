@@ -45,7 +45,7 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
         put("_previousMode",seed?.inputs?.get("_mortarMode")?:"area")
         put("_volume",seed?.inputs?.get("_volume")?:get("_volume")?:"1")
         put("_sandAvailable",seed?.inputs?.get("_sandAvailable")?:get("_sandAvailable")?:"1")
-        if(seed==null){putIfAbsent("_materialName",starting["_materialName"].orEmpty());putAll(PriceBook.apply(def,this,book))}
+        if(seed==null){putIfAbsent("_materialName",starting["_materialName"].orEmpty());listOf("_laborRate","_transportRate","_equipmentRate").forEach{k->starting[k]?.let{putIfAbsent(k,it)}};putAll(PriceBook.apply(def,this,book))}
         if(seed!=null&&seed.inputs.isEmpty()&&seed.sourceQuantity>0&&def.fields.any{it.key=="area"})put("area",exact(seed.sourceQuantity))
     }}
     val context=LocalContext.current
