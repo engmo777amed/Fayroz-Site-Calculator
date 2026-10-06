@@ -176,6 +176,7 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
 
 @Composable
 private fun BasicCalculatorInputs(def:com.fayroz.sitecalculator.domain.CalcDef,raw:Map<String,String>,set:(String,String)->Unit){
+    Text("البيانات المطلوبة",fontWeight=FontWeight.Bold)
     val mortar=def.id in CalculatorLibrary.mortarIds
     val mode=raw["_mortarMode"]?:"area"
     if(mortar){

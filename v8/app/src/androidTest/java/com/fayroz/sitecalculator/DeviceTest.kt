@@ -145,6 +145,7 @@ class DeviceTest {
     V8Repository(context).setPref("calc.paint.area","10")
     ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java).putExtra("calculator","paint")).use{
        assertText("البيانات المطلوبة")
+       type("المساحة الصافية","10")
        clickText("احسب واعرض النتيجة")
        assertText("10 م²");clickText("التكلفة")
        assertText("التكلفة غير مكتملة");compose.onAllNodesWithText("التكلفة غير مكتملة").onFirst().assertIsDisplayed();shot("incomplete-prices")
