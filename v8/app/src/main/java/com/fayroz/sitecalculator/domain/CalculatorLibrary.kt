@@ -132,7 +132,7 @@ object CalculatorLibrary {
     fun recipe(def:CalcDef,inputs:Map<String,String>,quantity:Double):Map<String,String> = def.fields.associate{it.key to it.default}+inputs+
         ((if(def.fields.any{it.key=="area"})"area" else if(def.fields.any{it.key=="length"})"length" else "count") to quantity.toString())
     val mortarIds=setOf("plaster","splash","screed","bedding","custom_mortar")
-    private fun number(raw:String)=raw.map{if(it.isDigit())it.digitToInt().digitToChar()else it}.joinToString("").replace('٫','.').replace(',','.').toDoubleOrNull()
+    private fun number(raw:String?)=raw.orEmpty().map{if(it.isDigit())it.digitToInt().digitToChar()else it}.joinToString("").replace('٫','.').replace(',','.').toDoubleOrNull()
     fun mortarArea(raw:Map<String,String>):Double {
         val mode=raw["_mortarMode"]?:"area"
         if(mode=="area")return number(raw["area"].orEmpty())?:0.0
