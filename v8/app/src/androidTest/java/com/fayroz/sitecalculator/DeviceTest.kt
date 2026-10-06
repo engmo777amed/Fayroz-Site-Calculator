@@ -78,20 +78,20 @@ class DeviceTest {
  }
  private fun field(label:String):SemanticsNodeInteraction {
     val matcher=hasSetTextAction() and (hasContentDescription("إدخال $label") or hasAnyAncestor(hasContentDescription("إدخال $label")))
-    repeat(15){
+    repeat(30){attempt->
         compose.waitForIdle()
         if(compose.onAllNodes(matcher,useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()) {
             val node=compose.onNode(matcher,useUnmergedTree=true)
             runCatching{node.performScrollTo()}
             return node
         }
-        device.swipe(device.displayWidth/2,device.displayHeight*3/4,device.displayWidth/2,device.displayHeight/3,20)
+        device.swipe(device.displayWidth/2,if(attempt<15)device.displayHeight/3 else device.displayHeight*3/4,device.displayWidth/2,if(attempt<15)device.displayHeight*3/4 else device.displayHeight/3,20)
     }
     fail("Field missing: $label");throw IllegalStateException()
  }
  private fun type(label:String,value:String){field(label).performTextReplacement(value);compose.waitForIdle();field(label).assertTextEquals(value)}
  private fun assertText(text:String){
-    repeat(15){
+    repeat(30){attempt->
         compose.waitForIdle()
         val nodes=compose.onAllNodesWithText(text,useUnmergedTree=true)
         if(nodes.fetchSemanticsNodes().isNotEmpty()){
@@ -99,7 +99,7 @@ class DeviceTest {
             runCatching{node.performScrollTo()}
             node.assertExists();return
         }
-        device.swipe(device.displayWidth/2,device.displayHeight*3/4,device.displayWidth/2,device.displayHeight/3,20)
+        device.swipe(device.displayWidth/2,if(attempt<15)device.displayHeight/3 else device.displayHeight*3/4,device.displayWidth/2,if(attempt<15)device.displayHeight*3/4 else device.displayHeight/3,20)
         device.waitForIdle()
     }
     fail("Text missing after scrolling: $text")
