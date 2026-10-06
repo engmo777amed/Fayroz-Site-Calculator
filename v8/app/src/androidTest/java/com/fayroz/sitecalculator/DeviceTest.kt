@@ -89,7 +89,11 @@ class DeviceTest {
     }
     fail("Field missing: $label");throw IllegalStateException()
  }
- private fun calculate(){if(compose.onAllNodes(hasText("احسب واعرض النتيجة") and hasClickAction()).fetchSemanticsNodes().isNotEmpty())clickText("احسب واعرض النتيجة")else assertText("حفظ النتيجة")}
+ private fun calculate(){if(compose.onAllNodes(hasText("احسب واعرض النتيجة") and hasClickAction()).fetchSemanticsNodes().isNotEmpty())clickText("احسب واعرض النتيجة")else {
+    val imePackage=device.executeShellCommand("settings get secure default_input_method").trim().substringBefore("/")
+    if(imePackage.isNotBlank()&&device.hasObject(By.pkg(imePackage))){device.pressBack();device.waitForIdle()}
+    assertText("حفظ النتيجة")
+ }}
  private fun type(label:String,value:String){field(label).performTextReplacement(value);compose.waitForIdle();field(label).assertTextEquals(value)}
  private fun assertText(text:String){
     repeat(30){attempt->
