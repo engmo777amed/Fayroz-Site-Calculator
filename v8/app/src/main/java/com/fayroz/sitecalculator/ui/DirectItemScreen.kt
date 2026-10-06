@@ -81,6 +81,7 @@ fun DirectItemScreen(
                 }
             }
 
+            if(n(waste)<0)item{Text("الهالك لا يمكن أن يكون سالبًا.",color=MaterialTheme.colorScheme.error)}
             if(n(quantity)>0&&n(waste)>=0){
                 item{
                     BoxCard{

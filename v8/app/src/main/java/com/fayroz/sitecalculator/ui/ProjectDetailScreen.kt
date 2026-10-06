@@ -137,7 +137,7 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
                         Text("المصاريف العامة والربح",fontWeight=FontWeight.Bold)
                         listOf("overheadPercent" to "مصاريف عامة","profitPercent" to "ربح","taxPercent" to "ضريبة إن انطبقت").forEach{(key,label)->NumberFieldX(label,defaults[key]?:"0",{defaults=defaults+(key to it)},"%")}
                         Text("النسب للمشروع كله؛ القيمة صفر تعني عدم إضافة هذه النسبة.",style=MaterialTheme.typography.bodySmall)
-                        Button(onClick={if(listOf("overheadPercent","profitPercent","taxPercent").all{n(defaults[it].orEmpty())>=0})onUpdate(project.copy(defaults=defaults))}){Text("حفظ نسب التسعير")}
+                        Button(onClick={if(listOf("overheadPercent","profitPercent","taxPercent").all{key->defaults[key].isNullOrBlank()||defaults[key]!!.map{if(it.isDigit())it.digitToInt().digitToChar()else it}.joinToString("").replace('٫','.').replace(',','.').toDoubleOrNull()?.let{it.isFinite()&&it>=0}==true})onUpdate(project.copy(defaults=defaults))else Toast.makeText(context,"أدخل نسبًا صحيحة صفر أو أكبر",Toast.LENGTH_SHORT).show()}){Text("حفظ نسب التسعير")}
                     }}
                     item{BoxCard{
                         Text("إعدادات المونة الافتراضية",fontWeight=FontWeight.Bold)
@@ -159,7 +159,7 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
                         }
                         }
                         Button(onClick={
-                            val valid=defaults.filterKeys{it !in setOf("cementName","sandName")}.all{(_,v)->v.isBlank()||v.map{if(it.isDigit())it.digitToInt().digitToChar()else it}.joinToString("").replace('٫','.').replace(',','.').toDoubleOrNull()?.let{it>=0&&it.isFinite()}==true}&&listOf("plasterThickness","splashThickness","plasterSand","splashSand").all{defaults[it]?.toDoubleOrNull()?.let{x->x>0}?:true}
+                            val valid=defaults.filterKeys{it !in setOf("cementName","sandName")}.all{(_,v)->v.isBlank()||v.map{if(it.isDigit())it.digitToInt().digitToChar()else it}.joinToString("").replace('٫','.').replace(',','.').toDoubleOrNull()?.let{it>=0&&it.isFinite()}==true}&&listOf("plasterThickness","splashThickness","screedThickness","plasterSand","splashSand","screedSand").all{defaults[it]==null||n(defaults[it].orEmpty())>0}
                             if(valid){onUpdate(project.copy(defaults=defaults,updatedAt=System.currentTimeMillis()));Toast.makeText(context,"تم حفظ الإعدادات",Toast.LENGTH_SHORT).show()}
                             else Toast.makeText(context,"راجع الأسعار والأسماك والخلطات",Toast.LENGTH_LONG).show()
                         }){Text("اعتماد إعدادات المشروع")}

@@ -60,6 +60,7 @@ class MainActivity:ComponentActivity(){
                 if(i>=0)projects[i]=updated
                 else projects.add(updated)
                 persist()
+                updated.calculations.forEach{repository.saveRecentCalc(it)}
             }
 
             fun activeProject():Project? =

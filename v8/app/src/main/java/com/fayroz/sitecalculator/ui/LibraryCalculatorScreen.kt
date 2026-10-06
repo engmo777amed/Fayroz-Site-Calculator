@@ -54,9 +54,10 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
         add(Triple("حساب مستقل",null as String?,null as String?))
         project?.let{p->
             add(Triple("المشروع كله",null,null))
-            p.sections.forEach{s->
-                add(Triple(s.name,s.id,null))
-                s.spaces.forEach{sp->add(Triple("${s.name} / ${sp.name}",s.id,sp.id))}
+            p.sections.forEachIndexed{si,s->
+                val sectionLabel=selectionLabels(p.sections.map{it.name})[si]
+                add(Triple(sectionLabel,s.id,null))
+                s.spaces.forEachIndexed{spi,sp->add(Triple("$sectionLabel / ${selectionLabels(s.spaces.map{it.name})[spi]}",s.id,sp.id))}
             }
         }
     }}
@@ -80,7 +81,7 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
     }
     fun saveResult(){
         if(result==null)return
-        val next=result.copy(inputs=result.inputs+mapOf("_label" to label,"_source" to source,"_sectionId" to sectionId.orEmpty(),"_spaceId" to spaceId.orEmpty(),"_savedId" to savedId,"_sourceItem" to sourceItem,"_includeInProject" to (includeInProject&&sourceItem.isBlank()&&source!="حساب مستقل").toString()))
+        val next=result.copy(inputs=result.inputs+mapOf("_label" to label,"_source" to source,"_sectionId" to sectionId.orEmpty(),"_spaceId" to spaceId.orEmpty(),"_savedId" to savedId,"_savedAt" to System.currentTimeMillis().toString(),"_sourceItem" to sourceItem,"_includeInProject" to (includeInProject&&sourceItem.isBlank()&&source!="حساب مستقل").toString()))
         def.fields.forEach{repository.setPref("calc.$toolId.${it.key}",raw[it.key].orEmpty())}
         if(project!=null&&source!="حساب مستقل")onSave(next,sectionId,spaceId)
         else repository.saveRecentCalc(SavedCalculation(id=savedId,toolId=next.toolId,title=next.title,summary=next.lines.joinToString(" • "){"${it.label}: ${it.value}"},sourceQuantity=next.sourceQuantity,unit=next.sourceUnit,inputs=next.inputs,cost=next.cost,explanation=next.explanation))
@@ -155,6 +156,7 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
                 item{TextButton(onClick={def.fields.forEach{raw[it.key]=it.default;raw.remove("_unit.${it.key}")};raw["_mortarMode"]="area";error=null}){Text("استعادة القيم الأصلية")}}
             }else if(answer!=null&&result!=null){
                 item{CalculatorResultCards(def,raw.toMap(),answer,"$label • $source")}
+                if(sourceItem.isNotBlank())item{Text("مصدر الكمية: $sourceItem • نسخة من الحصر وقت التعبئة",style=MaterialTheme.typography.bodySmall)}
                 item{BoxCard{ExpandableSection("اسم الحساب ومكان الحفظ"){
                     TextFieldX("اسم الحساب",label,{label=it})
                     if(project!=null&&source!="حساب مستقل"){

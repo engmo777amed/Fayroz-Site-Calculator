@@ -190,8 +190,8 @@ class DeviceTest {
         assertEquals("unit",V8Repository(context).recentCalcs().first().inputs["_mortarMode"])
         clickText("تعديل المدخلات")
         clickText("مكونات ١ م³ مونة");clickText("المونة المتاحة تفرد كام؟")
-        type("حجم المونة","2")
-        clickText("احسب واعرض النتيجة");assertText("100 م²");shot("mortar-coverage")
+        type("حجم المونة","2");field("الهالك").assertTextEquals("5")
+        clickText("احسب واعرض النتيجة");assertText("95.238 م²");shot("mortar-coverage")
     }
  }
  @Test fun projectShoppingShowsBagsAndKeepsCostSeparate(){
@@ -242,6 +242,49 @@ class DeviceTest {
     val output=ByteArrayOutputStream();ReportExport.xlsx(sample(),"حصر وتكلفة تفصيلي",output)
     val entries=mutableMapOf<String,String>();ZipInputStream(output.toByteArray().inputStream()).use{zip->var e=zip.nextEntry;while(e!=null){entries[e.name]=zip.readBytes().toString(Charsets.UTF_8);e=zip.nextEntry}}
     assertTrue(entries.containsKey("[Content_Types].xml"));assertTrue(entries["xl/worksheets/sheet1.xml"]!!.contains("جزء السقف"));assertTrue(entries["xl/worksheets/sheet1.xml"]!!.contains("rightToLeft=\"1\""))
+ }
+
+ @Test fun mortarModesRetainTheirOwnWaste(){
+    val intent=Intent(context,MainActivity::class.java).putExtra("calculator","plaster")
+    ActivityScenario.launch<MainActivity>(intent).use{
+        type("المساحة الصافية","100");type("الهالك","8")
+        clickText("خامات لمساحة");clickText("مكونات ١ م³ مونة")
+        field("الهالك").assertTextEquals("0")
+        clickText("مكونات ١ م³ مونة");clickText("خامات لمساحة")
+        field("الهالك").assertTextEquals("8")
+        clickText("احسب واعرض النتيجة");assertText("الهالك المستخدم: 8%");shot("mortar-waste-preserved")
+    }
+ }
+ @Test fun explicitlyIncludedCalculatorSavesOnceAndEntersProjectTotals(){
+    val project=Project(name="اختبار إضافة الحساب",sections=listOf(Section(name="الرئيسي")))
+    val repository=V8Repository(context);repository.saveProjects(listOf(project));repository.setActive(ActiveLocation(project.id))
+    val intent=Intent(context,MainActivity::class.java).putExtra("calculator","paint")
+    ActivityScenario.launch<MainActivity>(intent).use{
+        type("المساحة الصافية","10")
+        clickText("الأسعار — اختيارية");type("سعر العبوة","100")
+        clickText("احسب واعرض النتيجة")
+        clickText("اسم الحساب ومكان الحفظ")
+        clickText("حساب مستقل");clickText("المشروع كله")
+        assertText("إضافة الحساب لحصر وتكلفة وشراء المشروع")
+        compose.onNode(isToggleable()).performClick()
+        clickText("حفظ النتيجة");clickText("حفظ النتيجة")
+        val updated=repository.loadProjects().single()
+        assertEquals(1,updated.calculations.size);assertEquals(1,repository.recentCalcs().size)
+        assertEquals(10.0,com.fayroz.sitecalculator.domain.CostEngine.rows(updated).single().quantity,0.0)
+        assertEquals(21.0,com.fayroz.sitecalculator.domain.CostEngine.rows(updated).single().materialCost,1e-9)
+        shot("included-calculation")
+    }
+ }
+ @Test fun repricingScreenUpdatesStoredPriceWithoutChangingThickness(){
+    val project=sample();val repository=V8Repository(context);repository.saveProjects(listOf(project));repository.setActive(ActiveLocation(project.id))
+    ActivityScenario.launch(MainActivity::class.java).use{
+        clickText("الأسعار")
+        type("سعر شيكارة الأسمنت 50 كجم","300");type("سعر متر الرمل","400")
+        clickText("حفظ أسعار المشروع");clickText("إعادة تسعير البنود المحفوظة");clickText("إعادة التسعير")
+        val spec=repository.loadProjects().single().sections.single().spaces.single().takeoffs.single().material!!
+        assertEquals(300.0,spec.cementPrice,0.0);assertEquals(400.0,spec.sandPrice,0.0);assertEquals(15.0,spec.thicknessMm,0.0)
+        shot("updated-prices")
+    }
  }
 }
 

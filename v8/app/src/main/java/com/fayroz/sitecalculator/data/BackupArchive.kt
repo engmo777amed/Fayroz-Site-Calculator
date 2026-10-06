@@ -30,8 +30,13 @@ object BackupArchive {
  }
  fun preview(bytes:ByteArray):String=runCatching{
     val raw=if(bytes.firstOrNull()=='P'.code.toByte())ZipInputStream(bytes.inputStream()).use{zip->
-        var entry=zip.nextEntry;var result:String?=null
-        while(entry!=null){if(entry.name=="backup.json"){result=zip.readBytes().toString(Charsets.UTF_8);break};entry=zip.nextEntry};result?:error("بيانات مفقودة")
+        var entry=zip.nextEntry;var result:String?=null;var total=0
+        val block=ByteArray(8192)
+        while(entry!=null){
+            val output=if(entry.name=="backup.json")java.io.ByteArrayOutputStream()else null
+            while(true){val n=zip.read(block);if(n<0)break;total+=n;require(total<=LIMIT);output?.write(block,0,n)}
+            if(output!=null){result=output.toString("UTF-8");break};entry=zip.nextEntry
+        };result?:error("بيانات مفقودة")
     }else bytes.toString(Charsets.UTF_8)
     val projects=V8Codec.decodeProjects(JSONObject(raw).getJSONArray("projects").toString())
     "${projects.size} مشروع • ${projects.sumOf{it.sections.sumOf{s->s.spaces.size}}} مكان • ${projects.sumOf{it.calculations.size}} حساب محفوظ"

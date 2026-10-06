@@ -37,7 +37,7 @@ fun SiteUtilityScreen(toolId:String,onBack:()->Unit,repository:V8Repository?=nul
         }
     }
     fun calculate(){error=when{
-        toolId=="convert"&&(value.isBlank()||n(value)<0||!(n(value)*10000).isFinite())->"أدخل قيمة صحيحة صفر أو أكبر."
+        toolId=="convert"&&(value.isBlank()||value.map{if(it.isDigit())it.digitToInt().digitToChar()else it}.joinToString("").replace('٫','.').replace(',','.').toDoubleOrNull()==null||n(value)<0||!(n(value)*10000).isFinite())->"أدخل قيمة صحيحة صفر أو أكبر."
         toolId=="area"&&(parts.isEmpty()||parts.any{n(it.length)<=0||n(it.width)<=0})->"أدخل طولًا وعرضًا أكبر من صفر لكل جزء."
         toolId=="area"&&(!total.isFinite()||total<0)->"الخصومات أكبر من المساحات المضافة."
         else->null

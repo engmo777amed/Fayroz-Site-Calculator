@@ -34,6 +34,7 @@ fun SettingsScreen(
         if(uri!=null){
             importMessage=runCatching{
                 context.contentResolver.openOutputStream(uri)?.use{BackupArchive.write(context,repository,it)}?:error("تعذر فتح الملف")
+                repository.setPref("lastBackupAt",System.currentTimeMillis().toString())
                 "تم حفظ النسخة الاحتياطية والصور بنجاح."
             }.getOrElse{"فشل حفظ النسخة: ${it.message}"}
         }
@@ -97,6 +98,7 @@ fun SettingsScreen(
             item{PageHeader("النسخة الاحتياطية")}
             item{
                 BoxCard{
+                    repository.pref("lastBackupAt","").toLongOrNull()?.let{Text("آخر نسخة محفوظة: ${dated(it)}",style=MaterialTheme.typography.bodySmall)}
                     Text("احفظ المشروعات والحصر والحسابات في ملف، أو رجّع نسخة محفوظة.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                         OutlinedButton(

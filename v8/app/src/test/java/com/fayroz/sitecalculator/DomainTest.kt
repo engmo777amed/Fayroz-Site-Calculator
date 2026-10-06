@@ -205,6 +205,8 @@ class DomainTest {
     val def=CalculatorLibrary.all.first{it.id=="footing"}
     val raw=def.fields.associate{it.key to it.default}+mapOf("length" to "2","width" to "3","height" to "1","count" to "2","waste" to "0","price" to "100","_includeInProject" to "true")
     val p=Project(name="",calculations=listOf(SavedCalculation(toolId=def.id,title="قواعد",summary="",inputs=raw)))
+    assertEquals(12.0,CostEngine.rows(p).single().quantity,0.0)
+    assertEquals("م³",CostEngine.rows(p).single().unit)
     assertEquals(12.0,CostEngine.purchase(CostEngine.rows(p)).single().amount,0.0)
     assertEquals(1200.0,CostEngine.rows(p).single().materialCost,0.0)
  }

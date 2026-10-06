@@ -86,8 +86,10 @@ object CostEngine {
             val def=CalculatorLibrary.all.firstOrNull{it.id==c.toolId}?:return@forEach
             val answer=runCatching{CalculatorLibrary.evaluate(def,c.inputs)}.getOrNull()?:return@forEach
             val result=CalculatorLibrary.result(def,c.inputs,answer)
-            val qty=result.sourceQuantity.takeIf{it>0}?:answer.outputs.firstOrNull{it.unit in setOf("م²","م","م ط","م³","عدد","نقطة")}?.value?:1.0
-            val unit=result.sourceUnit.ifBlank{answer.outputs.firstOrNull{it.unit in setOf("م²","م","م ط","م³","عدد","نقطة")}?.unit?:"حساب"}
+            val measured=answer.outputs.firstOrNull{it.label.contains("صافي")&&!it.label.contains("فائض")}?:answer.outputs.firstOrNull{it.label in setOf("المساحة","وزن","نقاط","حجم مفيد","طول صافي","مساحة شدة")}
+            val useInput=def.fields.any{it.key=="area"}||def.id in setOf("pipes","cables","wires","skirting","skirting_cut","sealant","kerb","conduits","trays","points","fittings")
+            val qty=if(useInput)result.sourceQuantity.takeIf{it>0}?:measured?.value?:1.0 else measured?.value?:result.sourceQuantity.takeIf{it>0}?:1.0
+            val unit=if(useInput)result.sourceUnit.ifBlank{measured?.unit?:"حساب"}else measured?.unit?:result.sourceUnit.ifBlank{"حساب"}
             add(Row(c.sectionId.orEmpty(),c.spaceId.orEmpty(),c.id,null,"حساب مضاف / ${c.inputs["_source"].orEmpty()}",c.title,"كامل الحساب",qty,unit,
                 materialCost=answer.consumedCost,labor=qty*(numeric(c.inputs["_laborRate"])?:0.0),transport=qty*(numeric(c.inputs["_transportRate"])?:0.0),equipment=qty*(numeric(c.inputs["_equipmentRate"])?:0.0),
                 formula=result.explanation,calculatorId=def.id,calculatorInputs=c.inputs+("_savedCalculation" to "true"),materialLines=result.lines))
@@ -134,6 +136,7 @@ object CostEngine {
                 if(out("مادة إضافية")>0)add(Purchase("مادة إضافية","وحدة",out("مادة إضافية"),null,v("extraPrice"),out("مادة إضافية")*v("extraPrice")))
             }
         }
+        fun stockName(fallback:String)=raw["_materialName"]?.takeIf{it.isNotBlank()}?:fallback
         return when(def.id){
             "tile"->listOf(packageRow("بلاط / رخام / جرانيت",out("بعد الهالك"),"م²",out("عبوات الشراء"),v("price"),"كرتونة"))
             "skirting"->listOf(packageRow("وزرات",v("length")*(1+v("waste")/100),"م ط",out("عبوات"),v("price")))
@@ -145,6 +148,13 @@ object CostEngine {
                 Purchase(if(def.id=="masonry")"طوب" else "بلوك","وحدة",out("وحدات شراء"),null,v("brickPrice")/1000,out("وحدات شراء")/1000*v("brickPrice")),
                 packageRow("أسمنت (50 كجم)",out("أسمنت فعلي"),"كجم",out("أسمنت"),v("cementPrice"),"شيكارة"),
                 Purchase(raw["_sandName"]?:"رمل","م³",out("رمل"),null,v("sandPrice"),out("رمل")*v("sandPrice")))
+            "gypsum_system"->{val a=v("area")*(1+v("waste")/100);listOf(
+                Purchase(stockName("نظام جبس")+" / قطاعات","م ط",a*v("profiles"),out("قطاعات").toInt(),v("profilePrice"),out("قطاعات")*v("profilePrice"),"قطاع",v("profileL")),
+                Purchase(stockName("نظام جبس")+" / علاقات","عدد",out("علاقات"),null,v("hangerPrice"),out("علاقات")*v("hangerPrice")),
+                Purchase(stockName("نظام جبس")+" / مسامير","عدد",out("مسامير"),null,v("screwPrice"),out("مسامير")*v("screwPrice")))}
+            "conduits"->listOf(Purchase(stockName("مواسير كهرباء"),"م",v("length")*(1+v("waste")/100),out("مواسير").toInt(),v("price"),out("مواسير")*v("price"),"ماسورة",v("piece")),Purchase(stockName("كهرباء")+" / علب","علبة",out("علب"),null,v("boxPrice"),out("علب")*v("boxPrice")))
+            "trays"->listOf(Purchase(stockName("حوامل كابلات"),"م",v("length")*(1+v("waste")/100),out("قطع حوامل").toInt(),v("price"),out("قطع حوامل")*v("price"),"قطعة",v("piece")),Purchase(stockName("حوامل كابلات")+" / دعامات","عدد",out("دعامات لمسار مستقيم"),null,v("supportPrice"),out("دعامات لمسار مستقيم")*v("supportPrice")))
+            "interlock"->listOf(Purchase(stockName("إنترلوك"),"م²",out("مساحة شراء"),null,v("price"),answer.cost),Purchase("فرشة إنترلوك — السعر غير مدخل","م³",out("حجم فرشة"),null,0.0,0.0))
             "rolls"->listOf(Purchase(raw["_materialName"]?.takeIf{it.isNotBlank()}?:"لفائف عزل","م²",out("مساحة بالرجوع والهالك"),out("لفات").toInt(),v("price"),answer.cost,"لفة",out("تغطية فعالة للفة")))
             "insulation"->listOf(Purchase(raw["_materialName"]?.takeIf{it.isNotBlank()}?:"ألواح عزل حراري","م²",v("area")*(1+v("waste")/100),out("ألواح").toInt(),v("price"),answer.cost,"لوح",v("boardL")*v("boardW")))
             "sealant"->listOf(Purchase(raw["_materialName"]?.takeIf{it.isNotBlank()}?:"مادة ملء الفواصل","مل",out("استهلاك"),out("عبوات").toInt(),v("price"),answer.cost,"عبوة",v("pack")))

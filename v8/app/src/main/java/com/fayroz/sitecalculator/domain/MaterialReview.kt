@@ -16,7 +16,7 @@ object MaterialReview {
         }
     }
     fun missing(def:CalcDef,raw:Map<String,String>):List<String> = def.fields.filter{f->
-        f.key.contains("price",true)&&!(f.key=="extraPrice"&&number(raw["extraRate"])==0.0)&&number(raw[f.key])<=0
+        f.key.contains("price",true)&&!(f.key=="extraPrice"&&number(raw["extraRate"])==0.0)&&!(f.key=="boxPrice"&&number(raw["boxes"])==0.0)&&number(raw[f.key])<=0
     }.map{it.label}
     fun missing(row:CostEngine.Row):List<String> {
         val s=row.spec
