@@ -20,5 +20,5 @@ object MortarMix {
     private fun format(v:Double)=java.math.BigDecimal.valueOf(v).setScale(3,java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
     fun isMix(def:CalcDef)=def.fields.any{it.key=="cement"}&&def.fields.any{it.key=="sand"}
     fun basic(def:CalcDef)=def.fields.filter{f->!f.key.contains("price",true)&&f.key !in setOf("cement","sand","bag","density","dry","waste","extraRate")&&
-        ((f.required&&f.default.isBlank())||f.key in setOf("area","length","count","thickness","coats","rate","coverage","wall","bags"))}
+        ((f.required&&f.default.isBlank())||f.key in setOf("area","length","count","thickness","coats","rate","coverage","wall","bags","tileW","tileH","tileL","pack","piece","roll","layers","sides","slope","start","end","brickL","brickW","brickH","boardL","boardW","strip","tread","riser","jointW","jointD","rollL","rollW","conductors"))}
 }

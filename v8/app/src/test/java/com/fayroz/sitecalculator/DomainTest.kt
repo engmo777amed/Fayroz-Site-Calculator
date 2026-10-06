@@ -275,5 +275,52 @@ class DomainTest {
     listOf("0","-1","abc").forEach{bags->assertTrue(runCatching{calc("plaster","area" to "100","_bagsPerSand" to bags)}.isFailure)}
     assertTrue(runCatching{calc("plaster","area" to "4","_areaMethod" to "dimensions","_areaLength" to "-2","_areaWidth" to "-2")}.isFailure)
  }
+
+ @Test fun savedWiresUseTotalNetLength(){
+    val def=CalculatorLibrary.all.first{it.id=="wires"}
+    val raw=def.fields.associate{it.key to it.default}+mapOf("length" to "10","conductors" to "3","price" to "100","_includeInProject" to "true")
+    val c=SavedCalculation(toolId="wires",title="أسلاك",summary="",sourceQuantity=10.0,unit="م",inputs=raw)
+    val row=CostEngine.rows(Project(name="",calculations=listOf(c))).single()
+    assertEquals(30.0,row.quantity,1e-9);assertEquals("م",row.unit)
+ }
+ @Test fun savedMeshUsesWeightAndReverseMortarUsesArea(){
+    val mesh=CalculatorLibrary.all.first{it.id=="mesh"}
+    val raw=mesh.fields.associate{it.key to it.default}+mapOf("length" to "4","width" to "3","spacing" to "20","diameter" to "12")
+    val answer=CalculatorLibrary.evaluate(mesh,raw)
+    val measured=CalculatorLibrary.workQuantity(mesh,raw,answer)
+    assertEquals("كجم",measured.unit);assertEquals(answer.outputs.last().value/1.05,measured.value,1e-9)
+    val reverse=CalculatorLibrary.all.first{it.id=="reverse_mortar"}
+    val rr=reverse.fields.associate{it.key to it.default}+("bags" to "10")
+    assertEquals("م²",CalculatorLibrary.workQuantity(reverse,rr,CalculatorLibrary.evaluate(reverse,rr)).unit)
+ }
+ @Test fun invalidIncludedCalculationRemainsVisible(){
+    val c=SavedCalculation(toolId="wires",title="حساب يحتاج إصلاح",summary="",inputs=mapOf("length" to "invalid","_includeInProject" to "true"))
+    val row=CostEngine.rows(Project(name="",calculations=listOf(c))).single()
+    assertNotNull(row.issue);assertTrue(MaterialReview.missing(row).isNotEmpty());assertTrue(CostEngine.purchase(listOf(row)).isEmpty())
+ }
+ @Test fun zeroCementAndInvalidMaterialAreRejected(){
+    assertNotNull(MaterialReview.specError(MortarMix.withBags(MaterialSpec(),0.0)))
+    val t=Takeoff(name="محارة الحوائط",unit=UnitType.AREA,kind=CalcKind.DIRECT,directValue=10.0,material=MaterialSpec(cementPrice=-1.0))
+    val row=CostEngine.rows(Project(name="",sections=listOf(Section(name="",spaces=listOf(Space(name="",type="",takeoffs=listOf(t))))))).single()
+    assertNotNull(row.issue);assertEquals(0.0,row.total,1e-9)
+ }
+ @Test fun fittingsHaveNoHiddenExtraPiece(){assertEquals(3.0,calc("fittings","count" to "3").outputs.first().value,1e-9)}
+ @Test fun interlockCostIsExplicitlyPartial(){
+    val def=CalculatorLibrary.all.first{it.id=="interlock"}
+    assertTrue(MaterialReview.missing(def,def.fields.associate{it.key to it.default}+("price" to "100")).any{it.contains("فرشة")})
+ }
+ @Test fun basicFieldsIncludePurchaseSizesAndBlockDimensions(){
+    val tile=CalculatorLibrary.all.first{it.id=="tile"}
+    assertTrue(MortarMix.basic(tile).map{it.key}.containsAll(listOf("tileW","tileH","pack")))
+    val block=CalculatorLibrary.all.first{it.id=="blocks"}
+    assertTrue(block.fields.first{it.key=="brickH"}.default.isBlank())
+ }
+ @Test fun unspecifiedStocksStaySeparate(){
+    val def=CalculatorLibrary.all.first{it.id=="pipes"}
+    val raw=def.fields.associate{it.key to it.default}+mapOf("length" to "2","price" to "100","_includeInProject" to "true")
+    val cs=listOf("a","b").map{SavedCalculation(id=it,toolId="pipes",title=it,summary="",inputs=raw)}
+    val purchases=CostEngine.purchase(CostEngine.rows(Project(name="",calculations=cs)))
+    assertEquals(2,purchases.size);assertEquals(200.0,purchases.sumOf{it.cost},1e-9)
+ }
 }
 

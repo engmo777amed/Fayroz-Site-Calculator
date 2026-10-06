@@ -16,16 +16,19 @@ object BackupArchive {
  private const val LIMIT=128*1024*1024
  fun write(context:Context,repository:V8Repository,stream:OutputStream){
     val photos=repository.loadProjects().flatMap{it.sections}.flatMap{it.spaces}.flatMap{it.photoUris}.distinct()
+    var total=0L
+    val exportLimit=LIMIT-1024*1024
     ZipOutputStream(stream).use{zip->
        val mapping=JSONObject()
        photos.forEachIndexed{i,uri->
           val path="photos/$i.bin"
           context.contentResolver.openInputStream(Uri.parse(uri))?.use{input->
-              zip.putNextEntry(ZipEntry(path));input.copyTo(zip);zip.closeEntry();mapping.put(uri,path)
+              zip.putNextEntry(ZipEntry(path));val block=ByteArray(8192);while(true){val n=input.read(block);if(n<0)break;total+=n;require(total<=exportLimit){"حجم النسخة كبير؛ قلل الصور المرفقة ثم حاول مجددًا"};zip.write(block,0,n)};zip.closeEntry();mapping.put(uri,path)
           }?:error("الصورة غير متاحة: احذف المرجع غير المتاح أو أعد إرفاقها ثم حاول مجددًا")
        }
        val root=JSONObject(repository.exportBackup()).put("photoFiles",mapping)
-       zip.putNextEntry(ZipEntry("backup.json"));zip.write(root.toString().toByteArray());zip.closeEntry()
+       val json=root.toString().toByteArray();total+=json.size;require(total<=exportLimit){"حجم النسخة كبير؛ قلل الصور المرفقة ثم حاول مجددًا"}
+       zip.putNextEntry(ZipEntry("backup.json"));zip.write(json);zip.closeEntry()
     }
  }
  fun preview(bytes:ByteArray):String=runCatching{

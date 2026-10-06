@@ -45,15 +45,16 @@ fun MaterialSpecFields(value:MaterialSpec,onChange:(MaterialSpec)->Unit,rateUnit
         SpecNumber("معدل المادة الإضافية",value.extraRate,"وحدة/م²"){onChange(value.copy(extraRate=it))}
         SpecNumber("سعر وحدة الإضافة",value.extraPrice,"جنيه"){onChange(value.copy(extraPrice=it))}
         SpecNumber("معامل الحجم الجاف",value.dryFactor,"معامل"){onChange(value.copy(dryFactor=it))}
-        SpecNumber("كثافة الأسمنت الحجمية",value.cementDensity,"كجم/م³"){if(it>0)onChange(MortarMix.withBags(value.copy(cementDensity=it),MortarMix.bags(value)))}
+        SpecNumber("كثافة الأسمنت الحجمية",value.cementDensity,"كجم/م³"){if(it>0)onChange(MortarMix.withBags(value.copy(cementDensity=it),MortarMix.bags(value)))else onChange(value.copy(cementDensity=it))}
     }
     com.fayroz.sitecalculator.domain.MaterialReview.specError(value)?.let{Text(it,color=MaterialTheme.colorScheme.error)}
 }
 @Composable
 fun SpecNumber(label:String,value:Double,unit:String,modifier:Modifier=Modifier,onChange:(Double)->Unit){
     var raw by remember{mutableStateOf(exact(value))}
-    LaunchedEffect(value){if(n(raw)!=value)raw=exact(value)}
+    LaunchedEffect(value){if(value.isFinite()&&MortarMix.number(raw)!=null&&MortarMix.number(raw)!=value)raw=exact(value)}
     val positive=label in setOf("متوسط السمك","وزن شيكارة الأسمنت","معامل الحجم الجاف","كثافة الأسمنت الحجمية")
-    val invalid=raw.isNotBlank()&&(n(raw)<0||(positive&&n(raw)<=0))
-    NumberFieldX(label,raw,{raw=it;onChange(n(it))},unit,modifier,error=if(invalid)"راجع $label" else null)
+    val parsed=MortarMix.number(raw)
+    val invalid=parsed==null||parsed<0||(positive&&parsed<=0)
+    NumberFieldX(label,raw,{raw=it;onChange(MortarMix.number(it)?:-1.0)},unit,modifier,error=if(invalid)"راجع $label" else null)
 }

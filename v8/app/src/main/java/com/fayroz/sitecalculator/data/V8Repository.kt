@@ -143,6 +143,18 @@ class V8Repository(context:Context){
         prefs.edit().putString("recent_calcs",V8Codec.encodeProjects(listOf(holder))).apply()
     }
 
+    fun syncCalculations(previous:List<SavedCalculation>,current:List<SavedCalculation>){
+        val ids=current.map{it.id}.toSet()
+        previous.filterNot{it.id in ids}.forEach{deleteRecentCalc(it.id)}
+        val old=previous.associateBy{it.id}
+        current.filter{old[it.id]!=it}.asReversed().forEach{saveRecentCalc(it)}
+    }
+    fun calculatorDraft(toolId:String):Map<String,String> = runCatching{
+        val o=JSONObject(pref("draft.calculator.$toolId","{}"));o.keys().asSequence().associateWith{o.getString(it)}
+    }.getOrDefault(emptyMap())
+    fun saveCalculatorDraft(toolId:String,values:Map<String,String>)=setPref("draft.calculator.$toolId",JSONObject(values).toString())
+    fun clearCalculatorDraft(toolId:String)=setPref("draft.calculator.$toolId","{}")
+
     fun deleteRecentCalc(id:String){val holder=Project(name="_recent",calculations=recentCalcs().filterNot{it.id==id});prefs.edit().putString("recent_calcs",V8Codec.encodeProjects(listOf(holder))).apply()}
 
     fun recentCalcs():List<SavedCalculation>{
@@ -189,7 +201,7 @@ class V8Repository(context:Context){
         settings?.keys()?.forEach{key->if(key!="projects"&&!key.startsWith("draft_")&&key !in setOf("before_import","corrupt_projects","last_good_projects")){
             if(!merge||!prefs.contains(key))editor.putString(key,settings.getString(key))
         }}
-        if(!merge)editor.remove("active_location")
+        if(!merge){editor.remove("active_location");prefs.all.keys.filter{it.startsWith("draft_")||it.startsWith("pref_draft.")}.forEach{editor.remove(it)}}
         editor.commit()
     }.getOrDefault(false)
 

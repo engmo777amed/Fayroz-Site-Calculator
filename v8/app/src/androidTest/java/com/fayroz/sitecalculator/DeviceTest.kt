@@ -329,5 +329,38 @@ class DeviceTest {
         clickText("احسب واعرض النتيجة");assertText("1 م³");shot("available-materials")
     }
  }
+
+ @Test fun recentSyncDoesNotReorderUnchangedCalculations(){
+    val repo=V8Repository(context)
+    val a=SavedCalculation(id="a",toolId="points",title="a",summary="")
+    val z=a.copy(id="z",title="z")
+    repo.saveRecentCalc(z);repo.saveRecentCalc(a)
+    repo.syncCalculations(listOf(a,z),listOf(a,z))
+    assertEquals(listOf("a","z"),repo.recentCalcs().map{it.id})
+    repo.syncCalculations(listOf(a,z),listOf(a));assertEquals(listOf("a"),repo.recentCalcs().map{it.id})
+ }
+ @Test fun projectCopyPreservesCalculationsAndScopes(){
+    val p=sample();val section=p.sections.single();val space=section.spaces.single()
+    val d=CalculatorLibrary.all.first{it.id=="points"}
+    val raw=d.fields.associate{it.key to it.default}+mapOf("count" to "3","price" to "100","_includeInProject" to "true")
+    val source=p.copy(calculations=listOf(SavedCalculation(toolId="points",title="نقاط",summary="",sectionId=section.id,spaceId=space.id,inputs=raw)))
+    val copy=com.fayroz.sitecalculator.ui.copyProject(source)
+    assertNotEquals(source.id,copy.id);assertNotEquals(source.calculations.single().id,copy.calculations.single().id)
+    assertEquals(copy.sections.single().id,copy.calculations.single().sectionId)
+    assertEquals(copy.sections.single().spaces.single().id,copy.calculations.single().spaceId)
+    assertEquals(com.fayroz.sitecalculator.domain.CostEngine.rows(source).sumOf{it.total},com.fayroz.sitecalculator.domain.CostEngine.rows(copy).sumOf{it.total},1e-9)
+ }
+ @Test fun restoreClearsStaleDrafts(){
+    val repo=V8Repository(context);val original=sample();repo.saveProjects(listOf(original));val backup=repo.exportBackup()
+    repo.saveDraft("room",original.sections.single().spaces.single().copy(name="مسودة قديمة"))
+    repo.saveCalculatorDraft("tile",mapOf("area" to "999"))
+    assertTrue(repo.importBackup(backup));assertNull(repo.loadDraft("room"));assertTrue(repo.calculatorDraft("tile").isEmpty())
+ }
+ @Test fun utilityRepeatedSaveUpdatesOneRecord(){
+    ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java).putExtra("calculator","convert")).use{
+        type("القيمة","10");clickText("احسب واعرض النتيجة");clickText("حفظ النتيجة");clickText("حفظ النتيجة")
+        assertEquals(1,V8Repository(context).recentCalcs().size)
+    }
+ }
 }
 

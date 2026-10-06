@@ -41,8 +41,12 @@ fun CalcInputField(field:CalcField,value:String,onChange:(String)->Unit,unitPref
         val converted=if(field.unit in listOf("م","سم","مم"))convertLength(value,field.unit,displayUnit)else value
         if(n(displayValue)!=n(converted)||value.isBlank())displayValue=converted
     }
+    val number=MortarMix.number(value)
+    val invalid=value.isNotBlank()&&(number==null||(!field.signed&&number<0)||(field.required&&number<=0))
+    val error=if(invalid)"راجع ${field.label}"else null
     if(field.unit in listOf("م","سم","مم")){
         NumberUnitField(field.label,displayValue,{raw->displayValue=raw;onChange(if(raw.isBlank())"" else convertLength(raw,displayUnit,field.unit))},displayUnit,{unit->displayUnit=unit;onUnitChange(unit)},help="الوحدة المختارة واضحة بجوار الرقم؛ التحويل يحافظ على القيمة.")
-    }else NumberFieldX(field.label,value,onChange,field.unit)
+        error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
+    }else NumberFieldX(field.label,value,onChange,field.unit,error=error)
 }
 

@@ -119,7 +119,7 @@ fun CalculatorResultCards(def:CalcDef,inputs:Map<String,String>,answer:CalcAnswe
     when{
         view==0->BoxCard{
             Text("نتائج الحساب",fontWeight=FontWeight.Bold)
-            ExpandableSection("تفاصيل النتائج",!mortar){lines.forEach{MetricRow(it.label,"${fmt(it.value)} ${it.unit}")}}
+            ExpandableSection("تفاصيل النتائج"){lines.forEach{MetricRow(it.label,"${fmt(it.value)} ${it.unit}")}}
         }
         view==1&&priced->{
             val purchase=CostEngine.calculatorPurchases(def,inputs,answer)

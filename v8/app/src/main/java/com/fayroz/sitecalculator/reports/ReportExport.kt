@@ -33,7 +33,7 @@ object ReportExport {
         }else if(kind=="تحليل أسعار البنود"){
             out+=listOf("المكان","البند","الكمية","الوحدة","مواد / وحدة","معدات / وحدة","عمالة / وحدة","نقل / وحدة","تكلفة مباشرة / وحدة","مصاريف عامة / وحدة","ربح / وحدة","ضريبة / وحدة","سعر بيع / وحدة","حالة التسعير")
             rows.forEach{r->val price=CostEngine.selling(p,listOf(r));val q=r.quantity.takeIf{it>0}?:1.0
-                out+=listOf(r.location,r.item,r.quantity.toString(),r.unit,(r.materialCost/q).toString(),(r.equipment/q).toString(),(r.labor/q).toString(),(r.transport/q).toString(),(price.direct/q).toString(),(price.overhead/q).toString(),(price.profit/q).toString(),(price.tax/q).toString(),(price.total/q).toString(),if(MaterialReview.missing(r).isEmpty())"حسب الأسعار المدخلة"else "أسعار ناقصة")
+                out+=listOf(r.location,r.item,r.quantity.toString(),r.unit,(r.materialCost/q).toString(),(r.equipment/q).toString(),(r.labor/q).toString(),(r.transport/q).toString(),(price.direct/q).toString(),(price.overhead/q).toString(),(price.profit/q).toString(),(price.tax/q).toString(),(price.total/q).toString(),if(MaterialReview.missing(r).isEmpty())"حسب الأسعار المدخلة"else "بيانات أو أسعار ناقصة")
             }
             out+=listOf("إجمالي سعر البيع المدخل",CostEngine.selling(p,rows).total.toString(),"جنيه")
             out+=listOf("الأساس","المصاريف على التكلفة المباشرة؛ الربح بعد المصاريف؛ الضريبة بعد الربح. التكاليف غير المدخلة غير مشمولة.")
@@ -41,12 +41,12 @@ object ReportExport {
             out+=listOf("المكان","البند","الجزء","صافي الكمية","الوحدة","الخامات المطلوبة","تكلفة مباشرة","حالة التسعير")
             rows.forEach{r->
                 val materials=if(r.spec!=null)"${r.spec.cementName}: ${format(r.cementKg)} كجم • ${r.spec.sandName}: ${format(r.sandM3)} م³ • سمك ${format(r.spec.thicknessMm)} مم"else CostEngine.purchase(listOf(r)).joinToString(" • "){"${it.material}: ${format(it.amount)} ${it.unit}"}
-                out+=listOf(r.location,r.item,r.part,r.quantity.toString(),r.unit,materials,r.total.toString(),if(MaterialReview.missing(r).isEmpty())"حسب الأسعار المدخلة"else "أسعار ناقصة: "+MaterialReview.missing(r).joinToString("، "))
+                out+=listOf(r.location,r.item,r.part,r.quantity.toString(),r.unit,materials,r.total.toString(),if(MaterialReview.missing(r).isEmpty())"حسب الأسعار المدخلة"else "بيانات أو أسعار ناقصة: "+MaterialReview.missing(r).joinToString("، "))
             }
             out+=listOf("إجمالي التكلفة المباشرة",rows.sumOf{it.total}.toString(),"جنيه")
         }
         val missing=rows.flatMap{MaterialReview.missing(it)}.distinct()
-        if(missing.isNotEmpty())out+=listOf("التكلفة غير مكتملة — المبالغ جزئية","أسعار ناقصة: "+missing.joinToString("، "))
+        if(missing.isNotEmpty())out+=listOf("التكلفة غير مكتملة — المبالغ جزئية","بيانات أو أسعار ناقصة: "+missing.joinToString("، "))
         if(p.calculations.isNotEmpty()&&kind=="حصر وتكلفة تفصيلي"){
             out+=listOf("حسابات محفوظة بأسعار تاريخ الحفظ")
             p.calculations.forEach{c->out+=listOf(c.title,if(c.inputs["_includeInProject"]=="true")"مضاف للإجمالي أعلاه"else "مرجع فقط — خارج الإجمالي",c.summary,c.cost.toString())}
@@ -84,7 +84,7 @@ object ReportExport {
             CostEngine.rows(p).forEach{r->
                 append("<article><h2>${x(r.item)} — ${x(r.location)}</h2><p>${x(r.part)} • الكمية: ${format(r.quantity)} ${x(r.unit)}</p>")
                 val missing=MaterialReview.missing(r)
-                if(missing.isNotEmpty())append("<p class='missing'>أسعار ناقصة: ${x(missing.joinToString("، "))}</p>")
+                if(missing.isNotEmpty())append("<p class='missing'>بيانات أو أسعار ناقصة: ${x(missing.joinToString("، "))}</p>")
                 if(kind=="تحليل أسعار البنود"){
                     val price=CostEngine.selling(p,listOf(r));val q=r.quantity.takeIf{it>0}?:1.0
                     append("<table><thead><tr><th>عنصر السعر</th><th>جنيه / ${x(r.unit)}</th></tr></thead><tbody>")

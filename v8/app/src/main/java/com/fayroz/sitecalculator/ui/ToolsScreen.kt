@@ -26,7 +26,8 @@ fun ToolsScreen(recent:List<SavedCalculation>,hasActiveProject:Boolean,onOpen:(S
     var group by rememberSaveable{mutableStateOf<String?>(null)}
     var favorites by remember{mutableStateOf(repository?.pref("favorites","")?.split('|')?.filter{it.isNotBlank()}?.toSet().orEmpty())}
     BackHandler(enabled=group!=null||search.isNotBlank()){group=null;search=""}
-    val filtered=CalculatorLibrary.all.filter{d->(group==null||group==d.group||(group=="المفضلة"&&d.id in favorites))&&(search.isBlank()||d.title.contains(search)||d.group.contains(search))}
+    val listed=CalculatorLibrary.all.filter{it.id !in setOf("footing","beam","column","wall_concrete")||it.id in favorites}
+    val filtered=listed.filter{d->(group==null||group==d.group||(group=="المفضلة"&&d.id in favorites))&&(search.isBlank()||d.title.contains(search)||d.group.contains(search))}
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
         item{PageHeader(group?:"أقسام الحاسبات",if(group==null)"اختار نوع العمل، ثم الحاسبة المطلوبة" else "الحاسبات / $group")}
         if(group!=null)item{TextButton(onClick={group=null;search=""}){Text("رجوع للأقسام")}}
@@ -37,7 +38,7 @@ fun ToolsScreen(recent:List<SavedCalculation>,hasActiveProject:Boolean,onOpen:(S
             items(sections.size){i->Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
                 sections[i].forEach{g->Surface(onClick={group=g},modifier=Modifier.weight(1f).heightIn(min=100.dp),shape=RoundedCornerShape(18.dp),tonalElevation=2.dp){Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
                     Text(g,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium)
-                    Text("${CalculatorLibrary.all.count{it.group==g}} حاسبة",style=MaterialTheme.typography.bodySmall)
+                    Text("${listed.count{it.group==g}} حاسبة",style=MaterialTheme.typography.bodySmall)
                     Text("فتح القسم ←",color=MaterialTheme.colorScheme.primary)
                 }}}
             }}

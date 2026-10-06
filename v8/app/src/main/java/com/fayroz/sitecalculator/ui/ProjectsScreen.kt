@@ -81,7 +81,7 @@ fun ProjectsScreen(
                             if(p.id==activeProjectId)Icon(Icons.Rounded.CheckCircle,"مشروع نشط",tint=MaterialTheme.colorScheme.primary)
                             ActionMenu(listOf(
                                 "تعيين نشط" to {onSetActive(p.id)},
-                                "نسخ المشروع" to {onUpdate(p.copy(id=UUID.randomUUID().toString(),name=p.name+" — نسخة",sections=p.sections.map{it.copy(id=UUID.randomUUID().toString(),spaces=it.spaces.map(::copySpace))},calculations=emptyList(),archived=false,createdAt=System.currentTimeMillis(),updatedAt=System.currentTimeMillis()))},
+                                "نسخ المشروع" to {onUpdate(copyProject(p))},
                                 (if(p.archived)"استرجاع" else "أرشفة") to {onUpdate(p.copy(archived=!p.archived))},
                                 "حذف" to {delete=p}
                             ))

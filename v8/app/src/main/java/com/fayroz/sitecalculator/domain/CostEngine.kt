@@ -10,7 +10,7 @@ object CostEngine {
         val cementKg:Double=0.0,val sandM3:Double=0.0,val extra:Double=0.0,
         val materialCost:Double=0.0,val labor:Double=0.0,val transport:Double=0.0,val equipment:Double=0.0,
         val spec:MaterialSpec?=null,val formula:String="",
-        val calculatorId:String?=null,val calculatorInputs:Map<String,String> = emptyMap(),val materialLines:List<MaterialLine> = emptyList()) {
+        val issue:String?=null,val calculatorId:String?=null,val calculatorInputs:Map<String,String> = emptyMap(),val materialLines:List<MaterialLine> = emptyList()) {
         val total get()=materialCost+labor+transport+equipment
     }
     fun defaultSpec(name:String,defaults:Map<String,String> = emptyMap()):MaterialSpec? {
@@ -41,7 +41,8 @@ object CostEngine {
             if(c.inputs["_includeInProject"]!="true")c else {
                 val def=CalculatorLibrary.all.firstOrNull{it.id==c.toolId}
                 val raw=inputs(c.toolId,c.inputs)
-                val answer=def?.let{runCatching{CalculatorLibrary.evaluate(it,raw)}.getOrNull()}
+                val evaluation=def?.let{runCatching{CalculatorLibrary.evaluate(it,raw)}}
+                val answer=evaluation?.getOrNull()
                 c.copy(inputs=raw,cost=answer?.cost?:c.cost)
             }
         },updatedAt=System.currentTimeMillis())
@@ -72,55 +73,62 @@ object CostEngine {
             values.forEach{(part,base)->
                 val qty=base*factor*space.repeatCount
                 val spec=part?.material?:item.material?:defaultSpec(item.name,project.defaults)
-                val mat=if(spec!=null)measure(if(item.unit==UnitType.VOLUME)qty/(spec.thicknessMm/1000)else qty,spec)else Triple(0.0,0.0,0.0)
+                val specIssue=spec?.let{MaterialReview.specError(it)}
+                val mat=if(spec!=null&&specIssue==null)measure(if(item.unit==UnitType.VOLUME)qty/(spec.thicknessMm/1000)else qty,spec)else Triple(0.0,0.0,0.0)
                 val def=if(spec==null)CalculatorLibrary.forItem(item.name)else null
                 val inputs=(def?.let{CalculatorLibrary.defaults(it,project.defaults)}.orEmpty()+("waste" to item.waste.toString()))+(part?.calculatorInputs?.takeIf{it.isNotEmpty()}?:item.calculatorInputs)
                 val raw=def?.let{CalculatorLibrary.recipe(it,inputs,qty)}.orEmpty()
-                val answer=def?.let{runCatching{CalculatorLibrary.evaluate(it,raw)}.getOrNull()}
-                val cost=if(spec!=null)mat.first/spec.bagKg*spec.cementPrice+mat.second*spec.sandPrice+mat.third*spec.extraPrice else answer?.consumedCost?:0.0
+                val evaluation=def?.let{runCatching{CalculatorLibrary.evaluate(it,raw)}}
+                val answer=evaluation?.getOrNull()
+                val cost=if(spec!=null&&specIssue==null)mat.first/spec.bagKg*spec.cementPrice+mat.second*spec.sandPrice+mat.third*spec.extraPrice else answer?.consumedCost?:0.0
                 add(Row(section.id,space.id,item.id,part?.id,"${section.name} / ${space.name}",item.name,
                     part?.name?:"كامل البند",qty,item.unit.label,mat.first,mat.second,mat.third,cost,
-                    qty*(spec?.laborRate?:numeric(inputs["_laborRate"])?:0.0),qty*(spec?.transportRate?:numeric(inputs["_transportRate"])?:0.0),qty*(spec?.equipmentRate?:numeric(inputs["_equipmentRate"])?:0.0),spec,q.explanation,def?.id,raw,
+                    if(specIssue==null)qty*(spec?.laborRate?:numeric(inputs["_laborRate"])?:0.0)else 0.0,if(specIssue==null)qty*(spec?.transportRate?:numeric(inputs["_transportRate"])?:0.0)else 0.0,if(specIssue==null)qty*(spec?.equipmentRate?:numeric(inputs["_equipmentRate"])?:0.0)else 0.0,spec,q.explanation,specIssue?:evaluation?.exceptionOrNull()?.message,def?.id,raw,
                     if(def!=null&&answer!=null)CalculatorLibrary.result(def,raw,answer).lines else emptyList()))
             }
         }}}
         project.calculations.filter{it.inputs["_includeInProject"]=="true"}.forEach{c->
-            val def=CalculatorLibrary.all.firstOrNull{it.id==c.toolId}?:return@forEach
-            val answer=runCatching{CalculatorLibrary.evaluate(def,c.inputs)}.getOrNull()?:return@forEach
+            val def=CalculatorLibrary.all.firstOrNull{it.id==c.toolId}
+            val evaluation=def?.let{runCatching{CalculatorLibrary.evaluate(it,c.inputs)}}
+            val answer=evaluation?.getOrNull()
+            if(def==null||answer==null){
+                add(Row(c.sectionId.orEmpty(),c.spaceId.orEmpty(),c.id,null,"حساب مضاف",c.title,"راجع المدخلات",c.sourceQuantity,c.unit,
+                    issue="${c.title}: ${evaluation?.exceptionOrNull()?.message?:"الحاسبة غير متاحة"}"))
+                return@forEach
+            }
             val result=CalculatorLibrary.result(def,c.inputs,answer)
-            val measured=answer.outputs.firstOrNull{it.label.contains("صافي")&&!it.label.contains("فائض")}?:answer.outputs.firstOrNull{it.label in setOf("المساحة","وزن","نقاط","حجم مفيد","طول صافي","مساحة شدة")}
-            val useInput=def.fields.any{it.key=="area"}||def.id in setOf("pipes","cables","wires","skirting","skirting_cut","sealant","kerb","conduits","trays","points","fittings")
-            val qty=if(useInput)result.sourceQuantity.takeIf{it>0}?:measured?.value?:1.0 else measured?.value?:result.sourceQuantity.takeIf{it>0}?:1.0
-            val unit=if(useInput)result.sourceUnit.ifBlank{measured?.unit?:"حساب"}else measured?.unit?:result.sourceUnit.ifBlank{"حساب"}
+            val measured=CalculatorLibrary.workQuantity(def,c.inputs,answer)
+            val qty=measured.value
+            val unit=measured.unit
             add(Row(c.sectionId.orEmpty(),c.spaceId.orEmpty(),c.id,null,"حساب مضاف / ${c.inputs["_source"].orEmpty()}",c.title,"كامل الحساب",qty,unit,
                 materialCost=answer.consumedCost,labor=qty*(numeric(c.inputs["_laborRate"])?:0.0),transport=qty*(numeric(c.inputs["_transportRate"])?:0.0),equipment=qty*(numeric(c.inputs["_equipmentRate"])?:0.0),
                 formula=result.explanation,calculatorId=def.id,calculatorInputs=c.inputs+("_savedCalculation" to "true"),materialLines=result.lines))
         }
     }
-    data class Purchase(val material:String,val unit:String,val amount:Double,val packages:Int?,val price:Double,val cost:Double,val packageUnit:String="عبوة",val packageSize:Double?=null)
+    data class Purchase(val material:String,val unit:String,val amount:Double,val packages:Int?,val price:Double,val cost:Double,val packageUnit:String="عبوة",val packageSize:Double?=null,val identity:String="")
     fun purchase(rows:List<Row>):List<Purchase> = consolidate(buildList {
         // Different package sizes/prices remain separate, quantities rounded only after aggregation.
-        rows.filter{it.calculatorId!=null&&it.calculatorInputs["_savedCalculation"]!="true"}.groupBy{r->r.calculatorId to r.calculatorInputs.filterKeys{k->k !in setOf("area","length","count")&&(k=="_materialName"||k=="_cementName"||k=="_sandName"||CalculatorLibrary.all.first{it.id==r.calculatorId}.fields.any{it.key==k})}}.forEach{(key,group)->
+        rows.filter{it.issue==null&&it.calculatorId!=null&&it.calculatorInputs["_savedCalculation"]!="true"}.groupBy{r->r.calculatorId to ((if(r.calculatorInputs["_materialName"].isNullOrBlank())mapOf("_stockIdentity" to r.itemId)else emptyMap())+r.calculatorInputs.filterKeys{k->k !in setOf("area","length","count")&&(k=="_materialName"||k=="_cementName"||k=="_sandName"||CalculatorLibrary.all.first{it.id==r.calculatorId}.fields.any{it.key==k})})}.forEach{(key,group)->
             val def=CalculatorLibrary.all.first{it.id==key.first}
             val raw=CalculatorLibrary.recipe(def,key.second,group.sumOf{it.quantity})
             val answer=runCatching{CalculatorLibrary.evaluate(def,raw)}.getOrNull()
-            if(answer!=null)addAll(calculatorPurchases(def,raw,answer))
+            if(answer!=null)addAll(calculatorPurchases(def,raw,answer).map{p->if(raw["_materialName"].isNullOrBlank()&&def.id !in CalculatorLibrary.mortarIds)p.copy(identity=group.first().itemId+":"+raw.toSortedMap().toString())else p})
         }
-        rows.filter{it.calculatorInputs["_savedCalculation"]=="true"}.forEach{r->
+        rows.filter{it.issue==null&&it.calculatorInputs["_savedCalculation"]=="true"}.forEach{r->
             val def=CalculatorLibrary.all.first{it.id==r.calculatorId}
-            runCatching{CalculatorLibrary.evaluate(def,r.calculatorInputs)}.getOrNull()?.let{addAll(calculatorPurchases(def,r.calculatorInputs,it))}
+            runCatching{CalculatorLibrary.evaluate(def,r.calculatorInputs)}.getOrNull()?.let{addAll(calculatorPurchases(def,r.calculatorInputs,it).map{p->if(r.calculatorInputs["_materialName"].isNullOrBlank()&&def.id !in CalculatorLibrary.mortarIds)p.copy(identity=r.itemId)else p})}
         }
-        rows.filter{it.spec!=null}.groupBy{Triple(it.spec!!.bagKg,it.spec.cementPrice,it.spec.cementName)}.forEach{(key,group)->
+        rows.filter{it.issue==null&&it.spec!=null}.groupBy{Triple(it.spec!!.bagKg,it.spec.cementPrice,it.spec.cementName)}.forEach{(key,group)->
             val kg=group.sumOf{it.cementKg};if(kg>0){val bags=ceil(kg/key.first).toInt();add(Purchase("${key.third} (${java.math.BigDecimal.valueOf(key.first).stripTrailingZeros().toPlainString()} كجم)","كجم",kg,bags,key.second,bags*key.second,"شيكارة",key.first))}
         }
-        rows.filter{it.spec!=null}.groupBy{it.spec!!.sandName to it.spec.sandPrice}.forEach{(key,group)->
+        rows.filter{it.issue==null&&it.spec!=null}.groupBy{it.spec!!.sandName to it.spec.sandPrice}.forEach{(key,group)->
             val amount=group.sumOf{it.sandM3};if(amount>0)add(Purchase(key.first,"م³",amount,null,key.second,amount*key.second))
         }
-        rows.filter{it.spec!=null&&it.extra>0}.groupBy{it.spec!!.extraName to it.spec.extraPrice}.forEach{(key,group)->
+        rows.filter{it.issue==null&&it.spec!=null&&it.extra>0}.groupBy{it.spec!!.extraName to it.spec.extraPrice}.forEach{(key,group)->
             val amount=group.sumOf{it.extra};add(Purchase(key.first,"وحدة",amount,null,key.second,amount*key.second))
         }
     })
-    fun consolidate(purchases:List<Purchase>):List<Purchase> = purchases.groupBy{listOf(it.material,it.unit,it.price,it.packageUnit,it.packageSize)}.values.map{group->
+    fun consolidate(purchases:List<Purchase>):List<Purchase> = purchases.groupBy{listOf(it.material,it.unit,it.price,it.packageUnit,it.packageSize,it.identity)}.values.map{group->
         val first=group.first();val amount=group.sumOf{it.amount};val size=first.packageSize
         if(size!=null&&size>0){val packs=ceil(amount/size-1e-10).toInt();first.copy(amount=amount,packages=packs,cost=packs*first.price)}
         else first.copy(amount=amount,packages=if(first.packages==null)null else group.sumOf{it.packages?:0},cost=group.sumOf{it.cost})

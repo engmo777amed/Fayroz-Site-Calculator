@@ -8,7 +8,7 @@ object MaterialReview {
         if(values.any{!it.isFinite()||it<0})return "اكتب قيمًا صحيحة صفر أو أكبر في مواصفات المواد والأسعار."
         return when{
             s.thicknessMm<=0->"متوسط السمك يجب أن يكون أكبر من صفر."
-            s.cementParts+s.sandParts<=0->"أدخل عدد شكاير الأسمنت على متر الرمل."
+            s.cementParts<=0||s.sandParts<=0->"أدخل عدد شكاير الأسمنت على متر الرمل."
             s.dryFactor<=0->"معامل الحجم الجاف يجب أن يكون أكبر من صفر."
             s.cementDensity<=0->"كثافة الأسمنت يجب أن تكون أكبر من صفر."
             s.bagKg<=0->"وزن شيكارة الأسمنت يجب أن يكون أكبر من صفر."
@@ -17,8 +17,9 @@ object MaterialReview {
     }
     fun missing(def:CalcDef,raw:Map<String,String>):List<String> = def.fields.filter{f->
         f.key.contains("price",true)&&!(f.key=="extraPrice"&&number(raw["extraRate"])==0.0)&&!(f.key=="boxPrice"&&number(raw["boxes"])==0.0)&&number(raw[f.key])<=0
-    }.map{it.label}
+    }.map{it.label}+if(def.id=="interlock"&&(number(raw["bed"])>0||number(raw["thickness"])>0))listOf("تكلفة فرشة الإنترلوك غير مشمولة")else emptyList()
     fun missing(row:CostEngine.Row):List<String> {
+        row.issue?.let{return listOf(it)}
         val s=row.spec
         if(s!=null)return buildList{if(row.cementKg>0&&s.cementPrice<=0)add("سعر شيكارة الأسمنت");if(row.sandM3>0&&s.sandPrice<=0)add("سعر متر الرمل");if(row.extra>0&&s.extraPrice<=0)add("سعر ${s.extraName}")}
         val def=CalculatorLibrary.all.firstOrNull{it.id==row.calculatorId}?:return emptyList()

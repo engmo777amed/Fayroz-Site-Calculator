@@ -19,7 +19,7 @@ import java.util.UUID
 
 @Composable
 fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActive:()->Unit,onOpenSection:(String)->Unit,
-    onAddSection:(String)->Unit,onOpenMaterials:(MaterialResult)->Unit,onShare:()->Unit,
+    onAddSection:(String)->Unit,onOpenMaterials:(MaterialResult)->Unit,onShare:(Project)->Unit,
     onUpdate:(Project)->Unit,onEditSource:(String,String,String)->Unit,onOpenCalc:(SavedCalculation)->Unit,onDirectItem:()->Unit = {},onAddPlace:(String)->Unit = {}){
     val context=LocalContext.current
     var tab by remember{mutableStateOf("نظرة عامة")}
@@ -37,6 +37,8 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
     var reportKind by remember{mutableStateOf("حصر وتكلفة تفصيلي")}
     var defaultsTool by remember{mutableStateOf("tile")}
     var defaults by remember(project.defaults){mutableStateOf(project.defaults)}
+    val goBack={if(tab!="نظرة عامة")tab="نظرة عامة" else onBack()}
+    androidx.activity.compose.BackHandler(enabled=tab!="نظرة عامة"){goBack()}
     val scoped=project.copy(
         sections=project.sections.filter{sectionId==null||it.id==sectionId}.map{section->
             section.copy(spaces=section.spaces.filter{spaceId==null||it.id==spaceId}.map{space->
@@ -50,7 +52,7 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
     val export=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")){uri->
         if(uri!=null)runCatching{context.contentResolver.openOutputStream(uri)?.use{ReportExport.xlsx(scoped,reportKind,it)}?:error("تعذر فتح الملف")}.onSuccess{Toast.makeText(context,"تم حفظ Excel",Toast.LENGTH_SHORT).show()}.onFailure{Toast.makeText(context,"فشل الحفظ: ${it.message}",Toast.LENGTH_LONG).show()}
     }
-    Scaffold(topBar={TopAppBar(title={Text(project.name,fontWeight=FontWeight.Bold)},navigationIcon={TextButton(onClick=onBack){Text("رجوع")}},actions={ActionMenu(listOf("تعديل اسم المشروع" to {renameProject=true},"إعدادات المشروع" to {tab="إعدادات المشروع والتصدير"},"تصدير" to {exportOpen=true}))})}){padding->
+    Scaffold(topBar={TopAppBar(title={Text(project.name,fontWeight=FontWeight.Bold)},navigationIcon={TextButton(onClick=goBack){Text("رجوع")}},actions={ActionMenu(listOf("تعديل اسم المشروع" to {renameProject=true},"إعدادات المشروع" to {tab="إعدادات المشروع والتصدير"},"تصدير" to {exportOpen=true}))})}){padding->
         LazyColumn(Modifier.fillMaxSize().padding(padding),contentPadding=PaddingValues(12.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){
             item{Row{Text(project.type,Modifier.weight(1f));TextButton(onClick=onSetActive){Text(if(active)"المشروع النشط ✓" else "تعيين نشط")}}}
             if(tab=="نظرة عامة"){
@@ -88,7 +90,7 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
                         MetricRow("مصاريف عامة (${project.defaults["overheadPercent"]?:"0"}%)","${money(selling.overhead)} جنيه")
                         MetricRow("ربح (${project.defaults["profitPercent"]?:"0"}%)","${money(selling.profit)} جنيه")
                         MetricRow("ضريبة (${project.defaults["taxPercent"]?:"0"}%)","${money(selling.tax)} جنيه")
-                        MetricRow(if(rows.flatMap{MaterialReview.missing(it)}.isEmpty())"إجمالي سعر البيع المدخل"else "سعر بيع جزئي — أسعار ناقصة","${money(selling.total)} جنيه",true)
+                        MetricRow(if(rows.flatMap{MaterialReview.missing(it)}.isEmpty())"إجمالي سعر البيع المدخل"else "سعر بيع جزئي — بيانات أو أسعار ناقصة","${money(selling.total)} جنيه",true)
                         Text("المصاريف على التكلفة المباشرة، والربح بعد المصاريف، والضريبة بعد الربح. أي مصنعية أو نقل أو معدات غير مدخلة غير مشمولة.",style=MaterialTheme.typography.bodySmall)
                         TextButton(onClick={tab="إعدادات المشروع والتصدير"}){Text("تعديل نسب المصاريف والربح والضريبة")}
                     }}
@@ -183,7 +185,7 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
         Text("سيُصدّر النطاق المحدد في العرض.",style=MaterialTheme.typography.bodySmall)
     }},confirmButton={TextButton(onClick={export.launch("Fayroz-${project.name}.xlsx");exportOpen=false}){Text("Excel")}},dismissButton={Row{
         TextButton(onClick={ReportExport.printPdf(context,scoped,reportKind);exportOpen=false}){Text("PDF")}
-        TextButton(onClick={onShare();exportOpen=false}){Text("مشاركة")}
+        TextButton(onClick={onShare(scoped);exportOpen=false}){Text("مشاركة")}
     }})
     deleteSection?.let{section->AlertDialog(onDismissRequest={deleteSection=null},title={Text("حذف ${section.name}؟")},text={Text("سيُحذف الدور وأماكنه وحصره. الحسابات المحفوظة التابعة له تُحذف أيضًا.")},
         confirmButton={TextButton(onClick={onUpdate(project.copy(sections=project.sections.filterNot{it.id==section.id},calculations=project.calculations.filterNot{it.sectionId==section.id},updatedAt=System.currentTimeMillis()));deleteSection=null}){Text("حذف")}},dismissButton={TextButton(onClick={deleteSection=null}){Text("إلغاء")}})}
@@ -198,3 +200,13 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
 }
 fun copySpace(s:Space)=s.copy(id=UUID.randomUUID().toString(),name=s.name+" — نسخة",takeoffs=s.takeoffs.map{it.copy(id=UUID.randomUUID().toString(),parts=it.parts.map{p->p.copy(id=UUID.randomUUID().toString())})},updatedAt=System.currentTimeMillis())
 
+
+fun copyProject(p:Project):Project {
+    val sectionIds=p.sections.associate{it.id to UUID.randomUUID().toString()}
+    val spaceIds=p.sections.flatMap{it.spaces}.associate{it.id to UUID.randomUUID().toString()}
+    return p.copy(id=UUID.randomUUID().toString(),name=p.name+" — نسخة",archived=false,
+        createdAt=System.currentTimeMillis(),updatedAt=System.currentTimeMillis(),
+        sections=p.sections.map{s->s.copy(id=sectionIds.getValue(s.id),spaces=s.spaces.map{sp->copySpace(sp).copy(id=spaceIds.getValue(sp.id),name=sp.name)})},
+        calculations=p.calculations.map{c->val id=UUID.randomUUID().toString();val sid=c.sectionId?.let{sectionIds[it]};val spid=c.spaceId?.let{spaceIds[it]}
+            c.copy(id=id,sectionId=sid,spaceId=spid,inputs=c.inputs+mapOf("_savedId" to id,"_sectionId" to sid.orEmpty(),"_spaceId" to spid.orEmpty()))})
+}

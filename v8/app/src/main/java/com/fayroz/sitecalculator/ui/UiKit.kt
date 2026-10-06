@@ -24,8 +24,8 @@ fun money(v:Double):String=String.format(Locale.US,"%.2f",v)
 fun dated(time:Long):String=java.text.SimpleDateFormat("dd/MM/yyyy HH:mm",Locale.US).format(java.util.Date(time))
 fun selectionLabels(names:List<String>):List<String> = names.mapIndexed{i,name->if(names.count{it==name}>1)"$name (${i+1})"else name}
 
-fun exact(v:Double):String = java.math.BigDecimal.valueOf(v).stripTrailingZeros().toPlainString()
-fun fmt(v:Double):String=String.format(Locale.US,"%.3f",v).trimEnd('0').trimEnd('.')
+fun exact(v:Double):String = if(v.isFinite())java.math.BigDecimal.valueOf(v).stripTrailingZeros().toPlainString()else ""
+fun fmt(v:Double):String=if(v.isFinite())String.format(Locale.US,"%.3f",v).trimEnd('0').trimEnd('.')else "راجع الرقم"
 
 data class LengthUnit(val label:String,val meters:Double)
 val lengthUnits=listOf(LengthUnit("م",1.0),LengthUnit("سم",.01),LengthUnit("مم",.001))
@@ -35,6 +35,7 @@ fun lengthMeters(value:String,unit:String):Double =
 
 fun convertLength(value:String,from:String,to:String):String{
     if(value.isBlank())return ""
+    if(com.fayroz.sitecalculator.domain.MortarMix.number(value)==null)return value
     val fromFactor=java.math.BigDecimal.valueOf(lengthUnits.firstOrNull{it.label==from}?.meters?:1.0)
     val toFactor=java.math.BigDecimal.valueOf(lengthUnits.firstOrNull{it.label==to}?.meters?:1.0)
     return java.math.BigDecimal.valueOf(n(value)).multiply(fromFactor).divide(toFactor).stripTrailingZeros().toPlainString()
@@ -248,6 +249,7 @@ fun EmptyState(
 @Composable
 fun ExpandableSection(title:String,initiallyExpanded:Boolean=false,content:@Composable ColumnScope.()->Unit){
     var expanded by remember{mutableStateOf(initiallyExpanded)}
+    LaunchedEffect(initiallyExpanded){if(initiallyExpanded)expanded=true}
     Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(7.dp)){
         TextButton(onClick={expanded=!expanded},modifier=Modifier.fillMaxWidth()){
             Text(title,Modifier.weight(1f),textAlign=androidx.compose.ui.text.style.TextAlign.Start)

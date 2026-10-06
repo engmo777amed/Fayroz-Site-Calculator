@@ -23,17 +23,23 @@ import com.fayroz.sitecalculator.data.V8Repository
 fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repository,project:Project?,
     onBack:()->Unit,onSave:(MaterialResult,String?,String?)->Unit){
     val def=CalculatorLibrary.all.firstOrNull{it.id==toolId}?:return
+    val draftKey="$toolId.${project?.id?:"independent"}"
     val raw=remember(toolId,seed){mutableStateMapOf<String,String>().apply{
         def.fields.forEach{field->
             put(field.key,seed?.inputs?.get(field.key)?:if(project!=null)CalculatorLibrary.defaults(def,project.defaults)[field.key]?:field.default else if(field.key in setOf("area","length","count","bags")||field.default.isBlank())field.default else repository.pref("calc.$toolId.${field.key}",field.default))
             seed?.inputs?.get("_unit.${field.key}")?.let{unit->put("_unit.${field.key}",unit)}
         }
+        if(seed==null)putAll(repository.calculatorDraft(draftKey))
         seed?.inputs?.filterKeys{it.startsWith("_")}?.forEach{(k,v)->put(k,v)}
         if(MortarMix.isMix(def))put(MortarMix.key,seed?.let{it.inputs[MortarMix.key]?:exact(MortarMix.bags(this))}?:project?.let{CalculatorLibrary.defaults(def,it.defaults)[MortarMix.key]?:exact(MortarMix.bags(this))}?:repository.pref("calc.$toolId.${MortarMix.key}",exact(MortarMix.bags(this))))
-        put("_mortarMode",seed?.inputs?.get("_mortarMode")?:"area")
+        put("_mortarMode",seed?.inputs?.get("_mortarMode")?:get("_mortarMode")?:"area")
+        if(seed==null&&def.id in CalculatorLibrary.mortarIds){
+            listOf("area","unit","coverage","sand","stock").forEach{mode->putIfAbsent("_waste.$mode",repository.pref("calc.$toolId._waste.$mode",if(mode=="unit")"0"else "5"))}
+            put("waste",get("_waste.${get("_mortarMode")}")?:"5")
+        }
         put("_previousMode",seed?.inputs?.get("_mortarMode")?:"area")
-        put("_volume",seed?.inputs?.get("_volume")?:"1")
-        put("_sandAvailable",seed?.inputs?.get("_sandAvailable")?:"1")
+        put("_volume",seed?.inputs?.get("_volume")?:get("_volume")?:"1")
+        put("_sandAvailable",seed?.inputs?.get("_sandAvailable")?:get("_sandAvailable")?:"1")
         if(seed!=null&&seed.inputs.isEmpty()&&seed.sourceQuantity>0&&def.fields.any{it.key=="area"})put("area",exact(seed.sourceQuantity))
     }}
     val context=LocalContext.current
@@ -42,8 +48,14 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
     var templateDialog by remember{mutableStateOf(false)}
     var templateName by remember{mutableStateOf("")}
     var templates by remember{mutableStateOf(repository.calculatorTemplates(toolId))}
-    fun specification()=raw.filterKeys{key->key !in setOf("area","length","count","_areaLength","_areaWidth","_areaMethod","_mortarMode","_previousMode","_volume","_sandAvailable","_bagsAvailable")&&!key.contains("price",true)&&!key.startsWith("_waste.")&&(def.fields.any{it.key==key}||key==MortarMix.key||key.startsWith("_unit."))}
-    fun rememberSpecification(){specification().forEach{(key,value)->repository.setPref("calc.$toolId.$key",value)}}
+    fun isSetting(key:String):Boolean {
+        val fieldKey=key.removePrefix("_unit.")
+        return fieldKey !in setOf("area","length","width","height","count","bags","packs","steps","intervals","start","end","landing","perimeter","tail","boxes","deduct")&&
+            !key.contains("price",true)&&(def.fields.any{it.key==fieldKey&&it.default.isNotBlank()}||key==MortarMix.key||key.startsWith("_waste."))
+    }
+    fun specification()=raw.filterKeys(::isSetting)
+    fun rememberSpecification(){if(mortarModeSupported(def))raw["_waste.${raw["_mortarMode"]?:"area"}"]=raw["waste"]?:"5";specification().forEach{(key,value)->repository.setPref("calc.$toolId.$key",value)}}
+    var savedSnapshot by remember{mutableStateOf<Map<String,String>?>(null)}
     var savedId by remember{mutableStateOf(seed?.inputs?.get("_savedId")?:java.util.UUID.randomUUID().toString())}
     var includeInProject by remember{mutableStateOf(seed?.inputs?.get("_includeInProject")=="true")}
     val mortar=toolId in CalculatorLibrary.mortarIds
@@ -73,13 +85,15 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
     var sourceItem by remember{mutableStateOf(seed?.inputs?.get("_sourceItem").orEmpty())}
     val summary=project?.let{p->
         val filtered=p.copy(sections=p.sections.filter{sectionId==null||it.id==sectionId}.map{s->s.copy(spaces=s.spaces.filter{spaceId==null||it.id==spaceId})})
-        QuantityEngine.summarize(filtered)
+        QuantityEngine.summarize(filtered).filter{(it.unit==UnitType.AREA&&def.fields.any{f->f.key=="area"})||(it.unit==UnitType.LENGTH&&def.fields.any{f->f.key=="length"})}
     }.orEmpty()
     fun chooseSource(item:String){
+        val line=summary.firstOrNull{"${it.name} (${it.unit.label})"==item}?:return
         sourceItem=item
         raw["_quantityCopiedAt"]=System.currentTimeMillis().toString()
         includeInProject=false
-        val line=summary.firstOrNull{"${it.name} (${it.unit.label})"==item}
+        raw["_areaMethod"]="ready"
+        raw.remove("_areaLength");raw.remove("_areaWidth")
         if(line!=null&&line.unit==UnitType.AREA&&def.fields.any{it.key=="area"})raw["area"]=exact(line.quantity)
         if(line!=null&&line.unit==UnitType.LENGTH&&def.fields.any{it.key=="length"})raw["length"]=exact(line.quantity)
     }
@@ -94,9 +108,12 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
         rememberSpecification()
         if(project!=null&&(source!="حساب مستقل"||project.calculations.any{it.id==savedId}))onSave(next,sectionId,spaceId)
         else repository.saveRecentCalc(SavedCalculation(id=savedId,toolId=next.toolId,title=next.title,summary=next.lines.joinToString(" • "){"${it.label}: ${it.value}"},sourceQuantity=next.sourceQuantity,unit=next.sourceUnit,inputs=next.inputs,cost=next.cost,explanation=next.explanation))
+        savedSnapshot=raw.toMap()
+        repository.clearCalculatorDraft(draftKey)
         Toast.makeText(context,"تم حفظ النتيجة ✓",Toast.LENGTH_SHORT).show()
     }
     if(templateDialog)AlertDialog(onDismissRequest={templateDialog=false},title={Text("حفظ إعداداتي")},text={TextFieldX("اسم الإعداد",templateName,{templateName=it})},confirmButton={TextButton(enabled=templateName.isNotBlank()&&answer!=null,onClick={repository.saveCalculatorTemplate(toolId,templateName.trim(),specification());templates=repository.calculatorTemplates(toolId);templateDialog=false;Toast.makeText(context,"تم حفظ الإعداد ✓",Toast.LENGTH_SHORT).show()}){Text("حفظ الإعداد")}},dismissButton={TextButton(onClick={templateDialog=false}){Text("إلغاء")}})
+    DisposableEffect(toolId,seed){onDispose{if(seed==null&&savedSnapshot!=raw.toMap())repository.saveCalculatorDraft(draftKey,raw.toMap())}}
     BackHandler{if(stage==1){stage=0;error=null}else onBack()}
     LaunchedEffect(stage){listState.scrollToItem(0)}
     Scaffold(topBar={TopAppBar(title={Column{Text(def.title,fontWeight=FontWeight.Bold,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis);Text("الحاسبات / ${def.group}",style=MaterialTheme.typography.labelSmall,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)}},navigationIcon={TextButton(onClick={if(stage==1){stage=0;error=null}else onBack()}){Text("رجوع")}})},
@@ -113,8 +130,8 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
             if(stage==0){
                 item{Text(if(seed!=null)"قيم محفوظة بتاريخ الحساب؛ تعديل السعر لا يغيّر الكمية." else if(project!=null)"مواصفات وأسعار البداية من مشروع: ${project.name}" else "حساب مستقل؛ راجع مواصفات الخامة وأسعارها.",style=MaterialTheme.typography.bodySmall)}
                 item{BasicCalculatorInputs(def,raw){key,value->raw[key]=value;error=null}}
-                item{BoxCard{ExpandableSection("إعداداتي وتفاصيل إضافية",error!=null){
-                    if(templates.isNotEmpty())ChoiceFieldX("خلطة أو إعداد محفوظ","اختار إعدادًا",templates.map{it.first},{name->templates.firstOrNull{it.first==name}?.second?.forEach{(key,value)->raw[key]=value}})
+                item{BoxCard{ExpandableSection("إعداداتي وتفاصيل إضافية",error!=null&&def.fields.filter{it !in MortarMix.basic(def)}.any{error?.contains(it.label)==true}){
+                    if(templates.isNotEmpty())ChoiceFieldX("خلطة أو إعداد محفوظ","اختار إعدادًا",templates.map{it.first},{name->templates.firstOrNull{it.first==name}?.second?.filterKeys(::isSetting)?.forEach{(key,value)->raw[key]=value}})
                     TextButton(onClick={templateName=def.title;templateDialog=true}){Text("حفظ إعداداتي باسم")}
                     Text("الهالك ${raw["waste"]?:"0"}%"+(if(MortarMix.isMix(def))" • الشيكارة ${raw["bag"]?:"50"} كجم" else ""),style=MaterialTheme.typography.bodySmall)
                     val basic=MortarMix.basic(def)
@@ -133,7 +150,7 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
                         ChoiceFieldX("مكان الحفظ ومصدر الحصر",source,sources.map{it.first},{x->source=x;val target=sources.first{it.first==x};sectionId=target.second;spaceId=target.third;sourceItem="";raw["_mortarMode"]="area";raw["_areaMethod"]="ready"})
                         if(source!="حساب مستقل"&&summary.isNotEmpty())ChoiceFieldX("تعبئة كمية من بند",sourceItem.ifBlank{"اختار بندًا"},summary.map{"${it.name} (${it.unit.label})"},::chooseSource)
                     }
-                    TextButton(onClick={raw.clear();def.fields.forEach{raw[it.key]=it.default};if(MortarMix.isMix(def))raw[MortarMix.key]=exact(MortarMix.bags(raw));raw["_mortarMode"]="area";error=null}){Text("استعادة القيم الأصلية")}
+                    TextButton(onClick={raw.clear();def.fields.forEach{raw[it.key]=it.default};if(MortarMix.isMix(def))raw[MortarMix.key]=exact(MortarMix.bags(raw));raw["_mortarMode"]="area";sourceItem="";includeInProject=false;repository.clearCalculatorDraft(draftKey);error=null}){Text("استعادة القيم الأصلية")}
                 }}}
             }else if(answer!=null&&result!=null){
                 item{BoxCard{
@@ -212,3 +229,5 @@ private fun BasicCalculatorInputs(def:com.fayroz.sitecalculator.domain.CalcDef,r
     }
     if(n(raw["thickness"].orEmpty())>100)Text("السمك المدخل أكبر من ١٠ سم؛ راجع الرقم والوحدة.",color=MaterialTheme.colorScheme.tertiary)
 }
+
+private fun mortarModeSupported(def:com.fayroz.sitecalculator.domain.CalcDef)=def.id in CalculatorLibrary.mortarIds

@@ -11,8 +11,8 @@ android {
         minSdk = 26
         targetSdk = 35
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 15
-        versionName = "9.4.0"
+        versionCode = 16
+        versionName = "9.5.0"
         manifestPlaceholders["appLabel"] = "Fayroz Site Calculator"
     }
     buildTypes {

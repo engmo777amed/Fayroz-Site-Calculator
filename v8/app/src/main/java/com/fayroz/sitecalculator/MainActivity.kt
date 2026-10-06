@@ -56,11 +56,12 @@ class MainActivity:ComponentActivity(){
             }
 
             fun replaceProject(updated:Project){
+                val previous=projects.firstOrNull{it.id==updated.id}
                 val i=projects.indexOfFirst{it.id==updated.id}
                 if(i>=0)projects[i]=updated
                 else projects.add(updated)
                 persist()
-                updated.calculations.forEach{repository.saveRecentCalc(it)}
+                repository.syncCalculations(previous?.calculations.orEmpty(),updated.calculations)
             }
 
             fun activeProject():Project? =
@@ -206,6 +207,7 @@ class MainActivity:ComponentActivity(){
                                         },
                                         onUpdate={replaceProject(it)},
                                         onDelete={id->
+                                            projects.firstOrNull{it.id==id}?.calculations?.forEach{repository.deleteRecentCalc(it.id)}
                                             projects.removeAll{it.id==id};persist()
                                             if(active?.projectId==id){active=null;repository.clearActive()}
                                         },
@@ -226,9 +228,7 @@ class MainActivity:ComponentActivity(){
                                             if(active?.projectId==pid)setActive(ActiveLocation(pid,sid,spid))
                                             route=Route.RoomEdit(pid,sid,spid)
                                         },
-                                        onOpenCalc={calc->
-                                            route=Route.Tool(calc.toolId,MaterialResult(calc.toolId,calc.title,calc.sourceQuantity,calc.unit,emptyList(),calc.explanation,calc.inputs+("_savedId" to calc.id),calc.cost),active?.projectId)
-                                        }
+                                        onOpenCalc=::openSaved
                                     )
 
                                     RootTab.SAVED->SavedCalculationsScreen(repository.recentCalcs(),onDelete={id->
@@ -286,7 +286,7 @@ class MainActivity:ComponentActivity(){
                                 route=Route.Tool(material.toolId,material,p.id,true)
                             },
                             onDirectItem={route=Route.DirectItem(p.id)},
-                            onShare={shareProject(p)},
+                            onShare=::shareProject,
                             onUpdate={replaceProject(it)},
                             onEditSource={sid,spid,itemId->route=if(itemId in p.calculations.map{it.id}){val c=p.calculations.first{it.id==itemId};Route.Tool(c.toolId,MaterialResult(c.toolId,c.title,c.sourceQuantity,c.unit,emptyList(),c.explanation,c.inputs+("_savedId" to c.id),c.cost),p.id)}else Route.RoomEdit(p.id,sid,spid,itemId=itemId)},
                             onAddPlace={sid->route=Route.RoomEdit(p.id,sid,null)},
@@ -326,6 +326,7 @@ class MainActivity:ComponentActivity(){
                             onDeleteRoom={spid->
                                 val updatedSection=s.copy(spaces=s.spaces.filterNot{it.id==spid})
                                 replaceProject(p.copy(
+                                    calculations=p.calculations.filterNot{it.spaceId==spid},
                                     sections=p.sections.map{if(it.id==s.id)updatedSection else it},
                                     updatedAt=System.currentTimeMillis()
                                 ))
@@ -405,7 +406,7 @@ class MainActivity:ComponentActivity(){
                         if(r.toolId in setOf("convert","area")){
                             SiteUtilityScreen(r.toolId,onBack=back,repository=repository,seed=r.seed)
                         }else{
-                            val projectId=r.projectId ?: active?.projectId
+                            val projectId=r.projectId ?: if(r.seed==null)active?.projectId else null
                             val targetProject=projectId?.let{id->projects.firstOrNull{it.id==id}}
                             key(r.toolId,r.seed){LibraryCalculatorScreen(
                                 toolId=r.toolId,

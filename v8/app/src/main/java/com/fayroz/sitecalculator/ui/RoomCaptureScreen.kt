@@ -136,7 +136,7 @@ fun RoomCaptureScreen(
                         else Button(
                             onClick={
                                 val value=current()
-                                error=Validation.space(value)
+                                error=if(com.fayroz.sitecalculator.domain.MortarMix.number(repeat)?.let{it>=1&&it<=Int.MAX_VALUE&&it==kotlin.math.floor(it)}!=true)"عدد التكرارات يجب أن يكون عددًا صحيحًا أكبر من صفر."else Validation.space(value)
                                 if(error==null){onSave(value);repository.clearDraft(draftKey);Toast.makeText(context,"تم حفظ الحصر بنجاح ✓",Toast.LENGTH_SHORT).show()}
                             },
                             modifier=Modifier.weight(1f).heightIn(min=48.dp)
@@ -144,7 +144,7 @@ fun RoomCaptureScreen(
                             Icon(Icons.Rounded.Save,null,Modifier.size(18.dp));Spacer(Modifier.width(4.dp));Text("حفظ")
                         }
                         if(step==2)OutlinedButton(onClick={
-                            val value=current();error=Validation.space(value)
+                            val value=current();error=if(com.fayroz.sitecalculator.domain.MortarMix.number(repeat)?.let{it>=1&&it<=Int.MAX_VALUE&&it==kotlin.math.floor(it)}!=true)"عدد التكرارات يجب أن يكون عددًا صحيحًا أكبر من صفر."else Validation.space(value)
                             if(error==null){onSaveNext(value);repository.clearDraft(draftKey);Toast.makeText(context,"تم الحفظ — مكان جديد",Toast.LENGTH_SHORT).show()}
                         },modifier=Modifier.weight(1f)){Text("حفظ وإضافة",maxLines=1,style=MaterialTheme.typography.labelSmall)}
                     }
@@ -491,7 +491,7 @@ private fun OpeningRow(
                 }
                 Text("معاينة المقاس والارتفاع فقط؛ موضع الفتحة الأفقي غير مسجل.",style=MaterialTheme.typography.labelSmall)
             }
-            NumberFieldX("العدد",count,{count=it;onChange(opening.copy(count=n(it).toInt().coerceAtLeast(1)))},"عدد")
+            NumberFieldX("العدد",count,{count=it;onChange(opening.copy(count=if(com.fayroz.sitecalculator.domain.MortarMix.number(it)?.let{v->v>=1&&v<=Int.MAX_VALUE&&v==kotlin.math.floor(v)}==true)n(it).toInt()else 0))},"عدد")
         }
     }
 }

@@ -73,6 +73,8 @@ fun TakeoffEditorDialog(
 
     fun scopeError():String? {
         return when{
+            listOf(waste,tileHeight,upstand,layerThickness,pieceW,pieceH).any{it.isNotBlank()&&com.fayroz.sitecalculator.domain.MortarMix.number(it)==null}->"راجع الأرقام المدخلة في بيانات البند."
+            pack.isNotBlank()&&com.fayroz.sitecalculator.domain.MortarMix.number(pack)?.let{it>=1&&it<=Int.MAX_VALUE&&it==kotlin.math.floor(it)}!=true->"عدد القطع في العبوة يجب أن يكون عددًا صحيحًا أكبر من صفر."
             q.oneSpaceFinal<=0->"أدخل مقاسات أو كمية أكبر من صفر."
             preview.waste<0||preview.tileHeight<0||preview.upstand<0->"القيم لا يمكن أن تكون سالبة."
             parts.any{QuantityEngine.partValue(it,item.unit)<=0}->"راجع مقاسات وخصومات الأجزاء."
@@ -99,7 +101,7 @@ fun TakeoffEditorDialog(
                 error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
                 Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
                     OutlinedButton(onClick={if(stage>0){stage--;error=null}else onDismiss()},modifier=Modifier.weight(1f)){Text(if(stage>0)"تعديل المدخلات" else "إلغاء")}
-                    Button(onClick={if(stage<2)go(stage+1)else{error=MaterialReview.itemError(space,preview);if(error==null)onSave(preview)}},modifier=Modifier.weight(1f)){Text(when(stage){0->"التالي: المواد";1->"احسب واعرض النتيجة";else->"حفظ البند"})}
+                    Button(onClick={if(stage<2)go(stage+1)else{error=scopeError()?:MaterialReview.itemError(space,preview);if(error==null)onSave(preview)}},modifier=Modifier.weight(1f)){Text(when(stage){0->"التالي: المواد";1->"احسب واعرض النتيجة";else->"حفظ البند"})}
                 }
             }}}
         ){padding->Column(Modifier.fillMaxSize().padding(padding)){

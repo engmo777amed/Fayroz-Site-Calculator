@@ -24,6 +24,7 @@ fun SiteUtilityScreen(toolId:String,onBack:()->Unit,repository:V8Repository?=nul
     var value by remember{mutableStateOf(saved["value"].orEmpty())}
     var type by remember{mutableStateOf(saved["type"]?:"طول")}
     var unit by remember{mutableStateOf(saved["unit"]?:"م")}
+    val savedId=remember{saved["_savedId"]?:java.util.UUID.randomUUID().toString()}
     val parts=remember{mutableStateListOf<AreaPart>().apply{repeat(saved["parts"]?.toIntOrNull()?:1){i->add(AreaPart(saved["length.$i"].orEmpty(),saved["width.$i"].orEmpty(),saved["deduct.$i"]=="true",saved["name.$i"].orEmpty()))}}}
     val total=parts.sumOf{val a=lengthMeters(it.length,unit)*lengthMeters(it.width,unit);if(it.deduct)-a else a}
     val inputs=buildMap{put("_label",label);put("value",value);put("type",type);put("unit",unit);put("parts",parts.size.toString());parts.forEachIndexed{i,p->put("name.$i",p.name);put("length.$i",p.length);put("width.$i",p.width);put("deduct.$i",p.deduct.toString())}}
@@ -47,7 +48,7 @@ fun SiteUtilityScreen(toolId:String,onBack:()->Unit,repository:V8Repository?=nul
         error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
         Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
             if(stage==1)OutlinedButton(onClick={stage=0},modifier=Modifier.weight(1f)){Text("تعديل المدخلات")}
-            Button(onClick={if(stage==0)calculate()else{repository?.saveRecentCalc(SavedCalculation(id=saved["_savedId"]?:java.util.UUID.randomUUID().toString(),toolId=toolId,title=label,summary=lines.joinToString(" • "){"${it.label}: ${it.value}"},sourceQuantity=if(toolId=="area")total else n(value),unit=if(toolId=="area")"م²" else unit,inputs=inputs,explanation=if(toolId=="area")"جمع المساحات المضافة وطرح أجزاء الخصم." else "تحويل الوحدات ضمن نفس النوع."));Toast.makeText(context,"تم حفظ النتيجة ✓",Toast.LENGTH_SHORT).show()}},modifier=Modifier.weight(1f)){Text(if(stage==0)"احسب واعرض النتيجة" else "حفظ النتيجة")}
+            Button(onClick={if(stage==0)calculate()else{repository?.saveRecentCalc(SavedCalculation(id=savedId,toolId=toolId,title=label,summary=lines.joinToString(" • "){"${it.label}: ${it.value}"},sourceQuantity=if(toolId=="area")total else n(value),unit=if(toolId=="area")"م²" else unit,inputs=inputs,explanation=if(toolId=="area")"جمع المساحات المضافة وطرح أجزاء الخصم." else "تحويل الوحدات ضمن نفس النوع."));Toast.makeText(context,"تم حفظ النتيجة ✓",Toast.LENGTH_SHORT).show()}},modifier=Modifier.weight(1f)){Text(if(stage==0)"احسب واعرض النتيجة" else "حفظ النتيجة")}
         }
     }}}){padding->Column(Modifier.fillMaxSize().padding(padding)){
         StageNavigation(stage,listOf("إدخال البيانات","النتيجة")){if(it==0)stage=0 else calculate()}
