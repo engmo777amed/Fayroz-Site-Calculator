@@ -9,7 +9,6 @@ import com.fayroz.sitecalculator.domain.*
 fun RecipeFields(def:CalcDef,quantity:Double,inputs:Map<String,String>,onChange:(Map<String,String>)->Unit){
     Text(def.title,style=MaterialTheme.typography.titleMedium)
     val quantityUnit=if(def.fields.any{it.key=="area"})"م²" else if(def.fields.any{it.key=="length"})"م ط" else "عدد"
-    Text("الكمية المعتمدة: ${fmt(quantity)} $quantityUnit",style=MaterialTheme.typography.bodySmall)
     var prices by remember{mutableStateOf(false)}
     var more by remember{mutableStateOf(false)}
     var latestInputs by remember{mutableStateOf(inputs)}
@@ -22,8 +21,8 @@ fun RecipeFields(def:CalcDef,quantity:Double,inputs:Map<String,String>,onChange:
     TextFieldX("اسم الصنف والمواصفة",inputs["_materialName"].orEmpty(),{update("_materialName",it)},placeholder="مثال: سيراميك أرضية بيج 60 × 60")
     if(MortarMix.isMix(def))NumberFieldX("شكاير الأسمنت على متر الرمل",inputs[MortarMix.key]?:exact(MortarMix.bags(inputs)),{update(MortarMix.key,it)},"شيكارة/م³ رمل")
     val normal=MortarMix.basic(def).filter{it.key !in setOf("area","length","count")}
-    normal.forEach{f->CalcInputField(f,inputs[f.key]?:f.default,{update(f.key,it)},inputs["_unit.${f.key}"],{update("_unit.${f.key}",it)})}
-    TextButton(onClick={prices=!prices}){Text("الأسعار — اختيارية")}
+    normal.chunked(2).forEach{pair->Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){pair.forEach{f->Column(androidx.compose.ui.Modifier.weight(1f)){CalcInputField(f,inputs[f.key]?:f.default,{update(f.key,it)},inputs["_unit.${f.key}"],{update("_unit.${f.key}",it)})}}}}
+    TextButton(onClick={prices=!prices}){Text("السعر المستخدم / تغيير خاص")}
     if(prices)def.fields.filter{it.key.contains("price",true)}.forEach{f->CalcInputField(f,inputs[f.key]?:f.default,{update(f.key,it)},inputs["_unit.${f.key}"],{update("_unit.${f.key}",it)})}
     TextButton(onClick={more=!more}){Text("إعدادات إضافية ومصنعية")}
     if(more){

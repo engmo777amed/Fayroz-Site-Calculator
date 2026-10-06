@@ -17,16 +17,19 @@ import com.fayroz.sitecalculator.core.*
 import com.fayroz.sitecalculator.domain.CalculatorLibrary
 import com.fayroz.sitecalculator.domain.QuantityEngine
 import com.fayroz.sitecalculator.domain.MortarMix
+import com.fayroz.sitecalculator.domain.PriceBook
 import com.fayroz.sitecalculator.data.V8Repository
 
 @Composable
 fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repository,project:Project?,
     onBack:()->Unit,onSave:(MaterialResult,String?,String?)->Unit){
     val def=CalculatorLibrary.all.firstOrNull{it.id==toolId}?:return
+    val book=repository.centralPrices()+project?.defaults.orEmpty()
+    val starting=CalculatorLibrary.defaults(def,book)
     val draftKey="$toolId.${project?.id?:"independent"}"
     val raw=remember(toolId,seed){mutableStateMapOf<String,String>().apply{
         def.fields.forEach{field->
-            put(field.key,seed?.inputs?.get(field.key)?:if(project!=null)CalculatorLibrary.defaults(def,project.defaults)[field.key]?:field.default else if(field.key in setOf("area","length","count","bags")||field.default.isBlank())field.default else repository.pref("calc.$toolId.${field.key}",field.default))
+            put(field.key,seed?.inputs?.get(field.key)?:if(book.containsKey("recipe.$toolId.${field.key}"))starting[field.key]?:field.default else if(field.key in setOf("area","length","count","bags")||field.default.isBlank())field.default else repository.pref("calc.$toolId.${field.key}",field.default))
             seed?.inputs?.get("_unit.${field.key}")?.let{unit->put("_unit.${field.key}",unit)}
         }
         val draft=if(seed==null)repository.calculatorDraft(draftKey)else emptyMap()
@@ -42,6 +45,7 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
         put("_previousMode",seed?.inputs?.get("_mortarMode")?:"area")
         put("_volume",seed?.inputs?.get("_volume")?:get("_volume")?:"1")
         put("_sandAvailable",seed?.inputs?.get("_sandAvailable")?:get("_sandAvailable")?:"1")
+        if(seed==null){putIfAbsent("_materialName",starting["_materialName"].orEmpty());putAll(PriceBook.apply(def,this,book))}
         if(seed!=null&&seed.inputs.isEmpty()&&seed.sourceQuantity>0&&def.fields.any{it.key=="area"})put("area",exact(seed.sourceQuantity))
     }}
     val context=LocalContext.current
@@ -70,9 +74,10 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
     var source by remember{mutableStateOf(seed?.inputs?.get("_source")?:"حساب مستقل")}
     var sectionId by remember{mutableStateOf(seed?.inputs?.get("_sectionId")?.takeIf{it.isNotBlank()})}
     var spaceId by remember{mutableStateOf(seed?.inputs?.get("_spaceId")?.takeIf{it.isNotBlank()})}
-    val attempt=runCatching{CalculatorLibrary.evaluate(def,raw)}
+    val effective=if(seed==null)PriceBook.apply(def,raw.toMap(),book)else raw.toMap()
+    val attempt=runCatching{CalculatorLibrary.evaluate(def,effective)}
     val answer=attempt.getOrNull()
-    val result=answer?.let{CalculatorLibrary.result(def,raw.toMap(),it).copy(title=label)}
+    val result=answer?.let{CalculatorLibrary.result(def,effective,it).copy(title=label)}
     val sources=remember(project){buildList{
         add(Triple("حساب مستقل",null as String?,null as String?))
         project?.let{p->
@@ -103,11 +108,11 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
     }
     fun showResult(){
         error=attempt.exceptionOrNull()?.message
-        if(error==null){rememberSpecification();stage=1;quickEdit=false}
+        if(error==null){rememberSpecification();stage=1}
         else scope.launch{listState.animateScrollToItem(0)}
     }
     fun saveResult(){
-        if(result==null)return
+        if(result==null){error=attempt.exceptionOrNull()?.message;return}
         val next=result.copy(inputs=result.inputs+mapOf("_label" to label,"_source" to source,"_sectionId" to sectionId.orEmpty(),"_spaceId" to spaceId.orEmpty(),"_savedId" to savedId,"_savedAt" to System.currentTimeMillis().toString(),"_sourceItem" to sourceItem,"_includeInProject" to (includeInProject&&sourceItem.isBlank()&&source!="حساب مستقل").toString()))
         rememberSpecification()
         if(project!=null&&(source!="حساب مستقل"||project.calculations.any{it.id==savedId}))onSave(next,sectionId,spaceId)
@@ -118,22 +123,21 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
     }
     if(templateDialog)AlertDialog(onDismissRequest={templateDialog=false},title={Text("حفظ إعداداتي")},text={TextFieldX("اسم الإعداد",templateName,{templateName=it})},confirmButton={TextButton(enabled=templateName.isNotBlank()&&answer!=null,onClick={repository.saveCalculatorTemplate(toolId,templateName.trim(),specification());templates=repository.calculatorTemplates(toolId);templateDialog=false;Toast.makeText(context,"تم حفظ الإعداد ✓",Toast.LENGTH_SHORT).show()}){Text("حفظ الإعداد")}},dismissButton={TextButton(onClick={templateDialog=false}){Text("إلغاء")}})
     DisposableEffect(toolId,seed){onDispose{if(seed==null&&savedSnapshot!=raw.toMap())repository.saveCalculatorDraft(draftKey,raw.toMap())}}
-    BackHandler{if(stage==1){stage=0;error=null}else onBack()}
-    LaunchedEffect(stage){listState.scrollToItem(0)}
-    Scaffold(topBar={TopAppBar(title={Column{Text(def.title,fontWeight=FontWeight.Bold,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis);Text("الحاسبات / ${def.group}",style=MaterialTheme.typography.labelSmall,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)}},navigationIcon={TextButton(onClick={if(stage==1){stage=0;error=null}else onBack()}){Text("رجوع")}})},
+    BackHandler{onBack()}
+    Scaffold(topBar={TopAppBar(title={Column{Text(def.title,fontWeight=FontWeight.Bold,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis);Text("الحاسبات / ${def.group}",style=MaterialTheme.typography.labelSmall,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)}},navigationIcon={TextButton(onClick=onBack){Text("رجوع")}})},
         bottomBar={Surface(shadowElevation=8.dp){Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
             error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
             Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
-                if(stage==1)OutlinedButton(onClick={stage=0},modifier=Modifier.weight(1f)){Text("تعديل المدخلات")}
                 Button(onClick={if(stage==0)showResult() else saveResult()},modifier=Modifier.weight(1f)){Text(if(stage==0)"احسب واعرض النتيجة" else "حفظ النتيجة")}
             }
         }}}
     ){padding->Column(Modifier.fillMaxSize().padding(padding)){
-        StageNavigation(stage,listOf("إدخال البيانات","النتيجة")){i->if(i==0){stage=0;error=null}else showResult()}
-        LazyColumn(state=listState,modifier=Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-            if(stage==0){
-                item{Text(if(seed!=null)"قيم محفوظة بتاريخ الحساب؛ تعديل السعر لا يغيّر الكمية." else if(project!=null)"مواصفات وأسعار البداية من مشروع: ${project.name}" else "حساب مستقل؛ راجع مواصفات الخامة وأسعارها.",style=MaterialTheme.typography.bodySmall)}
+        LazyColumn(state=listState,modifier=Modifier.fillMaxSize(),contentPadding=PaddingValues(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
+            run{
+                if(seed!=null)item{Text("أسعار محفوظة بتاريخ الحساب",style=MaterialTheme.typography.labelSmall)}
                 item{BasicCalculatorInputs(def,raw){key,value->raw[key]=value;error=null}}
+                if(stage==1&&answer!=null)item{CalculatorResultCards(def,effective,answer,label)}
+                if(stage==1&&answer==null)item{Text(attempt.exceptionOrNull()?.message?:"راجع البيانات",color=MaterialTheme.colorScheme.error)}
                 item{BoxCard{ExpandableSection("إعداداتي وتفاصيل إضافية",error!=null&&def.fields.filter{it !in MortarMix.basic(def)}.any{error?.contains(it.label)==true}){
                     if(templates.isNotEmpty())ChoiceFieldX("خلطة أو إعداد محفوظ","اختار إعدادًا",templates.map{it.first},{name->templates.firstOrNull{it.first==name}?.second?.filterKeys(::isSetting)?.forEach{(key,value)->raw[key]=value}})
                     TextButton(onClick={templateName=def.title;templateDialog=true}){Text("حفظ إعداداتي باسم")}
@@ -145,9 +149,9 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
                         TextFieldX("نوع الأسمنت وماركته",raw["_cementName"]?:"أسمنت",{raw["_cementName"]=it})
                         TextFieldX("نوع الرمل",raw["_sandName"]?:"رمل",{raw["_sandName"]=it})
                     }
-                    if(def.fields.any{it.key.contains("price",true)})ExpandableSection("الأسعار — اختيارية"){
-                        Text("يمكن إدخال الأسعار بعد ظهور النتيجة أيضًا.",style=MaterialTheme.typography.bodySmall)
-                        def.fields.filter{it.key.contains("price",true)}.forEach{field->CalcInputField(field,raw[field.key].orEmpty(),{raw[field.key]=it;error=null})}
+                    if(def.fields.any{it.key.contains("price",true)})ExpandableSection("السعر المستخدم / تغيير خاص"){
+                        Text("الأسعار من شاشة الأسعار. أي تغيير هنا لهذا الحساب فقط.",style=MaterialTheme.typography.bodySmall)
+                        def.fields.filter{it.key.contains("price",true)}.forEach{field->CalcInputField(field,effective[field.key].orEmpty(),{raw[field.key]=it;raw["_priceOverride.${field.key}"]="true";error=null})}
                     }
                     if(project!=null)ExpandableSection("تعبئة كمية من المشروع"){
                         Text("نسخة من الحصر الحالي؛ لا تتحدث تلقائيًا.",style=MaterialTheme.typography.bodySmall)
@@ -156,16 +160,8 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
                     }
                     TextButton(onClick={raw.clear();def.fields.forEach{raw[it.key]=it.default};if(MortarMix.isMix(def))raw[MortarMix.key]=exact(MortarMix.bags(raw));raw["_mortarMode"]="area";sourceItem="";includeInProject=false;repository.clearCalculatorDraft(draftKey);error=null}){Text("استعادة القيم الأصلية")}
                 }}}
-            }else if(answer!=null&&result!=null){
-                item{BoxCard{
-                    TextButton(onClick={quickEdit=!quickEdit}){Text("تعديل سريع للنتيجة")}
-                    if(quickEdit)BasicCalculatorInputs(def,raw){key,value->raw[key]=value;error=null;rememberSpecification()}
-                }}
-                item{CalculatorResultCards(def,raw.toMap(),answer,"$label • $source")}
-                if(def.fields.any{it.key.contains("price",true)})item{BoxCard{ExpandableSection("احسب التكلفة"){
-                    def.fields.filter{it.key.contains("price",true)}.forEach{field->CalcInputField(field,raw[field.key].orEmpty(),{raw[field.key]=it;error=null})}
-                    Text("تكلفة الاستهلاك: ${money(answer.consumedCost)} جنيه • الشراء: ${money(answer.cost)} جنيه",style=MaterialTheme.typography.bodySmall)
-                }}}
+            }
+            if(stage==1&&answer!=null&&result!=null){
                 if(sourceItem.isNotBlank())item{Text("مصدر الكمية: $sourceItem • نسخة من الحصر وقت التعبئة",style=MaterialTheme.typography.bodySmall)}
                 item{BoxCard{ExpandableSection("اسم الحساب ومكان الحفظ"){
                     TextFieldX("اسم الحساب",label,{label=it})
@@ -186,10 +182,7 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
                     TextButton(onClick={baseline=result}){Text("ثبّت النتيجة للمقارنة")}
                     if(baseline!=null)TextButton(onClick={baseline=null}){Text("مسح المقارنة")}
                 }}}
-            }else item{BoxCard{
-                Text(attempt.exceptionOrNull()?.message?:"راجع البيانات",color=MaterialTheme.colorScheme.error)
-                BasicCalculatorInputs(def,raw){key,value->raw[key]=value;error=null}
-            }}
+            }
         }
     }}
 }
@@ -212,17 +205,21 @@ private fun BasicCalculatorInputs(def:com.fayroz.sitecalculator.domain.CalcDef,r
     }
     if(def.fields.any{it.key=="area"}&&(!mortar||mode=="area")){
         val dimensions=raw["_areaMethod"]=="dimensions"
-        ChoiceFieldX("إدخال المساحة",if(dimensions)"من الطول والعرض" else "مساحة جاهزة",listOf("مساحة جاهزة","من الطول والعرض"),{choice->
-            set("_areaMethod",if(choice=="من الطول والعرض")"dimensions"else "ready")
-            if(choice=="من الطول والعرض")set("area",exact(n(raw["_areaLength"].orEmpty())*n(raw["_areaWidth"].orEmpty())))
-        })
+        TextButton(onClick={set("_areaMethod",if(dimensions)"ready"else "dimensions")}){Text(if(dimensions)"استخدام مساحة جاهزة"else "من الطول والعرض")}
         if(dimensions){
-            NumberFieldX("طول المسطح",raw["_areaLength"].orEmpty(),{set("_areaLength",it);set("area",exact(n(it)*n(raw["_areaWidth"].orEmpty())))},"م")
-            NumberFieldX("عرض المسطح",raw["_areaWidth"].orEmpty(),{set("_areaWidth",it);set("area",exact(n(it)*n(raw["_areaLength"].orEmpty())))},"م")
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+            NumberFieldX("طول المسطح",raw["_areaLength"].orEmpty(),{set("_areaLength",it);set("area",exact(n(it)*n(raw["_areaWidth"].orEmpty())))},"م",Modifier.weight(1f))
+            NumberFieldX("عرض المسطح",raw["_areaWidth"].orEmpty(),{set("_areaWidth",it);set("area",exact(n(it)*n(raw["_areaLength"].orEmpty())))},"م",Modifier.weight(1f))
+            }
             Text("المساحة: ${raw["area"]?:"0"} م²")
         }else def.fields.first{it.key=="area"}.let{CalcInputField(it,raw["area"].orEmpty(),{set("area",it)})}
     }
-    MortarMix.basic(def).filter{it.key!="area"}.forEach{field->CalcInputField(field,raw[field.key].orEmpty(),{set(field.key,it)},raw["_unit.${field.key}"],{set("_unit.${field.key}",it)})}
+    val fields=MortarMix.basic(def).filter{it.key!="area"}
+    fields.chunked(2).forEach{pair->
+        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){pair.forEach{field->
+            Column(Modifier.weight(1f)){CalcInputField(field,raw[field.key].orEmpty(),{set(field.key,it)},raw["_unit.${field.key}"],{set("_unit.${field.key}",it)})}
+        }}
+    }
     if(MortarMix.isMix(def)){
         NumberFieldX("شكاير الأسمنت على متر الرمل",raw[MortarMix.key]?:exact(MortarMix.bags(raw)),{set(MortarMix.key,it)},"شيكارة/م³ رمل")
         Text("الشيكارة ${raw["bag"]?:"50"} كجم • هالك ${raw["waste"]?:"5"}%",style=MaterialTheme.typography.bodySmall)

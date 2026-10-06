@@ -1,140 +1,53 @@
 package com.fayroz.sitecalculator.ui
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.fayroz.sitecalculator.R
 import com.fayroz.sitecalculator.core.*
 
 @Composable
-fun HomeScreen(
-    projects:List<Project>,
-    active:ActiveLocation?,
-    recentCalcs:List<SavedCalculation>,
-    onContinue:()->Unit,
-    onProjects:()->Unit,
-    onToday:()->Unit,
-    onTools:()->Unit,
-    onNewRoom:()->Unit,
-    onDirectItem:()->Unit,
-    onSettings:()->Unit,
-    onOpenSaved:(SavedCalculation)->Unit = {},
-    onSaved:()->Unit = onToday,
-    onPrices:()->Unit = onSettings
-){
-    val project=active?.let{a->projects.firstOrNull{it.id==a.projectId}}
-    val section=project?.sections?.firstOrNull{it.id==active?.sectionId}
-    val space=section?.spaces?.firstOrNull{it.id==active?.spaceId}
-
-    androidx.compose.foundation.lazy.LazyColumn(
-        modifier=Modifier.fillMaxSize(),
-        contentPadding=PaddingValues(12.dp),
-        verticalArrangement=Arrangement.spacedBy(10.dp)
-    ){
-        item{
-            Surface(shape=RoundedCornerShape(22.dp),color=FayrozNavy,shadowElevation=4.dp){
-                Column(
-                    Modifier.background(Brush.horizontalGradient(listOf(FayrozNavy,FayrozNavy2))).padding(14.dp),
-                    verticalArrangement=Arrangement.spacedBy(10.dp)
-                ){
-                    Row(verticalAlignment=Alignment.CenterVertically){
-                        Image(painter=painterResource(R.drawable.ic_site_foreground),contentDescription=null,modifier=Modifier.size(46.dp))
-                        Spacer(Modifier.width(10.dp))
-                        Column(Modifier.weight(1f)){
-                            Text("FAYROZ SITE CALCULATOR",color=Color.White,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Black)
-                            Text("V9.4 • الحصر والخامات والتكلفة",color=FayrozTurquoise,style=MaterialTheme.typography.bodySmall)
-                        }
-                        IconButton(onClick=onSettings){Icon(Icons.Rounded.Settings,"الإعدادات",tint=Color.White)}
-                    }
-
-                    if(project!=null){
-                        Surface(onClick=onContinue,shape=RoundedCornerShape(15.dp),color=Color.White.copy(alpha=.07f)){
-                            Row(Modifier.fillMaxWidth().padding(11.dp),verticalAlignment=Alignment.CenterVertically){
-                                Column(Modifier.weight(1f)){
-                                    Text("المشروع النشط",color=Color.White.copy(alpha=.65f),style=MaterialTheme.typography.labelSmall)
-                                    Text(project.name,color=Color.White,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Black)
-                                    Text(
-                                        when{
-                                            space!=null->"${section?.name ?: ""} ← ${space.name}"
-                                            section!=null->section.name
-                                            else->"كمّل المشروع"
-                                        },
-                                        color=Color.White.copy(alpha=.72f),
-                                        style=MaterialTheme.typography.bodySmall
-                                    )
-                                }
-                                Column(horizontalAlignment=Alignment.CenterHorizontally){
-                                    Text("كمّل",color=FayrozTurquoise,fontWeight=FontWeight.Black)
-                                    Icon(Icons.Rounded.ChevronLeft,null,tint=FayrozTurquoise)
-                                }
-                            }
-                        }
-                    }else{
-                        Text("اختار مشروع نشط مرة واحدة، وبعدها البرنامج هيفتكره.",color=Color.White.copy(alpha=.75f),style=MaterialTheme.typography.bodySmall)
-                    }
-                }
-            }
-        }
-
-        item{PageHeader("اختار اللي محتاجه","حساب سريع أو حصر مشروع")}
-        item{Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
-            HomeAction("مشروعاتي","إنشاء مشروع أو استكمال الحصر",Icons.Rounded.FolderOpen,onProjects,Modifier.weight(1f))
-            HomeAction("الحاسبات","أقسام للحسابات السريعة",Icons.Rounded.Calculate,onTools,Modifier.weight(1f))
+fun HomeScreen(projects:List<Project>,active:ActiveLocation?,recentCalcs:List<SavedCalculation>,
+    onContinue:()->Unit,onProjects:()->Unit,onToday:()->Unit,onTools:()->Unit,onNewRoom:()->Unit,
+    onDirectItem:()->Unit,onSettings:()->Unit,onOpenSaved:(SavedCalculation)->Unit={},
+    onSaved:()->Unit=onToday,onPrices:()->Unit=onSettings,onCreate:(String,String)->Unit={_,_->},
+    onOpenPlace:(String,String,String)->Unit={_,_,_->}){
+    val project=projects.firstOrNull{it.id==active?.projectId}
+    var create by remember{mutableStateOf(false)}
+    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
+        item{Row(verticalAlignment=Alignment.CenterVertically){
+            Column(Modifier.weight(1f)){Text("فيروز",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold);Text("حصر الموقع",style=MaterialTheme.typography.bodySmall)}
+            TextButton(onClick=onPrices){Text("الأسعار")}
+            IconButton(onClick=onSettings){Icon(Icons.Rounded.Settings,"الإعدادات")}
         }}
-        item{Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
-            TextButton(onClick=onSaved,modifier=Modifier.weight(1f)){Text("المحفوظات")}
-            TextButton(onClick=onPrices,modifier=Modifier.weight(1f)){Text("الأسعار")}
+        if(project!=null)item{Surface(onClick=onContinue,shape=RoundedCornerShape(12.dp),color=FayrozNavy){Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=Alignment.CenterVertically){
+            Column(Modifier.weight(1f)){Text(project.name,color=androidx.compose.ui.graphics.Color.White,fontWeight=FontWeight.Bold);Text("${project.sections.sumOf{it.spaces.size}} مكان • المشروع الحالي",color=FayrozTurquoise,style=MaterialTheme.typography.bodySmall)}
+            Text("كمّل الحصر ←",color=FayrozTurquoise)
+        }}}
+        item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+            Button(onClick=onTools,modifier=Modifier.weight(1f)){Text("حساب سريع")}
+            OutlinedButton(onClick={create=true},modifier=Modifier.weight(1f)){Text("مشروع جديد")}
         }}
-        if(project!=null)item{BoxCard{
-            Text("إضافة حصر إلى ${project.name}",fontWeight=FontWeight.Bold)
-            Button(onClick=onDirectItem,modifier=Modifier.fillMaxWidth()){Text("إضافة كمية جاهزة")}
-            OutlinedButton(onClick=onNewRoom,modifier=Modifier.fillMaxWidth()){Text("إضافة مكان بالمقاسات")}
-        }}
-        item{TextButton(onClick=onToday){Text("الحصر الجاري")}}
-
+        if(project!=null){
+            item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                TextButton(onClick=onNewRoom,modifier=Modifier.weight(1f)){Text("إضافة مكان")}
+                TextButton(onClick=onDirectItem,modifier=Modifier.weight(1f)){Text("كمية جاهزة")}
+            }}
+            val places=project.sections.flatMap{s->s.spaces.map{s to it}}.sortedByDescending{it.second.updatedAt}.take(3)
+            if(places.isNotEmpty())item{Text("آخر الأماكن",fontWeight=FontWeight.Bold)}
+            items(places.size){i->val (section,space)=places[i];Surface(onClick={onOpenPlace(project.id,section.id,space.id)},shape=RoundedCornerShape(10.dp),tonalElevation=1.dp){Row(Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(space.name,fontWeight=FontWeight.Bold);Text(section.name,style=MaterialTheme.typography.labelSmall)};Text("${space.takeoffs.size} بند",style=MaterialTheme.typography.bodySmall)}}}
+        }else if(projects.isNotEmpty())item{TextButton(onClick=onProjects,modifier=Modifier.fillMaxWidth()){Text("اختيار مشروع لاستكمال الحصر")}}
         if(recentCalcs.isNotEmpty()){
-            item{PageHeader("آخر حساباتك")}
-            items(recentCalcs.take(3).size){index->
-                val calc=recentCalcs[index]
-                Surface(onClick={onOpenSaved(calc)},shape=RoundedCornerShape(14.dp),tonalElevation=1.dp){
-                    Column(Modifier.fillMaxWidth().padding(10.dp)){
-                        Text(calc.title,fontWeight=FontWeight.Black)
-                        Text(calc.summary.substringBefore(" • "),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=2)
-                    }
-                }
-            }
+            item{Text("آخر الحسابات",fontWeight=FontWeight.Bold)}
+            items(recentCalcs.take(3).size){i->val c=recentCalcs[i];Surface(onClick={onOpenSaved(c)},shape=RoundedCornerShape(10.dp),tonalElevation=1.dp){Row(Modifier.fillMaxWidth().padding(10.dp),verticalAlignment=Alignment.CenterVertically){Text(c.title,Modifier.weight(1f),maxLines=1,fontWeight=FontWeight.Bold);Text("فتح ←",style=MaterialTheme.typography.labelMedium)}}}
         }
     }
+    if(create)NewProjectDialog(onDismiss={create=false},onCreate={name,type->create=false;onCreate(name,type)})
 }
-
-@Composable
-private fun HomeAction(
-    title:String,
-    subtitle:String,
-    icon:androidx.compose.ui.graphics.vector.ImageVector,
-    onClick:()->Unit,
-    modifier:Modifier=Modifier
-){
-    Surface(onClick=onClick,modifier=modifier.heightIn(min=104.dp),shape=RoundedCornerShape(18.dp),tonalElevation=1.dp){
-        Column(Modifier.padding(11.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
-            Surface(shape=RoundedCornerShape(10.dp),color=MaterialTheme.colorScheme.primaryContainer){
-                Icon(icon,null,Modifier.padding(7.dp).size(20.dp),tint=MaterialTheme.colorScheme.primary)
-            }
-            Text(title,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Black)
-            Text(subtitle,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=2)
-        }
-    }
-}
-

@@ -124,10 +124,12 @@ object CalculatorLibrary {
         "سقف جبس بورد"->"gypsum"
         else->""
     }}
-    fun defaults(def:CalcDef,project:Map<String,String>):Map<String,String> {
+    fun defaults(def:CalcDef,project:Map<String,String>)=PriceBook.apply(def,baseDefaults(def,project),project)
+    fun baseDefaults(def:CalcDef,project:Map<String,String>):Map<String,String> {
         val result=def.fields.associate{field->field.key to (project["recipe.${def.id}.${field.key}"]?:project[field.key]?.takeIf{field.key in setOf("cementPrice","sandPrice")}?:field.default)}
         val mix=project["recipe.${def.id}._bagsPerSand"]?:project[when(def.id){"splash"->"splashBagsPerSand";"screed"->"screedBagsPerSand";else->"plasterBagsPerSand"}]?.takeIf{def.id in mortarIds}
-        return if(mix!=null)result+(MortarMix.key to mix)else result
+        val named=result+("_materialName" to project["recipe.${def.id}._materialName"].orEmpty())+listOf("_laborRate","_transportRate","_equipmentRate").mapNotNull{k->project["recipe.${def.id}.$k"]?.let{k to it}}.toMap()
+        return if(mix!=null)named+(MortarMix.key to mix)else named
     }
     fun recipe(def:CalcDef,inputs:Map<String,String>,quantity:Double):Map<String,String> = def.fields.associate{it.key to it.default}+inputs+
         ((if(def.fields.any{it.key=="area"})"area" else if(def.fields.any{it.key=="length"})"length" else "count") to quantity.toString())

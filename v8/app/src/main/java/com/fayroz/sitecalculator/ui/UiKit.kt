@@ -56,10 +56,10 @@ fun PageHeader(title:String,subtitle:String?=null,action:(@Composable ()->Unit)?
 fun BoxCard(content:@Composable ColumnScope.()->Unit){
     Surface(
         modifier=Modifier.fillMaxWidth(),
-        shape=RoundedCornerShape(18.dp),
+        shape=RoundedCornerShape(12.dp),
         tonalElevation=1.dp
     ){
-        Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(7.dp),content=content)
+        Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(5.dp),content=content)
     }
 }
 

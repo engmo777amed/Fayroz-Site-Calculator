@@ -38,7 +38,7 @@ fun ProjectsScreen(
     androidx.compose.foundation.lazy.LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding=PaddingValues(12.dp),
-        verticalArrangement=Arrangement.spacedBy(9.dp)
+        verticalArrangement=Arrangement.spacedBy(6.dp)
     ){
         item{
             PageHeader("المشروعات","اختار مشروع نشط مرة واحدة"){
@@ -65,10 +65,10 @@ fun ProjectsScreen(
                 val done=p.sections.sumOf{s->s.spaces.count{x->x.status.name=="DONE"||x.status.name=="REVIEWED"}}
                 Surface(
                     onClick={onOpen(p.id)},
-                    shape=RoundedCornerShape(17.dp),
+                    shape=RoundedCornerShape(12.dp),
                     tonalElevation=1.dp
                 ){
-                    Column(Modifier.fillMaxWidth().padding(11.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
+                    Column(Modifier.fillMaxWidth().padding(11.dp),verticalArrangement=Arrangement.spacedBy(3.dp)){
                         Row(verticalAlignment=Alignment.CenterVertically){
                             Surface(shape=RoundedCornerShape(10.dp),color=MaterialTheme.colorScheme.primaryContainer){
                                 Icon(Icons.Rounded.Apartment,null,Modifier.padding(7.dp).size(19.dp),tint=MaterialTheme.colorScheme.primary)
@@ -105,7 +105,7 @@ fun ProjectsScreen(
 }
 
 @Composable
-private fun NewProjectDialog(onDismiss:()->Unit,onCreate:(String,String)->Unit){
+fun NewProjectDialog(onDismiss:()->Unit,onCreate:(String,String)->Unit){
     var name by remember{mutableStateOf("")}
     var type by remember{mutableStateOf("شقة")}
     AlertDialog(

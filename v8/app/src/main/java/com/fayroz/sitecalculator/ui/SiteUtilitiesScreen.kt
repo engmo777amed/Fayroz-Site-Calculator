@@ -43,17 +43,15 @@ fun SiteUtilityScreen(toolId:String,onBack:()->Unit,repository:V8Repository?=nul
         toolId=="area"&&(!total.isFinite()||total<0)->"الخصومات أكبر من المساحات المضافة."
         else->null
     };if(error==null)stage=1}
-    BackHandler{if(stage==1)stage=0 else onBack()}
-    Scaffold(topBar={TopAppBar(title={Text(label)},navigationIcon={TextButton(onClick={if(stage==1)stage=0 else onBack()}){Text("رجوع")}})},bottomBar={Surface(shadowElevation=8.dp){Column(Modifier.fillMaxWidth().padding(12.dp).navigationBarsPadding().imePadding()){
+    BackHandler{onBack()}
+    Scaffold(topBar={TopAppBar(title={Text(label)},navigationIcon={TextButton(onClick=onBack){Text("رجوع")}})},bottomBar={Surface(shadowElevation=8.dp){Column(Modifier.fillMaxWidth().padding(12.dp).navigationBarsPadding().imePadding()){
         error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
         Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
-            if(stage==1)OutlinedButton(onClick={stage=0},modifier=Modifier.weight(1f)){Text("تعديل المدخلات")}
-            Button(onClick={if(stage==0)calculate()else{repository?.saveRecentCalc(SavedCalculation(id=savedId,toolId=toolId,title=label,summary=lines.joinToString(" • "){"${it.label}: ${it.value}"},sourceQuantity=if(toolId=="area")total else n(value),unit=if(toolId=="area")"م²" else unit,inputs=inputs,explanation=if(toolId=="area")"جمع المساحات المضافة وطرح أجزاء الخصم." else "تحويل الوحدات ضمن نفس النوع."));Toast.makeText(context,"تم حفظ النتيجة ✓",Toast.LENGTH_SHORT).show()}},modifier=Modifier.weight(1f)){Text(if(stage==0)"احسب واعرض النتيجة" else "حفظ النتيجة")}
+            Button(onClick={if(stage==0)calculate()else{calculate();if(error==null){repository?.saveRecentCalc(SavedCalculation(id=savedId,toolId=toolId,title=label,summary=lines.joinToString(" • "){"${it.label}: ${it.value}"},sourceQuantity=if(toolId=="area")total else n(value),unit=if(toolId=="area")"م²" else unit,inputs=inputs,explanation=if(toolId=="area")"جمع المساحات المضافة وطرح أجزاء الخصم." else "تحويل الوحدات ضمن نفس النوع."));Toast.makeText(context,"تم حفظ النتيجة ✓",Toast.LENGTH_SHORT).show()}}},modifier=Modifier.weight(1f)){Text(if(stage==0)"احسب واعرض النتيجة" else "حفظ النتيجة")}
         }
     }}}){padding->Column(Modifier.fillMaxSize().padding(padding)){
-        StageNavigation(stage,listOf("إدخال البيانات","النتيجة")){if(it==0)stage=0 else calculate()}
-        key(stage){LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-            if(stage==0){
+        LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+            run{
                 item{ExpandableSection("اسم الحساب — اختياري"){TextFieldX("اسم الحساب",label,{label=it})}}
                 if(toolId=="convert")item{BoxCard{
                     ChoiceFieldX("نوع التحويل",type,listOf("طول","مساحة","حجم","وزن"),{type=it;unit=when(it){"طول"->"م";"مساحة"->"م²";"وزن"->"كجم";else->"م³"}})
@@ -71,12 +69,13 @@ fun SiteUtilityScreen(toolId:String,onBack:()->Unit,repository:V8Repository?=nul
                     }}
                     item{OutlinedButton(onClick={parts.add(AreaPart())},modifier=Modifier.fillMaxWidth()){Text("إضافة جزء")}}
                 }
-            }else{
+            }
+            if(stage==1){
                 item{BoxCard{Text("ملخص الحساب");Text(label);Text("حساب مستقل");lines.forEach{MetricRow(it.label,it.value,true)}}}
                 if(toolId=="area")item{BoxCard{Text("الأجزاء والخصومات");parts.forEachIndexed{i,p->MetricRow(p.name.ifBlank{"جزء ${i+1}"}+(if(p.deduct)" — خصم" else " — إضافة"),"${fmt(lengthMeters(p.length,unit)*lengthMeters(p.width,unit))} م²")}}}
                 item{OutlinedButton(onClick={context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_TEXT,label+"\n"+lines.joinToString("\n"){"${it.label}: ${it.value}"})},"مشاركة النتيجة"))},modifier=Modifier.fillMaxWidth()){Text("تصدير / مشاركة النتيجة")}}
             }
-        }}
+        }
     }}
 }
 

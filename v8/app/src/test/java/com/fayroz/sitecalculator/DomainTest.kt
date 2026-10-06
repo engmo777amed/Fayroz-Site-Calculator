@@ -322,5 +322,31 @@ class DomainTest {
     val purchases=CostEngine.purchase(CostEngine.rows(Project(name="",calculations=cs)))
     assertEquals(2,purchases.size);assertEquals(200.0,purchases.sumOf{it.cost},1e-9)
  }
+
+ @Test fun centralPriceMatchesPackagingAndName(){
+    val d=CalculatorLibrary.all.first{it.id=="tile"}
+    val r=CalculatorLibrary.baseDefaults(d,emptyMap())+mapOf("_materialName" to "سيراميك بيج","price" to "200")
+    val book=PriceBook.record(d,r)
+    assertEquals("200",PriceBook.apply(d,r+("price" to "0"),book)["price"])
+    assertEquals("0",PriceBook.apply(d,r+mapOf("tileW" to "80"),book)["price"])
+    assertEquals("0",PriceBook.apply(d,r+mapOf("pack" to "8"),book)["price"])
+    assertEquals("0",PriceBook.apply(d,r+mapOf("_materialName" to "سيراميك آخر"),book)["price"])
+ }
+ @Test fun centralPriceDoesNotDependOnJobAreaOrWaste(){
+    val d=CalculatorLibrary.all.first{it.id=="tile"};val r=CalculatorLibrary.baseDefaults(d,emptyMap())+("price" to "200")
+    val book=PriceBook.record(d,r)
+    assertEquals("200",PriceBook.apply(d,r+mapOf("area" to "500","waste" to "12"),book)["price"])
+ }
+ @Test fun centralCementPriceScalesWithBagWeightAndHonorsOverride(){
+    val d=CalculatorLibrary.all.first{it.id=="plaster"};val raw=CalculatorLibrary.baseDefaults(d,emptyMap())+mapOf("bag" to "25")
+    assertEquals(100.0,PriceBook.apply(d,raw,mapOf("cementPrice" to "200"))["cementPrice"]!!.toDouble(),0.0)
+    assertEquals("80",PriceBook.apply(d,raw+mapOf("cementPrice" to "80","_priceOverride.cementPrice" to "true"),mapOf("cementPrice" to "200"))["cementPrice"])
+ }
+ @Test fun explicitRepricingUsesMatchingSpecificationOnly(){
+    val d=CalculatorLibrary.all.first{it.id=="tile"};val raw=CalculatorLibrary.baseDefaults(d,emptyMap())+mapOf("area" to "10","price" to "200","_includeInProject" to "true")
+    val book=PriceBook.record(d,raw+("price" to "300"))
+    val p=Project(name="",defaults=book,calculations=listOf(SavedCalculation(toolId="tile",title="",summary="",inputs=raw)))
+    val next=CostEngine.reprice(p).calculations.single();assertEquals("300",next.inputs["price"]);assertEquals("10",next.inputs["area"])
+ }
 }
 

@@ -36,10 +36,9 @@ fun ToolsScreen(recent:List<SavedCalculation>,hasActiveProject:Boolean,onOpen:(S
             item{OutlinedButton(onClick={group="المفضلة"},modifier=Modifier.fillMaxWidth()){Text("المفضلة ★ (${favorites.size})")}}
             val sections=CalculatorLibrary.groups.chunked(2)
             items(sections.size){i->Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
-                sections[i].forEach{g->Surface(onClick={group=g},modifier=Modifier.weight(1f).heightIn(min=100.dp),shape=RoundedCornerShape(18.dp),tonalElevation=2.dp){Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
-                    Text(g,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleMedium)
-                    Text("${listed.count{it.group==g}} حاسبة",style=MaterialTheme.typography.bodySmall)
-                    Text("فتح القسم ←",color=MaterialTheme.colorScheme.primary)
+                sections[i].forEach{g->Surface(onClick={group=g},modifier=Modifier.weight(1f).heightIn(min=64.dp),shape=RoundedCornerShape(12.dp),tonalElevation=2.dp){Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
+                    Text(g,fontWeight=FontWeight.Bold,style=MaterialTheme.typography.titleSmall)
+                    Icon(Icons.Rounded.Calculate,null,Modifier.size(18.dp),tint=MaterialTheme.colorScheme.primary)
                 }}}
             }}
         }else{

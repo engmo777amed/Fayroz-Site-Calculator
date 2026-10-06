@@ -33,7 +33,7 @@ fun TakeoffEditorDialog(
     initialStage:Int=0
 ){
     var recipe by remember{mutableStateOf(defaultRecipe+("waste" to item.waste.toString())+item.calculatorInputs)}
-    var stage by remember{mutableIntStateOf(initialStage)}
+    var quantityOpen by remember{mutableStateOf(initialStage==0)}
     var selectedPartId by remember{mutableStateOf<String?>(null)}
     val recipeDef=CalculatorLibrary.forItem(item.name)
     var parts by remember{mutableStateOf(item.parts)}
@@ -84,7 +84,7 @@ fun TakeoffEditorDialog(
     }
     fun go(target:Int){
         error=if(target==1)scopeError() else if(target==2)MaterialReview.itemError(space,preview) else null
-        if(error==null)stage=target
+        if(error==null)quantityOpen=target==0
     }
     val selectedPart=parts.firstOrNull{it.id==selectedPartId}
     val scopeName=if(manualEnabled)"كامل البند — كمية فعلية" else if(selectedPart==null)"كامل البند" else selectedPart.name
@@ -94,23 +94,19 @@ fun TakeoffEditorDialog(
     val rows=if(MaterialReview.itemError(space,preview)==null)runCatching{CostEngine.rows(projected)}.getOrDefault(emptyList())else emptyList()
     val selectedRows=rows.filter{manualEnabled||selectedPartId==null||it.partId==selectedPartId}
     Dialog(onDismissRequest=onDismiss,properties=DialogProperties(usePlatformDefaultWidth=false)){
-        BackHandler{if(stage>0){stage--;error=null}else onDismiss()}
+        BackHandler{onDismiss()}
         Scaffold(
-            topBar={TopAppBar(title={Column{Text(item.name,fontWeight=FontWeight.Bold);Text(space.name,style=MaterialTheme.typography.bodySmall)}},navigationIcon={TextButton(onClick={if(stage>0){stage--;error=null}else onDismiss()}){Text("رجوع")}})},
+            topBar={TopAppBar(title={Column{Text(item.name,fontWeight=FontWeight.Bold);Text(space.name,style=MaterialTheme.typography.bodySmall)}},navigationIcon={TextButton(onClick=onDismiss){Text("رجوع")}})},
             bottomBar={Surface(shadowElevation=8.dp){Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
                 error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
-                Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
-                    OutlinedButton(onClick={if(stage>0){stage--;error=null}else onDismiss()},modifier=Modifier.weight(1f)){Text(if(stage>0)"تعديل المدخلات" else "إلغاء")}
-                    Button(onClick={if(stage<2)go(stage+1)else{error=scopeError()?:MaterialReview.itemError(space,preview);if(error==null)onSave(preview)}},modifier=Modifier.weight(1f)){Text(when(stage){0->"التالي: المواد";1->"احسب واعرض النتيجة";else->"حفظ البند"})}
-                }
+                Button(onClick={error=scopeError()?:MaterialReview.itemError(space,preview);if(error==null)onSave(preview)},modifier=Modifier.fillMaxWidth()){Text("حفظ البند")}
+
             }}}
         ){padding->Column(Modifier.fillMaxSize().padding(padding)){
-            StageNavigation(stage,listOf("الكمية","المواد","النتيجة"),::go)
-            if(stage==0)Text("صافي التنفيذ: ${fmt(q.repeatedFinal)} ${item.unit.label}",Modifier.padding(horizontal=16.dp,vertical=8.dp),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
             val listState=rememberLazyListState()
-            LaunchedEffect(stage){listState.scrollToItem(0)}
-            androidx.compose.foundation.lazy.LazyColumn(state=listState,contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.fillMaxSize()){
-                if(stage==0){
+            androidx.compose.foundation.lazy.LazyColumn(state=listState,contentPadding=PaddingValues(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.fillMaxSize()){
+                item{Row(verticalAlignment=Alignment.CenterVertically){Text("${fmt(q.repeatedFinal)} ${item.unit.label}",Modifier.weight(1f),fontWeight=FontWeight.Bold);TextButton(onClick={quantityOpen=!quantityOpen}){Text(if(quantityOpen)"إخفاء تفاصيل الكمية"else "تعديل الكمية والأجزاء")}}}
+                if(quantityOpen){
                 item{BoxCard{ExpandableSection("خطوات حصر الكمية"){
                     MetricRow("الكمية الأساسية", "${fmt(q.base)} ${item.unit.label}")
                     MetricRow("الإضافات", "${fmt(q.additions)} ${item.unit.label}")
@@ -159,8 +155,8 @@ fun TakeoffEditorDialog(
                                 SpecNumber("خصم هذا الجزء",p.deduction,item.unit.label){change(p.copy(deduction=it))}
                                 TextFieldX("ملاحظة الجزء",p.note,{change(p.copy(note=it))})
                                 Row{
-                                    if(material!=null)TextButton(onClick={selectedPartId=p.id;stage=1}){Text("خلطة وتكلفة الجزء")}
-                                    else if(recipeDef!=null)TextButton(onClick={selectedPartId=p.id;stage=1}){Text("خامات وتكلفة الجزء")}
+                                    if(material!=null)TextButton(onClick={selectedPartId=p.id;quantityOpen=false}){Text("خلطة وتكلفة الجزء")}
+                                    else if(recipeDef!=null)TextButton(onClick={selectedPartId=p.id;quantityOpen=false}){Text("خامات وتكلفة الجزء")}
                                     TextButton(onClick={parts=parts.filterNot{it.id==p.id}}){Text("حذف الجزء")}
                                 }
                                 HorizontalDivider()
@@ -276,16 +272,16 @@ fun TakeoffEditorDialog(
                 item{ExpandableSection("ملاحظة البند"){TextFieldX("ملاحظة البند",note,{note=it},placeholder="اختياري")}}
 
                 }
-                if(stage==1||stage==2){
+                if(parts.isNotEmpty()){
                     item{BoxCard{
                         val labels=listOf("كامل البند")+parts.mapIndexed{i,p->"${p.name} (${i+1})"}
                         val selectedIndex=parts.indexOfFirst{it.id==selectedPartId}
-                        if(!manualEnabled)ChoiceFieldX("نطاق المواد والنتيجة",if(selectedIndex<0)labels[0] else labels[selectedIndex+1],labels,{label->selectedPartId=parts.getOrNull(labels.indexOf(label)-1)?.id;error=null})
-                        MetricRow("الصافي المحدد", "${fmt(selectedQuantity)} ${item.unit.label}")
+                        if(!manualEnabled&&parts.isNotEmpty())ChoiceFieldX("نطاق المواد والنتيجة",if(selectedIndex<0)labels[0] else labels[selectedIndex+1],labels,{label->selectedPartId=parts.getOrNull(labels.indexOf(label)-1)?.id;error=null})
+
                         if(manualEnabled&&selectedPart!=null)Text("الكمية الفعلية تلغي توزيع الأجزاء. اختار كامل البند للنتيجة.",color=MaterialTheme.colorScheme.error)
                     }}
                 }
-                if(stage==1){
+                run{
                     if(selectedPart!=null&&(material!=null||recipeDef!=null))item{BoxCard{
                         val custom=if(material!=null)selectedPart.material!=null else selectedPart.calculatorInputs.isNotEmpty()
                         Row(verticalAlignment=Alignment.CenterVertically){Text("خلطة خاصة لهذا الجزء",Modifier.weight(1f));Switch(custom,{enabled->parts=parts.map{p->if(p.id!=selectedPart.id)p else if(material!=null)p.copy(material=if(enabled)material else null)else p.copy(calculatorInputs=if(enabled)recipe else emptyMap())}})}
@@ -297,9 +293,9 @@ fun TakeoffEditorDialog(
                     if(material==null&&recipeDef!=null&&(selectedPart==null||selectedPart.calculatorInputs.isNotEmpty()))item{BoxCard{key(selectedPartId){RecipeFields(recipeDef,selectedQuantity,selectedPart?.calculatorInputs?.takeIf{it.isNotEmpty()}?:recipe,{next->if(selectedPart==null)recipe=next else parts=parts.map{if(it.id==selectedPart.id)it.copy(calculatorInputs=next)else it};error=null})}}}
                     if(material==null&&recipeDef==null)item{BoxCard{Text("هذا البند له حصر كمية فقط. اضغط احسب لعرض الكمية.")}}
                 }
-                if(stage==2){
-                    item{WorkResultCards(selectedRows,"${space.name} / ${item.name} / $scopeName")}
-                    item{OutlinedButton(onClick={stage=1},modifier=Modifier.fillMaxWidth()){Text("تعديل المواد والأسعار")}}
+                if(selectedRows.isNotEmpty()){
+                    item{WorkResultCards(selectedRows,"${space.name} / ${item.name} / $scopeName",showQuantity=false)}
+
                 }
             }
         }}

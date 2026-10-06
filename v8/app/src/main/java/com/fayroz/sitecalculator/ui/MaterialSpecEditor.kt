@@ -11,25 +11,24 @@ import com.fayroz.sitecalculator.domain.MortarMix
 
 @Composable
 fun MaterialSpecFields(value:MaterialSpec,onChange:(MaterialSpec)->Unit,rateUnit:String="م²"){
-    Text("إعداد المونة",style=MaterialTheme.typography.titleMedium)
+    Text("مواصفات التنفيذ",style=MaterialTheme.typography.titleSmall)
     Text("${fmt(MortarMix.bags(value))} شيكارة × ${fmt(value.bagKg)} كجم على ١ م³ رمل • هالك ${fmt(value.waste)}%",style=MaterialTheme.typography.bodySmall)
     SpecNumber("شكاير الأسمنت على متر الرمل",MortarMix.bags(value),"شيكارة/م³ رمل"){onChange(MortarMix.withBags(value,it))}
     SpecNumber("متوسط السمك",value.thicknessMm,"مم"){onChange(value.copy(thicknessMm=it))}
     val reference=if(value.thicknessMm>0&&value.cementParts+value.sandParts>0&&value.bagKg>0)
         runCatching{CostEngine.measure(1000/value.thicknessMm,value.copy(waste=0.0))}.getOrNull()else null
-    ExpandableSection("مكونات ١ م³ مونة — قبل الهالك"){
+    ExpandableSection("مكونات المونة — مرجع اختياري"){
     reference?.let{r->
         MetricRow("رمل","${fmt(r.second)} م³")
         MetricRow("أسمنت","${fmt(r.first/value.bagKg)} شيكارة × ${fmt(value.bagKg)} كجم")
         MetricRow("تغطية عند السمك المدخل","${fmt(1000/value.thicknessMm)} م²")
     }
     }
-    Text("المكونات حسب الخلطة المستخدمة في الحساب.",style=MaterialTheme.typography.bodySmall)
-    ExpandableSection("تغيير الخلطة والهالك"){
+    ExpandableSection("تفاصيل إضافية"){
         SpecNumber("هالك الخامات",value.waste,"%"){onChange(value.copy(waste=it))}
         SpecNumber("وزن شيكارة الأسمنت",value.bagKg,"كجم"){onChange(MortarMix.withBags(value.copy(bagKg=it),MortarMix.bags(value)))}
     }
-    ExpandableSection("الأسعار — اختيارية"){
+    ExpandableSection("السعر المستخدم / تغيير خاص"){
         TextFieldX("نوع الأسمنت وماركته",value.cementName,{onChange(value.copy(cementName=it))})
         TextFieldX("نوع الرمل",value.sandName,{onChange(value.copy(sandName=it))})
         SpecNumber("سعر شيكارة الأسمنت",value.cementPrice,"جنيه"){onChange(value.copy(cementPrice=it))}

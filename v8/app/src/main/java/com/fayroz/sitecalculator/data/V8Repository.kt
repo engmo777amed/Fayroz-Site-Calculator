@@ -214,6 +214,9 @@ class V8Repository(context:Context){
         setPref("templates.$toolId",org.json.JSONArray().apply{next.take(20).forEach{(label,v)->put(JSONObject().put("name",label).put("values",JSONObject(v)))}}.toString())
     }
 
+    fun centralPrices():Map<String,String> = runCatching{val o=JSONObject(pref("centralPrices","{}"));o.keys().asSequence().associateWith{o.getString(it)}}.getOrDefault(emptyMap())
+    fun saveCentralPrices(values:Map<String,String>)=setPref("centralPrices",JSONObject(values).toString())
+
     fun appearance():String=prefs.getString("appearance","system")?:"system"
     fun setAppearance(value:String)=prefs.edit().putString("appearance",value).apply()
 

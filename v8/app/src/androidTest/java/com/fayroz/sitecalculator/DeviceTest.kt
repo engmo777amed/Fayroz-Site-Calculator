@@ -50,22 +50,22 @@ class DeviceTest {
        clickText("المشروعات")
        assertText("اختبار الحصر")
        clickText("اختبار الحصر")
-       assertText("الأدوار والأماكن");shot("project");clickText("الأدوار والأماكن")
+       assertText("الأماكن");shot("project");
        assertText("الدور الأول")
        clickText("الدور الأول")
        assertText("غرفة الاختبار");shot("section")
        clickText("غرفة الاختبار")
-       assertText("اسم المكان");shot("room-input")
-       clickText("التالي");device.waitForIdle();clickText("التالي");device.waitForIdle()
-       assertTrue(device.wait(Until.hasObject(By.desc("فتح البند")),10000));shot("room-results")
-       device.findObject(By.desc("فتح البند")).click();device.waitForIdle();shot("part-editor");assertText("التالي: المواد")
-       clickText("التالي: المواد");device.waitForIdle();shot("item-materials")
+       clickText("المقاسات");assertText("اسم المكان");shot("room-input");clickText("المقاسات")
+       device.waitForIdle()
+       assertText("تعديل");shot("room-results")
+       clickText("تعديل");device.waitForIdle();shot("part-editor");assertText("مواصفات التنفيذ")
+       device.waitForIdle();shot("item-materials")
        clickText("كامل البند");clickText("جزء السقف (1)");device.waitForIdle()
        assertText("خلطة خاصة لهذا الجزء")
        compose.onNode(isToggleable()).assertIsOff().performClick().assertIsOn();compose.waitForIdle()
        type("متوسط السمك","20.5")
-       clickText("الأسعار — اختيارية");type("سعر شيكارة الأسمنت","250")
-       clickText("احسب واعرض النتيجة");assertText("حفظ البند");shot("item-result")
+       clickText("السعر المستخدم / تغيير خاص");type("سعر شيكارة الأسمنت","250")
+       assertText("حفظ البند");shot("item-result")
        assertText("6 م²")
        clickText("حفظ البند")
        clickText("حفظ");device.waitForIdle()
@@ -89,6 +89,7 @@ class DeviceTest {
     }
     fail("Field missing: $label");throw IllegalStateException()
  }
+ private fun calculate(){if(compose.onAllNodes(hasText("احسب واعرض النتيجة") and hasClickAction()).fetchSemanticsNodes().isNotEmpty())clickText("احسب واعرض النتيجة")else assertText("حفظ النتيجة")}
  private fun type(label:String,value:String){field(label).performTextReplacement(value);compose.waitForIdle();field(label).assertTextEquals(value)}
  private fun assertText(text:String){
     repeat(30){attempt->
@@ -121,11 +122,11 @@ class DeviceTest {
        type("متوسط السمك","15.5")
        clickText("مم");clickText("سم")
        field("متوسط السمك").assertTextEquals("1.55")
-       clickText("إعداداتي وتفاصيل إضافية");clickText("الأسعار — اختيارية");type("سعر شيكارة الأسمنت","200")
+       clickText("إعداداتي وتفاصيل إضافية");clickText("السعر المستخدم / تغيير خاص");type("سعر شيكارة الأسمنت","200")
        type("سعر متر الرمل","300")
        shot("calculator-filled")
-       clickText("احسب واعرض النتيجة");device.waitForIdle();shot("calculator-result")
-       assertText("12.5 م²")
+       calculate();device.waitForIdle();shot("calculator-result")
+       field("المساحة الصافية").assertTextEquals("12.5")
        clickText("اسم الحساب ومكان الحفظ");type("اسم الحساب","اختبار محارة 12.5")
        clickText("حفظ النتيجة")
        val saved=V8Repository(context).recentCalcs().first()
@@ -135,8 +136,8 @@ class DeviceTest {
        clickText("المحفوظات")
        assertTrue(device.wait(Until.hasObject(By.textContains("اختبار محارة 12.5")),10000));shot("saved-calculations")
        device.findObject(By.textContains("اختبار محارة 12.5")).click()
-       assertText("12.5 م²")
-       clickText("تعديل المدخلات")
+       field("المساحة الصافية").assertTextEquals("12.5")
+       
        field("المساحة الصافية").assertTextEquals("12.5")
        field("متوسط السمك").assertTextEquals("1.55")
     }
@@ -146,12 +147,12 @@ class DeviceTest {
     ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java).putExtra("calculator","paint")).use{
        assertText("البيانات المطلوبة")
        type("المساحة الصافية","10")
-       clickText("احسب واعرض النتيجة")
-       assertText("10 م²");clickText("التكلفة")
-       assertText("التكلفة غير مكتملة");compose.onAllNodesWithText("التكلفة غير مكتملة").onFirst().assertIsDisplayed();shot("incomplete-prices")
-       clickText("تعديل المدخلات")
+       calculate()
+       field("المساحة الصافية").assertTextEquals("10")
+       assertText("التكلفة غير مكتملة");shot("incomplete-prices")
+       
        type("المساحة الصافية","0")
-       clickText("احسب واعرض النتيجة")
+       calculate()
        device.waitForIdle();shot("invalid-input")
        assertTrue(device.wait(Until.hasObject(By.textContains("المساحة الصافية يجب")),10000))
     }
@@ -160,7 +161,7 @@ class DeviceTest {
     ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java).putExtra("calculator","convert")).use{
        assertText("نوع التحويل")
        type("القيمة","1.25")
-       clickText("احسب واعرض النتيجة")
+       calculate()
        assertText("125 سم");shot("unit-result")
        clickText("حفظ النتيجة")
        assertEquals("1.25",V8Repository(context).recentCalcs().first().inputs["value"])
@@ -185,22 +186,22 @@ class DeviceTest {
     ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java).putExtra("calculator","plaster")).use{
         clickText("خامات لمساحة");clickText("مكونات ١ م³ مونة")
         type("متوسط السمك","20")
-        clickText("احسب واعرض النتيجة")
-        assertText("1 م³");assertText("50 م²");shot("mortar-one-cubic-meter")
+        calculate()
+        clickText("التفاصيل وطريقة الحساب");assertText("1 م³");assertText("50 م²");shot("mortar-one-cubic-meter")
         clickText("حفظ النتيجة")
         assertEquals("unit",V8Repository(context).recentCalcs().first().inputs["_mortarMode"])
-        clickText("تعديل المدخلات")
+        
         clickText("مكونات ١ م³ مونة");clickText("المونة المتاحة تفرد كام؟")
         type("حجم المونة","2");clickText("إعداداتي وتفاصيل إضافية");field("الهالك").assertTextEquals("5")
-        clickText("احسب واعرض النتيجة");assertText("95.238 م²");shot("mortar-coverage")
+        calculate();assertText("95.238 م²");shot("mortar-coverage")
     }
  }
  @Test fun projectShoppingShowsBagsAndKeepsCostSeparate(){
     V8Repository(context).saveProjects(listOf(sample()))
     ActivityScenario.launch(MainActivity::class.java).use{
-        clickText("المشروعات");clickText("اختبار الحصر");clickText("طلب الخامات")
+        clickText("المشروعات");clickText("اختبار الحصر");clickText("الخامات")
         assertText("طلب الخامات");assertText("1 شيكارة");shot("project-shopping")
-        clickText("رجوع لملخص المشروع");clickText("التكلفة")
+        clickText("الأماكن");clickText("التكلفة")
         assertText("تكلفة الاستهلاك");shot("project-cost")
     }
  }
@@ -208,7 +209,7 @@ class DeviceTest {
     val project=sample().copy(sections=listOf(Section(name="الرئيسي")))
     V8Repository(context).saveProjects(listOf(project))
     ActivityScenario.launch(MainActivity::class.java).use{
-        clickText("المشروعات");clickText("اختبار الحصر");clickText("إضافة كمية جاهزة")
+        clickText("المشروعات");clickText("اختبار الحصر");clickText("كمية جاهزة")
         type("الكمية الجاهزة","100")
         clickText("الهالك والملاحظات — اختياري");type("الهالك","5")
         assertText("100 م²");assertText("105 م²");shot("ready-quantity")
@@ -216,7 +217,7 @@ class DeviceTest {
         val space=V8Repository(context).loadProjects().single().sections.single().spaces.single()
         assertEquals(100.0,space.takeoffs.single().directValue,0.0)
         assertEquals(5.0,space.takeoffs.single().waste,0.0)
-        clickText(space.name);assertText("الخامات والنتيجة");shot("ready-quantity-reopened")
+        clickText(space.name);assertText("البنود");shot("ready-quantity-reopened")
     }
  }
  @Test fun backupIncludesPhotosAndRestoresSpecs(){
@@ -253,7 +254,7 @@ class DeviceTest {
         field("الهالك").assertTextEquals("0")
         clickText("مكونات ١ م³ مونة");clickText("خامات لمساحة")
         field("الهالك").assertTextEquals("8")
-        clickText("احسب واعرض النتيجة");assertText("الهالك المستخدم: 8%");shot("mortar-waste-preserved")
+        calculate();clickText("التفاصيل وطريقة الحساب");assertText("الهالك المستخدم: 8%");shot("mortar-waste-preserved")
     }
  }
  @Test fun explicitlyIncludedCalculatorSavesOnceAndEntersProjectTotals(){
@@ -262,8 +263,8 @@ class DeviceTest {
     val intent=Intent(context,MainActivity::class.java).putExtra("calculator","paint")
     ActivityScenario.launch<MainActivity>(intent).use{
         type("المساحة الصافية","10")
-        clickText("إعداداتي وتفاصيل إضافية");clickText("الأسعار — اختيارية");type("سعر العبوة","100")
-        clickText("احسب واعرض النتيجة")
+        clickText("إعداداتي وتفاصيل إضافية");clickText("السعر المستخدم / تغيير خاص");type("سعر العبوة","100")
+        calculate()
         clickText("اسم الحساب ومكان الحفظ")
         clickText("حساب مستقل");clickText("المشروع كله")
         assertText("إضافة الحساب لحصر وتكلفة وشراء المشروع")
@@ -284,7 +285,8 @@ class DeviceTest {
     val project=sample();val repository=V8Repository(context);repository.saveProjects(listOf(project));repository.setActive(ActiveLocation(project.id))
     ActivityScenario.launch(MainActivity::class.java).use{
         clickText("الأسعار")
-        type("سعر شيكارة الأسمنت 50 كجم","300");type("سعر متر الرمل","400")
+        clickText("كل المشروعات — أسعار عامة");clickText(project.name)
+        type("شيكارة أسمنت 50 كجم","300");type("متر الرمل","400")
         clickText("حفظ أسعار المشروع");clickText("إعادة تسعير البنود المحفوظة");clickText("إعادة التسعير")
         val spec=repository.loadProjects().single().sections.single().spaces.single().takeoffs.single().material!!
         assertEquals(300.0,spec.cementPrice,0.0);assertEquals(400.0,spec.sandPrice,0.0);assertEquals(15.0,spec.thicknessMm,0.0)
@@ -312,21 +314,21 @@ class DeviceTest {
         clickText("إعداداتي وتفاصيل إضافية");clickText("حفظ إعداداتي باسم");type("اسم الإعداد","محارة الموقع");clickText("حفظ الإعداد")
         assertEquals("5",repo.calculatorTemplates("plaster").single().second["_bagsPerSand"])
         assertFalse(repo.calculatorTemplates("plaster").single().second.containsKey("area"))
-        clickText("احسب واعرض النتيجة");shot("practical-mortar-result")
-        clickText("تعديل سريع للنتيجة");type("المساحة الصافية","200");clickText("حفظ النتيجة")
+        calculate();shot("practical-mortar-result")
+        ;type("المساحة الصافية","200");clickText("حفظ النتيجة")
         assertEquals(200.0,repo.recentCalcs().first().sourceQuantity,0.0)
         assertEquals("5",repo.recentCalcs().first().inputs["_bagsPerSand"])
     }
  }
  @Test fun areaDimensionsAndAvailableMaterialsArePractical(){
     ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java).putExtra("calculator","plaster")).use{
-        clickText("مساحة جاهزة");clickText("من الطول والعرض")
+        clickText("من الطول والعرض")
         type("طول المسطح","5");type("عرض المسطح","4");type("شكاير الأسمنت على متر الرمل","5")
-        clickText("احسب واعرض النتيجة");clickText("حفظ النتيجة")
+        calculate();clickText("حفظ النتيجة")
         assertEquals(20.0,V8Repository(context).recentCalcs().first().sourceQuantity,0.0)
-        clickText("تعديل المدخلات");clickText("خامات لمساحة");clickText("الرمل والأسمنت الموجودين يكفوا كام؟")
+        ;clickText("خامات لمساحة");clickText("الرمل والأسمنت الموجودين يكفوا كام؟")
         type("الرمل المتاح","2");type("شكاير الأسمنت المتاحة","5")
-        clickText("احسب واعرض النتيجة");assertText("1 م³");shot("available-materials")
+        calculate();assertText("1 م³");shot("available-materials")
     }
  }
 
@@ -358,7 +360,7 @@ class DeviceTest {
  }
  @Test fun utilityRepeatedSaveUpdatesOneRecord(){
     ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java).putExtra("calculator","convert")).use{
-        type("القيمة","10");clickText("احسب واعرض النتيجة");clickText("حفظ النتيجة");clickText("حفظ النتيجة")
+        type("القيمة","10");calculate();clickText("حفظ النتيجة");clickText("حفظ النتيجة")
         assertEquals(1,V8Repository(context).recentCalcs().size)
     }
  }
@@ -373,11 +375,42 @@ class DeviceTest {
     ActivityScenario.launch<MainActivity>(intent).use{
         field("المساحة الصافية").assertTextEquals("23.5");field("شكاير الأسمنت على متر الرمل").assertTextEquals("6.5")
         clickText("إعداداتي وتفاصيل إضافية");field("الهالك").assertTextEquals("8")
-        clickText("خامات لمساحة");clickText("مكونات ١ م³ مونة");clickText("احسب واعرض النتيجة");clickText("حفظ النتيجة")
+        clickText("خامات لمساحة");clickText("مكونات ١ م³ مونة");calculate();clickText("حفظ النتيجة")
         device.pressBack();device.pressBack();compose.waitForIdle()
     }
     ActivityScenario.launch<MainActivity>(intent).use{
         clickText("إعداداتي وتفاصيل إضافية");field("الهالك").assertTextEquals("8")
+    }
+ }
+
+ @Test fun centralPricesWorkWithoutAProjectAndDoNotRewriteHistory(){
+    ActivityScenario.launch(MainActivity::class.java).use{
+        clickText("الأسعار");type("شيكارة أسمنت 50 كجم","200");type("متر الرمل","300");clickText("حفظ الأسعار العامة")
+        assertEquals("200",V8Repository(context).centralPrices()["cementPrice"])
+        device.pressBack();clickText("الحاسبات");clickText("المونة والمحارة");clickText("مونة المحارة")
+        type("المساحة الصافية","100");calculate();clickText("حفظ النتيجة")
+        val saved=V8Repository(context).recentCalcs().single();assertEquals(200.0,saved.inputs["cementPrice"]!!.toDouble(),0.0);assertTrue(saved.cost>0)
+        V8Repository(context).saveCentralPrices(mapOf("cementPrice" to "999","sandPrice" to "999"))
+        assertEquals(200.0,V8Repository(context).recentCalcs().single().inputs["cementPrice"]!!.toDouble(),0.0)
+        shot("central-prices-mortar")
+    }
+ }
+ @Test fun calculatorEditsUpdateResultInPlace(){
+    ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java).putExtra("calculator","plaster")).use{
+        type("المساحة الصافية","100");calculate()
+        assertTrue(compose.onAllNodesWithText("تعديل المدخلات").fetchSemanticsNodes().isEmpty())
+        type("متوسط السمك","20");clickText("حفظ النتيجة")
+        val c=V8Repository(context).recentCalcs().single();assertEquals("20",c.inputs["thickness"])
+        assertEquals(100.0,c.sourceQuantity,0.0);shot("single-page-calculator")
+    }
+ }
+ @Test fun projectOpensOnPlacesAndRoomHasOneSaveAction(){
+    V8Repository(context).saveProjects(listOf(sample()))
+    ActivityScenario.launch(MainActivity::class.java).use{
+        clickText("المشروعات");clickText("اختبار الحصر");assertText("غرفة الاختبار");shot("project-workspace")
+        clickText("غرفة الاختبار");assertText("البنود");assertText("تعديل")
+        assertEquals(1,compose.onAllNodes(hasText("حفظ") and hasClickAction()).fetchSemanticsNodes().size)
+        assertTrue(compose.onAllNodesWithText("التالي").fetchSemanticsNodes().isEmpty());shot("single-page-room")
     }
  }
 }

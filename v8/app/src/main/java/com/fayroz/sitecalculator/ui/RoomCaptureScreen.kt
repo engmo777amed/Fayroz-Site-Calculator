@@ -121,7 +121,7 @@ fun RoomCaptureScreen(
             TopAppBar(
                 title={Column{
                     Text(title,fontWeight=FontWeight.Black)
-                    Text(listOf("المكان والمقاسات","الشكل والفتحات","البنود والنتيجة")[step],style=MaterialTheme.typography.labelSmall)
+                    Text("المقاسات والبنود",style=MaterialTheme.typography.labelSmall)
                 }},
                 navigationIcon={IconButton(onClick=onBack){Icon(Icons.Rounded.ArrowForward,"رجوع")}}
             )
@@ -129,25 +129,11 @@ fun RoomCaptureScreen(
         bottomBar={
             Surface(tonalElevation=4.dp){
                 Column(Modifier.fillMaxWidth().imePadding().padding(10.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
-                    LinearProgressIndicator(progress={(step+1)/3f},modifier=Modifier.fillMaxWidth())
-                    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                        if(step>0)TextButton(onClick={step--},modifier=Modifier.weight(1f).heightIn(min=48.dp)){Text("السابق")}
-                        if(step<2)Button(onClick={error=if(step==0&&takeoffs.any{it.kind!=CalcKind.DIRECT&&it.manualValue==null&&it.parts.isEmpty()}&&geometryMode=="مستطيل بسيط"&&(lengthMeters(length,dimUnit)<=0||lengthMeters(width,dimUnit)<=0||lengthMeters(height,dimUnit)<=0))"أدخل طولًا وعرضًا وارتفاعًا أكبر من صفر." else null;if(error==null)step++},modifier=Modifier.weight(1f).heightIn(min=48.dp)){Text("التالي")}
-                        else Button(
-                            onClick={
-                                val value=current()
-                                error=if(com.fayroz.sitecalculator.domain.MortarMix.number(repeat)?.let{it>=1&&it<=Int.MAX_VALUE&&it==kotlin.math.floor(it)}!=true)"عدد التكرارات يجب أن يكون عددًا صحيحًا أكبر من صفر."else Validation.space(value)
-                                if(error==null){onSave(value);repository.clearDraft(draftKey);Toast.makeText(context,"تم حفظ الحصر بنجاح ✓",Toast.LENGTH_SHORT).show()}
-                            },
-                            modifier=Modifier.weight(1f).heightIn(min=48.dp)
-                        ){
-                            Icon(Icons.Rounded.Save,null,Modifier.size(18.dp));Spacer(Modifier.width(4.dp));Text("حفظ")
-                        }
-                        if(step==2)OutlinedButton(onClick={
-                            val value=current();error=if(com.fayroz.sitecalculator.domain.MortarMix.number(repeat)?.let{it>=1&&it<=Int.MAX_VALUE&&it==kotlin.math.floor(it)}!=true)"عدد التكرارات يجب أن يكون عددًا صحيحًا أكبر من صفر."else Validation.space(value)
-                            if(error==null){onSaveNext(value);repository.clearDraft(draftKey);Toast.makeText(context,"تم الحفظ — مكان جديد",Toast.LENGTH_SHORT).show()}
-                        },modifier=Modifier.weight(1f)){Text("حفظ وإضافة",maxLines=1,style=MaterialTheme.typography.labelSmall)}
-                    }
+                    Button(onClick={
+                        val value=current()
+                        error=if(com.fayroz.sitecalculator.domain.MortarMix.number(repeat)?.let{it>=1&&it<=Int.MAX_VALUE&&it==kotlin.math.floor(it)}!=true)"عدد التكرارات يجب أن يكون صحيحًا."else Validation.space(value)
+                        if(error==null){onSave(value);repository.clearDraft(draftKey);Toast.makeText(context,"تم حفظ الحصر بنجاح ✓",Toast.LENGTH_SHORT).show()}
+                    },modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("حفظ")}
                     error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
                     Row {
                     }
@@ -160,8 +146,8 @@ fun RoomCaptureScreen(
             contentPadding=PaddingValues(12.dp),
             verticalArrangement=Arrangement.spacedBy(9.dp)
         ){
-            when(step){
-                0->item{
+            item{
+                BoxCard{ExpandableSection("المقاسات",initial==null){
                     BoxCard{
                         TextFieldX("اسم المكان",name,{name=it},placeholder="مثال: حمام رئيسي")
                         Text("$type • المقاسات بالـ$dimUnit",style=MaterialTheme.typography.bodySmall)
@@ -245,7 +231,7 @@ fun RoomCaptureScreen(
                                 var wl by remember(w.id,dimUnit){mutableStateOf(if(w.length>0)exact(w.length/(lengthUnits.first{it.label==dimUnit}.meters)) else "")}
                                 var wh by remember(w.id,dimUnit){mutableStateOf(exact(w.height/(lengthUnits.first{it.label==dimUnit}.meters)))}
                                 Surface(shape=RoundedCornerShape(12.dp),color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.35f)){
-                                    Column(Modifier.padding(8.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
+                                    Column(Modifier.padding(8.dp),verticalArrangement=Arrangement.spacedBy(2.dp)){
                                         Row(verticalAlignment=Alignment.CenterVertically){
                                             Text(w.name,Modifier.weight(1f),fontWeight=FontWeight.Black)
                                             if(walls.size>1)IconButton(onClick={walls.removeAt(i)},modifier=Modifier.size(40.dp)){Icon(Icons.Rounded.Delete,"حذف")}
@@ -293,8 +279,9 @@ fun RoomCaptureScreen(
                         }
                     }
                 }
+                }}
 
-                1->item{
+                item{BoxCard{ExpandableSection("الفتحات (${openings.size})"){
                     BoxCard{
                         Row(verticalAlignment=Alignment.CenterVertically){
                             Column(Modifier.weight(1f)){
@@ -328,8 +315,9 @@ fun RoomCaptureScreen(
                         }
                     }
                 }
+                }}
 
-                else->{
+                run{
                     item{
                         BoxCard{
                             TextButton(onClick={showCatalog=!showCatalog}){Text(if(showCatalog)"قفل قائمة البنود" else "إضافة / اختيار البنود")}
@@ -350,7 +338,7 @@ fun RoomCaptureScreen(
                     }
 
                     if(takeoffs.isNotEmpty()){
-                        item{PageHeader("النتيجة","المكان الواحد أولًا، والتكرار ظاهر لو موجود")}
+                        item{Text("البنود",fontWeight=FontWeight.Bold)}
                         item{
                             val space=current()
                             BoxCard{
@@ -360,20 +348,20 @@ fun RoomCaptureScreen(
                                         shape=RoundedCornerShape(12.dp),
                                         color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.28f)
                                     ){
-                                        Column(Modifier.fillMaxWidth().padding(8.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
+                                        Column(Modifier.fillMaxWidth().padding(8.dp),verticalArrangement=Arrangement.spacedBy(2.dp)){
                                             Row(verticalAlignment=Alignment.CenterVertically){
                                                 Column(Modifier.weight(1f)){
                                                     Text(item.name,fontWeight=FontWeight.Black)
                                                     Text(item.kind.label+" • "+(if(item.parts.isNotEmpty())"${item.parts.size} أجزاء" else "مسطح كامل"),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                                                 }
                                                 Text("${fmt(q.repeatedFinal)} ${item.unit.label}",fontWeight=FontWeight.Black,color=MaterialTheme.colorScheme.primary)
-                                                IconButton(onClick={editStage=0;editIndex=i}){Icon(Icons.Rounded.Tune,"فتح البند")}
+                                                TextButton(onClick={editStage=1;editIndex=i}){Text("تعديل")}
                                             }
                                             if(space.repeatCount>1){
                                                 Text("المكان الواحد ${fmt(q.oneSpaceFinal)} × ${space.repeatCount}",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                                             }
                                             Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                                                FilledTonalButton(modifier=Modifier.weight(1f),onClick={editStage=1;editIndex=i}){Text("الخامات والنتيجة")}
+
                                                 ActionMenu(buildList{
                                                     add("تعديل الكمية والأجزاء" to {editStage=0;editIndex=i})
                                                     add("نسخ البند" to {takeoffs.add(i+1,item.copy(id=UUID.randomUUID().toString(),parts=item.parts.map{it.copy(id=UUID.randomUUID().toString())}))})
@@ -391,7 +379,6 @@ fun RoomCaptureScreen(
                         }
                     }
                 }
-            }
         }
     }
 
@@ -422,7 +409,7 @@ private fun SurfacePartRow(
     var w by remember(surface.id,unit){mutableStateOf(if(surface.width>0)exact(surface.width/(lengthUnits.first{it.label==unit}.meters)) else "")}
     var d by remember(surface.id){mutableStateOf(if(surface.deductionArea>0)exact(surface.deductionArea) else "")}
     Surface(shape=RoundedCornerShape(12.dp),color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.35f)){
-        Column(Modifier.padding(8.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
+        Column(Modifier.padding(8.dp),verticalArrangement=Arrangement.spacedBy(2.dp)){
             Row(verticalAlignment=Alignment.CenterVertically){
                 Text(surface.name,Modifier.weight(1f),fontWeight=FontWeight.Black)
                 IconButton(onClick=onDelete,modifier=Modifier.size(40.dp)){Icon(Icons.Rounded.Delete,"حذف")}

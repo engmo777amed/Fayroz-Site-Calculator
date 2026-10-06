@@ -54,7 +54,7 @@ fun SectionScreen(
         androidx.compose.foundation.lazy.LazyColumn(
             Modifier.fillMaxSize().padding(padding),
             contentPadding=PaddingValues(12.dp),
-            verticalArrangement=Arrangement.spacedBy(9.dp)
+            verticalArrangement=Arrangement.spacedBy(6.dp)
         ){
 
             item{
@@ -74,10 +74,10 @@ fun SectionScreen(
                     val itemsDone=space.takeoffs.size
                     Surface(
                         onClick={onEditRoom(space.id)},
-                        shape=RoundedCornerShape(16.dp),
+                        shape=RoundedCornerShape(12.dp),
                         tonalElevation=1.dp
                     ){
-                        Column(Modifier.fillMaxWidth().padding(10.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
+                        Column(Modifier.fillMaxWidth().padding(10.dp),verticalArrangement=Arrangement.spacedBy(3.dp)){
                             Row(verticalAlignment=Alignment.CenterVertically){
                                 Surface(shape=RoundedCornerShape(10.dp),color=MaterialTheme.colorScheme.primaryContainer){
                                     Icon(Icons.Rounded.MeetingRoom,null,Modifier.padding(7.dp).size(19.dp),tint=MaterialTheme.colorScheme.primary)
@@ -138,7 +138,7 @@ fun SectionScreen(
             onDismissRequest={materialsOpen=false},
             title={Text("إجمالي خامات الجزء",fontWeight=FontWeight.Black)},
             text={
-                androidx.compose.foundation.lazy.LazyColumn(verticalArrangement=Arrangement.spacedBy(9.dp)){
+                androidx.compose.foundation.lazy.LazyColumn(verticalArrangement=Arrangement.spacedBy(6.dp)){
                     item{MetricRow("تكلفة مواد","${fmt(costRows.sumOf{it.materialCost})} جنيه")}
                     items(purchase.size){i->val m=purchase[i];Column{
                         Text(m.material,fontWeight=FontWeight.Bold)

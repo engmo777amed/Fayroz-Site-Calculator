@@ -22,7 +22,7 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
     onAddSection:(String)->Unit,onOpenMaterials:(MaterialResult)->Unit,onShare:(Project)->Unit,
     onUpdate:(Project)->Unit,onEditSource:(String,String,String)->Unit,onOpenCalc:(SavedCalculation)->Unit,onDirectItem:()->Unit = {},onAddPlace:(String)->Unit = {}){
     val context=LocalContext.current
-    var tab by remember{mutableStateOf("نظرة عامة")}
+    var tab by remember{mutableStateOf("الأدوار")}
     var sectionId by remember{mutableStateOf<String?>(null)}
     var spaceId by remember{mutableStateOf<String?>(null)}
     var itemFilter by remember{mutableStateOf("كل البنود")}
@@ -37,8 +37,8 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
     var reportKind by remember{mutableStateOf("حصر وتكلفة تفصيلي")}
     var defaultsTool by remember{mutableStateOf("tile")}
     var defaults by remember(project.defaults){mutableStateOf(project.defaults)}
-    val goBack={if(tab!="نظرة عامة")tab="نظرة عامة" else onBack()}
-    androidx.activity.compose.BackHandler(enabled=tab!="نظرة عامة"){goBack()}
+    val goBack={if(tab!="الأدوار")tab="الأدوار" else onBack()}
+    androidx.activity.compose.BackHandler(enabled=tab!="الأدوار"){goBack()}
     val scoped=project.copy(
         sections=project.sections.filter{sectionId==null||it.id==sectionId}.map{section->
             section.copy(spaces=section.spaces.filter{spaceId==null||it.id==spaceId}.map{space->
@@ -52,26 +52,18 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
     val export=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")){uri->
         if(uri!=null)runCatching{context.contentResolver.openOutputStream(uri)?.use{ReportExport.xlsx(scoped,reportKind,it)}?:error("تعذر فتح الملف")}.onSuccess{Toast.makeText(context,"تم حفظ Excel",Toast.LENGTH_SHORT).show()}.onFailure{Toast.makeText(context,"فشل الحفظ: ${it.message}",Toast.LENGTH_LONG).show()}
     }
-    Scaffold(topBar={TopAppBar(title={Text(project.name,fontWeight=FontWeight.Bold)},navigationIcon={TextButton(onClick=goBack){Text("رجوع")}},actions={ActionMenu(listOf("تعديل اسم المشروع" to {renameProject=true},"إعدادات المشروع" to {tab="إعدادات المشروع والتصدير"},"تصدير" to {exportOpen=true}))})}){padding->
+    Scaffold(topBar={TopAppBar(title={Text(project.name,fontWeight=FontWeight.Bold)},navigationIcon={TextButton(onClick=goBack){Text("رجوع")}},actions={ActionMenu(listOf("تعديل اسم المشروع" to {renameProject=true},"إعدادات المشروع" to {tab="إعدادات المشروع والتصدير"},"حسابات محفوظة" to {tab="حسابات محفوظة"},"تصدير" to {exportOpen=true}))})}){padding->
         LazyColumn(Modifier.fillMaxSize().padding(padding),contentPadding=PaddingValues(12.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){
             item{Row{Text(project.type,Modifier.weight(1f));TextButton(onClick=onSetActive){Text(if(active)"المشروع النشط ✓" else "تعيين نشط")}}}
-            if(tab=="نظرة عامة"){
-                item{PageHeader("اختار المطلوب","${project.sections.size} دور / جزء • ${project.sections.sumOf{it.spaces.size}} مكان")}
-                val links=listOf("الأدوار والأماكن" to "الأدوار","حصر الأعمال" to "الحصر والتكلفة","طلب الخامات" to "شراء الخامات","التكلفة" to "التكلفة")
-                items(2){i->Row(horizontalArrangement=Arrangement.spacedBy(10.dp)){
-                    links.drop(i*2).take(2).forEach{(label,target)->ElevatedCard(onClick={tab=target},modifier=Modifier.weight(1f)){
-                        Column(Modifier.padding(16.dp).heightIn(min=64.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
-                            Text(label,fontWeight=FontWeight.Bold);Text("فتح ←",color=MaterialTheme.colorScheme.primary)
-                        }
-                    }}
-                }}
-                item{Button(onClick=onDirectItem,modifier=Modifier.fillMaxWidth()){Text("إضافة كمية جاهزة")}}
-                item{OutlinedButton(onClick={if(project.sections.size==1)onAddPlace(project.sections.first().id)else if(project.sections.isEmpty()){tab="الأدوار";add=true}else addPlace=true},modifier=Modifier.fillMaxWidth()){Text("إضافة مكان بالمقاسات")}}
-                item{TextButton(onClick={tab="حسابات محفوظة"}){Text("حسابات المشروع المحفوظة")}}
-            }else{
-                item{TextButton(onClick={tab="نظرة عامة"}){Text("رجوع لملخص المشروع")}}
-                item{PageHeader(when(tab){"الحصر والتكلفة"->"حصر الأعمال";"شراء الخامات"->"طلب الخامات";"الأدوار"->"الأدوار والأماكن";else->tab})}
-            }
+            item{Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                listOf("الأماكن" to "الأدوار","الحصر" to "الحصر والتكلفة","الخامات" to "شراء الخامات","التكلفة" to "التكلفة").forEach{(label,target)->
+                    FilterChip(selected=tab==target,onClick={tab=target},label={Text(label,style=MaterialTheme.typography.labelMedium)},modifier=Modifier.weight(1f))
+                }
+            }}
+            if(tab=="الأدوار")item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                Button(onClick={if(project.sections.size==1)onAddPlace(project.sections.first().id)else if(project.sections.isEmpty())add=true else addPlace=true},modifier=Modifier.weight(1f)){Text("إضافة مكان")}
+                OutlinedButton(onClick=onDirectItem,modifier=Modifier.weight(1f)){Text("كمية جاهزة")}
+            }}
             if(tab in listOf("الحصر والتكلفة","شراء الخامات","التكلفة","حسابات محفوظة"))item{BoxCard{ExpandableSection("تحديد نطاق العرض"){
                 val sectionLabels=selectionLabels(project.sections.map{it.name})
                 ChoiceFieldX("الدور / الجزء",project.sections.indexOfFirst{it.id==sectionId}.takeIf{it>=0}?.let{sectionLabels[it]}?:"المشروع كله",listOf("المشروع كله")+sectionLabels,{name->sectionId=project.sections.getOrNull(sectionLabels.indexOf(name))?.id;spaceId=null})
@@ -96,7 +88,7 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
                     }}
                 }
                 "الأدوار"->{
-                    item{Button(onClick={sectionName="";add=true},modifier=Modifier.fillMaxWidth()){Text("إضافة دور / جزء")}}
+                    item{TextButton(onClick={sectionName="";add=true}){Text("إضافة دور / جزء")}}
                     items(project.sections.size){i->val s=project.sections[i];BoxCard{
                         Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){Column(Modifier.weight(1f)){
                         TextButton(onClick={onOpenSection(s.id)}){Text(s.name,fontWeight=FontWeight.Bold)}
@@ -112,6 +104,7 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
                             if(i>0)add("تحريك لأعلى" to {val list=project.sections.toMutableList();list[i]=list[i-1].also{list[i-1]=list[i]};onUpdate(project.copy(sections=list))})
                         })
                         }
+                        s.spaces.forEach{sp->TextButton(onClick={onEditSource(s.id,sp.id,"")},modifier=Modifier.fillMaxWidth()){Text(sp.name,Modifier.weight(1f));Text("${sp.takeoffs.size} بند")}}
                     }}
                 }
                 "الحصر والتكلفة"->{

@@ -93,6 +93,12 @@ class MainActivity:ComponentActivity(){
                 else route=Route.RoomEdit(p.id,sectionId,null)
             }
 
+            fun createProject(name:String,type:String){
+                val first=Section(name="الرئيسي")
+                val p=Project(name=name,type=type,sections=listOf(first))
+                projects.add(p);persist();setActive(ActiveLocation(p.id,first.id));route=Route.ProjectDetail(p.id)
+            }
+
             fun saveCalculation(
                 targetProjectId:String,
                 result:MaterialResult,
@@ -194,7 +200,8 @@ class MainActivity:ComponentActivity(){
                                         },
                                         onSettings={route=Route.Settings},
                                         onSaved={tab=RootTab.SAVED},onPrices={route=Route.Prices},
-                                        onOpenSaved=::openSaved
+                                        onOpenSaved=::openSaved,onCreate=::createProject,
+                                        onOpenPlace={pid,sid,spid->route=Route.RoomEdit(pid,sid,spid)}
                                     )
 
                                     RootTab.PROJECTS->ProjectsScreen(
@@ -211,13 +218,7 @@ class MainActivity:ComponentActivity(){
                                             projects.removeAll{it.id==id};persist()
                                             if(active?.projectId==id){active=null;repository.clearActive()}
                                         },
-                                        onCreate={name,type->
-                                            val first=Section(name="الرئيسي")
-                                            val p=Project(name=name,type=type,sections=listOf(first))
-                                            projects.add(p);persist()
-                                            setActive(ActiveLocation(p.id,first.id))
-                                            route=Route.ProjectDetail(p.id)
-                                        }
+                                        onCreate=::createProject
                                     )
 
                                     RootTab.TODAY->TodayScreen(
@@ -251,7 +252,7 @@ class MainActivity:ComponentActivity(){
                         }
                     }
 
-                    Route.Prices->PricesScreen(projects.toList(),active?.projectId,{route=Route.Root},{replaceProject(it)})
+                    Route.Prices->PricesScreen(projects.toList(),active?.projectId,{route=Route.Root},{replaceProject(it)},repository)
                     Route.Settings->SettingsScreen(
                         repository=repository,
                         appearance=appearance,
@@ -371,7 +372,7 @@ class MainActivity:ComponentActivity(){
                             }
                             key(r.session){RoomCaptureScreen(
                                 title=initial?.name?:"حصر مكان جديد",
-                                draftKey="${p.id}.${section.id}.${r.spaceId?:"new"}",repository=repository,initial=initial,defaults=p.defaults,initialItemId=r.itemId,
+                                draftKey="${p.id}.${section.id}.${r.spaceId?:"new"}",repository=repository,initial=initial,defaults=repository.centralPrices()+p.defaults,initialItemId=r.itemId,
                                 onBack={route=Route.SectionDetail(p.id,section.id)},
                                 onSave={saveSpace(it,false)},onSaveNext={saveSpace(it,true)}
                             )}

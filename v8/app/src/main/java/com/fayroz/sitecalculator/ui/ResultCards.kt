@@ -23,54 +23,31 @@ fun CostSummary(material:Double,labor:Double=0.0,transport:Double=0.0,equipment:
     }
 }
 @Composable
-private fun ResultTabs(selected:Int,labels:List<String>,onSelect:(Int)->Unit){
-    TabRow(selectedTabIndex=selected){labels.forEachIndexed{i,label->Tab(selected=selected==i,onClick={onSelect(i)},text={Text(label,maxLines=1,style=MaterialTheme.typography.labelMedium)})}}
-}
-@Composable
-fun WorkResultCards(rows:List<CostEngine.Row>,scope:String){
-    var view by remember{mutableIntStateOf(0)}
+fun WorkResultCards(rows:List<CostEngine.Row>,scope:String,showQuantity:Boolean=true){
     val missing=rows.flatMap{MaterialReview.missing(it)}.distinct()
+    val stock=CostEngine.purchase(rows)
     BoxCard{
-        Text(scope,style=MaterialTheme.typography.bodySmall)
-        rows.groupBy{it.unit}.forEach{(unit,group)->MetricRow("صافي التنفيذ","${fmt(group.sumOf{it.quantity})} $unit",true)}
-    }
-    ResultTabs(view,listOf("الخامات","الشراء","التكلفة")){view=it}
-    when(view){
-        0->rows.forEach{row->BoxCard{
-            Text(if(rows.size>1)row.part else "الخامات المطلوبة",fontWeight=FontWeight.Bold)
-            row.spec?.let{s->
-                MetricRow("رمل","${fmt(row.sandM3)} م³",true)
-                MetricRow("أسمنت فعلي","${fmt(row.cementKg)} كجم",true)
-                Text("يعادل ${fmt(row.cementKg/s.bagKg)} شيكارة وزن ${fmt(s.bagKg)} كجم",style=MaterialTheme.typography.bodySmall)
-                if(row.extra>0)MetricRow(s.extraName,fmt(row.extra))
-                ExpandableSection("وزن الأسمنت وتفاصيل الجزء"){
-                    MetricRow("وزن الأسمنت","${fmt(row.cementKg)} كجم")
-                    MetricRow("مساحة الجزء","${fmt(row.quantity)} ${row.unit}")
-                    Text("الشكاير الكاملة تظهر في الشراء بعد تجميع الأجزاء.",style=MaterialTheme.typography.bodySmall)
-                }
-            }
-            if(row.materialLines.isNotEmpty()){
-                val stock=CostEngine.purchase(listOf(row))
-                stock.forEach{MetricRow(it.material,"${fmt(it.amount)} ${it.unit}")}
-                ExpandableSection("تفاصيل حساب الخامات"){row.materialLines.filterNot{it.value.endsWith("جنيه")||it.value.startsWith("0 ")}.forEach{MetricRow(it.label,it.value)}}
-            }
-            if(row.spec==null&&row.materialLines.isEmpty())Text("هذا البند حصر كمية فقط؛ لم تُربط به خامات.")
-        }}
-        1->PurchaseCards(CostEngine.purchase(rows),missing.isEmpty())
-        2->{CostSummary(rows.sumOf{it.materialCost},rows.sumOf{it.labor},rows.sumOf{it.transport},rows.sumOf{it.equipment},missing)
-            rows.groupBy{it.unit}.forEach{(unit,group)->val qty=group.sumOf{it.quantity};if(qty>0)BoxCard{
-                Text("تحليل تكلفة $unit",fontWeight=FontWeight.Bold)
-                MetricRow("مواد", "${money(group.sumOf{it.materialCost}/qty)} جنيه/$unit")
-                MetricRow("معدات", "${money(group.sumOf{it.equipment}/qty)} جنيه/$unit")
-                MetricRow("عمالة", "${money(group.sumOf{it.labor}/qty)} جنيه/$unit")
-                MetricRow("نقل", "${money(group.sumOf{it.transport}/qty)} جنيه/$unit")
-                MetricRow("تكلفة مباشرة للوحدة", "${money(group.sumOf{it.total}/qty)} جنيه/$unit",true)
-            }}
+        Text("المطلوب للتنفيذ",style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)
+        if(showQuantity)rows.groupBy{it.unit}.forEach{(unit,group)->MetricRow("صافي التنفيذ","${fmt(group.sumOf{it.quantity})} $unit")}
+        stock.forEach{p->
+            MetricRow(p.material,if(p.packages!=null)"${p.packages} ${p.packageUnit}"else "${fmt(p.amount)} ${p.unit}",true)
+            if(p.packages!=null)Text("استهلاك فعلي: ${displayAmount(p.amount,p.unit)} ${p.unit}",style=MaterialTheme.typography.labelSmall)
+        }
+        if(stock.isEmpty())Text(if(rows.any{it.issue!=null})"راجع بيانات الحساب"else "حصر كمية فقط",style=MaterialTheme.typography.bodySmall)
+        if(missing.isNotEmpty()){Text("التكلفة غير مكتملة",color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall);Text(missing.joinToString("، "),style=MaterialTheme.typography.labelSmall)}
+        if(rows.sumOf{it.total}>0){
+            HorizontalDivider()
+            MetricRow(if(missing.isEmpty())"تكلفة التنفيذ"else "تكلفة جزئية","${money(rows.sumOf{it.total})} جنيه",true)
+            MetricRow("شراء الخامات بعد التقريب","${money(stock.sumOf{it.cost})} جنيه")
+        }
+        ExpandableSection("تفاصيل التكلفة وطريقة الحساب"){
+            MetricRow("مواد","${money(rows.sumOf{it.materialCost})} جنيه")
+            if(rows.sumOf{it.labor}>0)MetricRow("مصنعية","${money(rows.sumOf{it.labor})} جنيه")
+            if(rows.sumOf{it.transport}>0)MetricRow("نقل","${money(rows.sumOf{it.transport})} جنيه")
+            if(rows.sumOf{it.equipment}>0)MetricRow("معدات","${money(rows.sumOf{it.equipment})} جنيه")
+            rows.forEach{r->Text(r.part+": "+r.formula,style=MaterialTheme.typography.bodySmall)}
         }
     }
-    BoxCard{ExpandableSection("مصدر الكمية وطريقة الحساب"){
-        rows.forEach{MetricRow(it.part,"${fmt(it.quantity)} ${it.unit}");Text(it.formula,style=MaterialTheme.typography.bodySmall)}
-    }}
 }
 @Composable
 fun PurchaseCards(purchases:List<CostEngine.Purchase>,complete:Boolean){
@@ -91,53 +68,35 @@ fun PurchaseCards(purchases:List<CostEngine.Purchase>,complete:Boolean){
 }
 @Composable
 fun CalculatorResultCards(def:CalcDef,inputs:Map<String,String>,answer:CalcAnswer,scope:String){
-    var view by remember{mutableIntStateOf(0)}
     val missing=MaterialReview.missing(def,inputs)
-    val lines=answer.outputs.filter{it.unit !in setOf("جنيه","جنيه/م²")&&!(it.value==0.0&&it.label in setOf("مادة إضافية","وزن عند الكثافة المدخلة","فائض التعبئة"))}
     val mortar=def.id in CalculatorLibrary.mortarIds
+    val lines=answer.outputs.filter{it.unit !in setOf("جنيه","جنيه/م²")&&it.value!=0.0}
+    val stock=CostEngine.calculatorPurchases(def,inputs,answer)
     BoxCard{
-        Text(scope,style=MaterialTheme.typography.bodySmall)
-        val main=if(mortar)lines.firstOrNull{it.label=="مونة منفذة"}else
-            lines.firstOrNull{it.label.contains("شراء")&&!it.label.contains("فائض")}?:
-            lines.firstOrNull{it.label.contains("توريد")}?:
-            lines.firstOrNull{it.label in setOf("استهلاك دهان","كمية فعلية","عبوات","عبوات كاملة","ألواح","منسوب النهاية","الميل الموجّه","وزن","صافي الكسوة","المساحة","سعة")}?:
-            lines.firstOrNull{it.label.contains("صافي")}?:lines.firstOrNull{!it.unit.contains("/")}?:lines.firstOrNull()
-        main?.let{MetricRow(it.label,"${fmt(it.value)} ${it.unit}",true)}
+        Text("النتيجة",style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)
         if(mortar){
             MetricRow("الرمل المطلوب","${fmt(lines.first{it.label=="رمل"}.value)} م³",true)
-            val kg=lines.first{it.label=="أسمنت فعلي"}.value
-            MetricRow("الأسمنت الفعلي","${displayAmount(kg,"كجم")} كجم",true)
-            Text("استهلاك ${displayAmount(kg/n(inputs["bag"].orEmpty()),"شيكارة")} شيكارة × ${inputs["bag"]} كجم",style=MaterialTheme.typography.bodySmall)
             MetricRow("شراء الأسمنت","${fmt(lines.first{it.label=="شراء أسمنت"}.value)} شيكارة",true)
-            Text("الهالك المستخدم: ${inputs["waste"]}%",style=MaterialTheme.typography.bodySmall)
-            MetricRow("تغطي عند سمك ${inputs["thickness"]} مم","${fmt(CalculatorLibrary.mortarArea(inputs))} م²")
-            if(def.id=="splash")Text("تغطية الطرطشة تقدير حجمي؛ راجع معدل الاستهلاك الفعلي بالموقع.",style=MaterialTheme.typography.bodySmall)
-        }else def.fields.filter{it.key in setOf("area","length","count")}.forEach{MetricRow(it.label,"${inputs[it.key]} ${it.unit}")}
-    }
-    val priced=def.fields.any{it.key.contains("price",true)}
-    ResultTabs(view,if(priced)listOf("التفاصيل","الشراء","التكلفة")else listOf("التفاصيل","طريقة الحساب")){view=it}
-    when{
-        view==0->BoxCard{
-            Text("نتائج الحساب",fontWeight=FontWeight.Bold)
-            ExpandableSection("تفاصيل النتائج"){lines.filterNot{it.label in setOf("صافي التنفيذ","المساحة")&&def.fields.any{f->f.key=="area"}}.forEach{MetricRow(it.label,"${displayAmount(it.value,it.unit)} ${it.unit}")}}
-        }
-        view==1&&priced->{
-            val purchase=CostEngine.calculatorPurchases(def,inputs,answer)
-            if(purchase.isNotEmpty())PurchaseCards(purchase,missing.isEmpty())else BoxCard{
-                Text("الكمية المطلوبة / التوريد",fontWeight=FontWeight.Bold)
-                lines.filter{it.label.contains("شراء")||it.label.contains("توريد")||it.unit in setOf("عبوة","لفة","لوح","ماسورة")}.forEach{MetricRow(it.label,"${fmt(it.value)} ${it.unit}")}
-                MetricRow(if(missing.isEmpty())"تكلفة الشراء" else "تكلفة شراء جزئية","${money(answer.cost)} جنيه",true)
-                if(missing.isNotEmpty())Text("غير مسعر: "+missing.joinToString("، "))
+            val kg=lines.first{it.label=="أسمنت فعلي"}.value
+            Text("استهلاك فعلي: ${displayAmount(kg,"كجم")} كجم = ${displayAmount(kg/n(inputs["bag"].orEmpty()),"شيكارة")} شيكارة × ${inputs["bag"]} كجم",style=MaterialTheme.typography.bodySmall)
+            if((inputs["_mortarMode"]?:"area")!="area")MetricRow("تغطية المونة","${fmt(CalculatorLibrary.mortarArea(inputs))} م²")
+        }else if(stock.isNotEmpty()){
+            stock.forEach{p->
+                MetricRow(p.material,if(p.packages!=null)"${p.packages} ${p.packageUnit}"else "${displayAmount(p.amount,p.unit)} ${p.unit}",true)
+                if(p.packages!=null)Text("احتياج فعلي: ${displayAmount(p.amount,p.unit)} ${p.unit}",style=MaterialTheme.typography.labelSmall)
             }
+        }else lines.filterNot{it.label.contains("فائض")||it.label.contains("وزن المتر")}.take(3).forEach{MetricRow(it.label,"${displayAmount(it.value,it.unit)} ${it.unit}",true)}
+        if(answer.cost>0){HorizontalDivider();MetricRow(if(missing.isEmpty())"تكلفة شراء الخامات"else "تكلفة شراء جزئية","${money(answer.cost)} جنيه",true)}
+        if(missing.isNotEmpty()){Text("التكلفة غير مكتملة",color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall);Text(missing.joinToString("، "),style=MaterialTheme.typography.labelSmall)}
+        ExpandableSection("التفاصيل وطريقة الحساب"){
+            if(mortar){MetricRow("مونة منفذة","${fmt(lines.first{it.label=="مونة منفذة"}.value)} م³");Text("الهالك المستخدم: ${inputs["waste"]}%",style=MaterialTheme.typography.bodySmall)}
+            if(stock.isNotEmpty()&&!mortar)lines.filter{it.label.contains("فائض")||it.unit.contains("/")}.forEach{MetricRow(it.label,"${displayAmount(it.value,it.unit)} ${it.unit}")}
+            if(stock.isEmpty()&&lines.size>3)lines.drop(3).forEach{MetricRow(it.label,"${displayAmount(it.value,it.unit)} ${it.unit}")}
+            if(answer.consumedCost>0)MetricRow("تكلفة الاستهلاك قبل تقريب العبوات","${money(answer.consumedCost)} جنيه")
+            if(MortarMix.isMix(def))Text(MortarMix.summary(inputs),style=MaterialTheme.typography.bodySmall)
+            Text(def.formula,style=MaterialTheme.typography.bodySmall);Text(answer.explanation,style=MaterialTheme.typography.bodySmall)
         }
-        view==2&&priced->{CostSummary(answer.consumedCost,missing=missing);BoxCard{MetricRow("شراء بعد التقريب","${money(answer.cost)} جنيه");Text("قد تزيد تكلفة الشراء عن الاستهلاك بسبب العبوات الكاملة.",style=MaterialTheme.typography.bodySmall)}}
-        else->BoxCard{Text(def.formula);Text(answer.explanation)}
     }
-    BoxCard{ExpandableSection("المدخلات والخلطة وطريقة الحساب"){
-        if(MortarMix.isMix(def))MetricRow("الخلطة المستخدمة",MortarMix.summary(inputs))
-        def.fields.filter{it.key !in setOf("cement","sand")}.forEach{MetricRow(it.label,if(mortar&&it.key=="area")"${fmt(CalculatorLibrary.mortarArea(inputs))} م²" else "${inputs[it.key]} ${it.unit}")}
-        Text(def.formula);Text(answer.explanation)
-    }}
 }
 
 private fun displayAmount(value:Double,unit:String):String=if(unit in setOf("كجم","شيكارة","جنيه","جنيه/م²"))java.math.BigDecimal.valueOf(value).setScale(if(unit=="كجم")1 else 2,java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()else fmt(value)

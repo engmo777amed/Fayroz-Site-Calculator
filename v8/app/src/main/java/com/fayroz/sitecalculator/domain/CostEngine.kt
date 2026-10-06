@@ -18,9 +18,10 @@ object CostEngine {
         fun d(k:String,f:Double)=numeric(defaults[k])?:f
         val splash=name.contains("طرطشة")
         val screed=name.contains("تسوية")
+        val recipeId=if(splash)"splash"else if(screed)"screed"else "plaster"
         val base=MaterialSpec(thicknessMm=d(if(splash)"splashThickness" else if(screed)"screedThickness" else "plasterThickness",if(splash)5.0 else if(screed)50.0 else 15.0),
             sandParts=d(if(splash)"splashSand" else if(screed)"screedSand" else "plasterSand",if(splash)2.0 else 4.0),
-            waste=d("mortarWaste",5.0),cementPrice=d("cementPrice",0.0),sandPrice=d("sandPrice",0.0),cementName=defaults["cementName"]?:"أسمنت",sandName=defaults["sandName"]?:"رمل")
+            waste=d("mortarWaste",5.0),cementPrice=d("cementPrice",0.0),sandPrice=d("sandPrice",0.0),cementName=defaults["cementName"]?:"أسمنت",sandName=defaults["sandName"]?:"رمل",laborRate=d("recipe.$recipeId._laborRate",0.0),transportRate=d("recipe.$recipeId._transportRate",0.0),equipmentRate=d("recipe.$recipeId._equipmentRate",0.0))
         val key=if(splash)"splashBagsPerSand"else if(screed)"screedBagsPerSand"else "plasterBagsPerSand"
         return numeric(defaults[key])?.let{MortarMix.withBags(base,it)}?:base
     }
@@ -32,7 +33,8 @@ object CostEngine {
                 val value=project.defaults["recipe.${def.id}.${f.key}"]?:project.defaults[f.key]?.takeIf{f.key in setOf("cementPrice","sandPrice")}
                 value?.let{v->f.key to if(f.key=="cementPrice"&&def.id in CalculatorLibrary.mortarIds&&project.defaults["recipe.${def.id}.${f.key}"]==null) ((numeric(v)?:0.0)*(numeric(raw["bag"])?:50.0)/50).toString()else v}
             }.toMap()
-            return raw+prices
+            val reset=raw.filterKeys{!it.startsWith("_priceOverride.")}
+            return PriceBook.apply(def,reset+prices,project.defaults)
         }
         return project.copy(sections=project.sections.map{s->s.copy(spaces=s.spaces.map{sp->sp.copy(takeoffs=sp.takeoffs.map{t->
             val id=CalculatorLibrary.forItem(t.name)?.id
