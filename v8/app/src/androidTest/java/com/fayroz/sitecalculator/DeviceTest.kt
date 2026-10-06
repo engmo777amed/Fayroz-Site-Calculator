@@ -121,7 +121,7 @@ class DeviceTest {
        type("متوسط السمك","15.5")
        clickText("مم");clickText("سم")
        field("متوسط السمك").assertTextEquals("1.55")
-       clickText("الأسعار — اختيارية");type("سعر شيكارة الأسمنت","200")
+       clickText("إعداداتي وتفاصيل إضافية");clickText("الأسعار — اختيارية");type("سعر شيكارة الأسمنت","200")
        type("سعر متر الرمل","300")
        shot("calculator-filled")
        clickText("احسب واعرض النتيجة");device.waitForIdle();shot("calculator-result")
@@ -190,7 +190,7 @@ class DeviceTest {
         assertEquals("unit",V8Repository(context).recentCalcs().first().inputs["_mortarMode"])
         clickText("تعديل المدخلات")
         clickText("مكونات ١ م³ مونة");clickText("المونة المتاحة تفرد كام؟")
-        type("حجم المونة","2");field("الهالك").assertTextEquals("5")
+        type("حجم المونة","2");clickText("إعداداتي وتفاصيل إضافية");field("الهالك").assertTextEquals("5")
         clickText("احسب واعرض النتيجة");assertText("95.238 م²");shot("mortar-coverage")
     }
  }
@@ -247,7 +247,7 @@ class DeviceTest {
  @Test fun mortarModesRetainTheirOwnWaste(){
     val intent=Intent(context,MainActivity::class.java).putExtra("calculator","plaster")
     ActivityScenario.launch<MainActivity>(intent).use{
-        type("المساحة الصافية","100");type("الهالك","8")
+        type("المساحة الصافية","100");clickText("إعداداتي وتفاصيل إضافية");type("الهالك","8")
         clickText("خامات لمساحة");clickText("مكونات ١ م³ مونة")
         field("الهالك").assertTextEquals("0")
         clickText("مكونات ١ م³ مونة");clickText("خامات لمساحة")
@@ -261,7 +261,7 @@ class DeviceTest {
     val intent=Intent(context,MainActivity::class.java).putExtra("calculator","paint")
     ActivityScenario.launch<MainActivity>(intent).use{
         type("المساحة الصافية","10")
-        clickText("الأسعار — اختيارية");type("سعر العبوة","100")
+        clickText("إعداداتي وتفاصيل إضافية");clickText("الأسعار — اختيارية");type("سعر العبوة","100")
         clickText("احسب واعرض النتيجة")
         clickText("اسم الحساب ومكان الحفظ")
         clickText("حساب مستقل");clickText("المشروع كله")
@@ -299,6 +299,33 @@ class DeviceTest {
         clickText("حذف");clickText("حذف")
         assertTrue(repository.recentCalcs().isEmpty())
         assertText("لا توجد حسابات محفوظة");shot("deleted-saved-calculation")
+    }
+ }
+
+ @Test fun practicalMortarUsesBagsTemplatesAndQuickEditing(){
+    val repo=V8Repository(context)
+    ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java).putExtra("calculator","plaster")).use{
+        type("المساحة الصافية","100");type("متوسط السمك","20");type("شكاير الأسمنت على متر الرمل","5")
+        assertTrue(compose.onAllNodesWithText("جزء",substring=true).fetchSemanticsNodes().isEmpty())
+        shot("practical-mortar-input")
+        clickText("إعداداتي وتفاصيل إضافية");clickText("حفظ إعداداتي باسم");type("اسم الإعداد","محارة الموقع");clickText("حفظ الإعداد")
+        assertEquals("5",repo.calculatorTemplates("plaster").single().second["_bagsPerSand"])
+        assertFalse(repo.calculatorTemplates("plaster").single().second.containsKey("area"))
+        clickText("احسب واعرض النتيجة");shot("practical-mortar-result")
+        clickText("تعديل سريع للنتيجة");type("المساحة الصافية","200");clickText("حفظ النتيجة")
+        assertEquals(200.0,repo.recentCalcs().first().sourceQuantity,0.0)
+        assertEquals("5",repo.recentCalcs().first().inputs["_bagsPerSand"])
+    }
+ }
+ @Test fun areaDimensionsAndAvailableMaterialsArePractical(){
+    ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java).putExtra("calculator","plaster")).use{
+        clickText("مساحة جاهزة");clickText("من الطول والعرض")
+        type("طول المسطح","5");type("عرض المسطح","4");type("شكاير الأسمنت على متر الرمل","5")
+        clickText("احسب واعرض النتيجة");clickText("حفظ النتيجة")
+        assertEquals(20.0,V8Repository(context).recentCalcs().first().sourceQuantity,0.0)
+        clickText("تعديل المدخلات");clickText("خامات لمساحة");clickText("الرمل والأسمنت الموجودين يكفوا كام؟")
+        type("الرمل المتاح","2");type("شكاير الأسمنت المتاحة","5")
+        clickText("احسب واعرض النتيجة");assertText("1 م³");shot("available-materials")
     }
  }
 }

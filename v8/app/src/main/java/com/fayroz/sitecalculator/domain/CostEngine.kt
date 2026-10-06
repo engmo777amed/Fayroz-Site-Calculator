@@ -18,9 +18,11 @@ object CostEngine {
         fun d(k:String,f:Double)=numeric(defaults[k])?:f
         val splash=name.contains("طرطشة")
         val screed=name.contains("تسوية")
-        return MaterialSpec(thicknessMm=d(if(splash)"splashThickness" else if(screed)"screedThickness" else "plasterThickness",if(splash)5.0 else if(screed)50.0 else 15.0),
+        val base=MaterialSpec(thicknessMm=d(if(splash)"splashThickness" else if(screed)"screedThickness" else "plasterThickness",if(splash)5.0 else if(screed)50.0 else 15.0),
             sandParts=d(if(splash)"splashSand" else if(screed)"screedSand" else "plasterSand",if(splash)2.0 else 4.0),
             waste=d("mortarWaste",5.0),cementPrice=d("cementPrice",0.0),sandPrice=d("sandPrice",0.0),cementName=defaults["cementName"]?:"أسمنت",sandName=defaults["sandName"]?:"رمل")
+        val key=if(splash)"splashBagsPerSand"else if(screed)"screedBagsPerSand"else "plasterBagsPerSand"
+        return numeric(defaults[key])?.let{MortarMix.withBags(base,it)}?:base
     }
     fun reprice(project:Project):Project {
         fun spec(s:MaterialSpec)=s.copy(cementPrice=numeric(project.defaults["cementPrice"])?.let{it*s.bagKg/50}?:s.cementPrice,sandPrice=numeric(project.defaults["sandPrice"])?:s.sandPrice)

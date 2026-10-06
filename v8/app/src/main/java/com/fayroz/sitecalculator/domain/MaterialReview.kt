@@ -8,7 +8,7 @@ object MaterialReview {
         if(values.any{!it.isFinite()||it<0})return "اكتب قيمًا صحيحة صفر أو أكبر في مواصفات المواد والأسعار."
         return when{
             s.thicknessMm<=0->"متوسط السمك يجب أن يكون أكبر من صفر."
-            s.cementParts+s.sandParts<=0->"أدخل نسبة الأسمنت والرمل في الخلطة."
+            s.cementParts+s.sandParts<=0->"أدخل عدد شكاير الأسمنت على متر الرمل."
             s.dryFactor<=0->"معامل الحجم الجاف يجب أن يكون أكبر من صفر."
             s.cementDensity<=0->"كثافة الأسمنت يجب أن تكون أكبر من صفر."
             s.bagKg<=0->"وزن شيكارة الأسمنت يجب أن يكون أكبر من صفر."

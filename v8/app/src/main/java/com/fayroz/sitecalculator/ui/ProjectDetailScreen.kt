@@ -143,23 +143,30 @@ fun ProjectDetailScreen(project:Project,active:Boolean,onBack:()->Unit,onSetActi
                         Text("إعدادات المونة الافتراضية",fontWeight=FontWeight.Bold)
                         ExpandableSection("خلطات المونة والسمك الافتراضي"){
                         Text("تُستخدم للأجزاء بدون إعدادات خاصة. الحسابات المحفوظة بالخامات الخاصة تحتفظ بقيمها.",style=MaterialTheme.typography.bodySmall)
-                        listOf(Triple("plasterThickness","سمك المحارة","مم"),Triple("plasterSand","رمل مقابل جزء أسمنت للمحارة","جزء"),Triple("screedThickness","سمك مونة التسوية","مم"),Triple("screedSand","رمل مقابل جزء أسمنت للتسوية","جزء"),Triple("splashThickness","سمك الطرطشة","مم"),Triple("splashSand","رمل مقابل جزء أسمنت للطرطشة","جزء"),Triple("mortarWaste","هالك المونة","%")).forEach{(key,label,unit)->
-                            val default=when(key){"plasterThickness"->"15";"plasterSand","screedSand"->"4";"screedThickness"->"50";"splashThickness","mortarWaste"->"5";"splashSand"->"2";else->"0"}
-                            NumberFieldX(label,defaults[key]?:default,{defaults=defaults+(key to it)},unit)
+                        listOf(Triple("plaster","المحارة","15"),Triple("screed","تسوية الأرضيات","50"),Triple("splash","الطرطشة","5")).forEach{(kind,label,thick)->
+                            NumberFieldX("سمك $label",defaults["${kind}Thickness"]?:thick,{defaults=defaults+("${kind}Thickness" to it)},"مم")
+                            val legacy=n(defaults["${kind}Sand"]?:if(kind=="splash")"2"else "4")
+                            val bags=defaults["${kind}BagsPerSand"]?:exact(1440.0/50/legacy)
+                            NumberFieldX("شكاير $label على متر الرمل",bags,{defaults=defaults+("${kind}BagsPerSand" to it)},"شيكارة × 50 كجم/م³ رمل")
                         }
+                        NumberFieldX("هالك المونة",defaults["mortarWaste"]?:"5",{defaults=defaults+("mortarWaste" to it)},"%")
                         }
                         HorizontalDivider()
                         val recipes=CalculatorLibrary.all.filter{it.id in setOf("tile","skirting","paint","waterproof","gypsum","masonry")}
                         ChoiceFieldX("إعدادات باقي خامات المشروع",recipes.first{it.id==defaultsTool}.title,recipes.map{it.title},{title->defaultsTool=recipes.first{it.title==title}.id})
                         val recipe=recipes.first{it.id==defaultsTool}
                         ExpandableSection("تعديل مواصفات الخامة المختارة"){
-                        recipe.fields.filter{it.key !in setOf("area","length","count")&&!it.key.contains("price",true)}.forEach{field->
+                        if(com.fayroz.sitecalculator.domain.MortarMix.isMix(recipe)){
+                            val values=CalculatorLibrary.defaults(recipe,defaults)
+                            NumberFieldX("شكاير الأسمنت على متر الرمل",defaults["recipe.${recipe.id}._bagsPerSand"]?:exact(com.fayroz.sitecalculator.domain.MortarMix.bags(values)),{defaults=defaults+("recipe.${recipe.id}._bagsPerSand" to it)},"شيكارة × 50 كجم/م³ رمل")
+                        }
+                        recipe.fields.filter{it.key !in setOf("area","length","count","cement","sand")&&!it.key.contains("price",true)}.forEach{field->
                             val key="recipe.${recipe.id}.${field.key}"
                             NumberFieldX(field.label,defaults[key]?:field.default,{defaults=defaults+(key to it)},field.unit)
                         }
                         }
                         Button(onClick={
-                            val valid=defaults.filterKeys{it !in setOf("cementName","sandName")}.all{(_,v)->v.isBlank()||v.map{if(it.isDigit())it.digitToInt().digitToChar()else it}.joinToString("").replace('٫','.').replace(',','.').toDoubleOrNull()?.let{it>=0&&it.isFinite()}==true}&&listOf("plasterThickness","splashThickness","screedThickness","plasterSand","splashSand","screedSand").all{defaults[it]==null||n(defaults[it].orEmpty())>0}
+                            val valid=defaults.filterKeys{it !in setOf("cementName","sandName")}.all{(_,v)->v.isBlank()||v.map{if(it.isDigit())it.digitToInt().digitToChar()else it}.joinToString("").replace('٫','.').replace(',','.').toDoubleOrNull()?.let{it>=0&&it.isFinite()}==true}&&listOf("plasterThickness","splashThickness","screedThickness","plasterSand","splashSand","screedSand","plasterBagsPerSand","screedBagsPerSand","splashBagsPerSand").all{defaults[it]==null||n(defaults[it].orEmpty())>0}
                             if(valid){onUpdate(project.copy(defaults=defaults,updatedAt=System.currentTimeMillis()));Toast.makeText(context,"تم حفظ الإعدادات",Toast.LENGTH_SHORT).show()}
                             else Toast.makeText(context,"راجع الأسعار والأسماك والخلطات",Toast.LENGTH_LONG).show()
                         }){Text("اعتماد إعدادات المشروع")}

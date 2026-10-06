@@ -54,7 +54,7 @@ fun HomeScreen(
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)){
                             Text("FAYROZ SITE CALCULATOR",color=Color.White,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Black)
-                            Text("V9.3 • الحصر والخامات والتكلفة",color=FayrozTurquoise,style=MaterialTheme.typography.bodySmall)
+                            Text("V9.4 • الحصر والخامات والتكلفة",color=FayrozTurquoise,style=MaterialTheme.typography.bodySmall)
                         }
                         IconButton(onClick=onSettings){Icon(Icons.Rounded.Settings,"الإعدادات",tint=Color.White)}
                     }

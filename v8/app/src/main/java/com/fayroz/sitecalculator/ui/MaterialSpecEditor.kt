@@ -7,11 +7,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.fayroz.sitecalculator.core.MaterialSpec
 import com.fayroz.sitecalculator.domain.CostEngine
+import com.fayroz.sitecalculator.domain.MortarMix
 
 @Composable
 fun MaterialSpecFields(value:MaterialSpec,onChange:(MaterialSpec)->Unit,rateUnit:String="م²"){
     Text("إعداد المونة",style=MaterialTheme.typography.titleMedium)
-    Text("الخلطة الحجمية: أسمنت ${fmt(value.cementParts)} : رمل ${fmt(value.sandParts)} • هالك ${fmt(value.waste)}%",style=MaterialTheme.typography.bodySmall)
+    Text("${fmt(MortarMix.bags(value))} شيكارة × ${fmt(value.bagKg)} كجم على ١ م³ رمل • هالك ${fmt(value.waste)}%",style=MaterialTheme.typography.bodySmall)
+    SpecNumber("شكاير الأسمنت على متر الرمل",MortarMix.bags(value),"شيكارة/م³ رمل"){onChange(MortarMix.withBags(value,it))}
     SpecNumber("متوسط السمك",value.thicknessMm,"مم"){onChange(value.copy(thicknessMm=it))}
     val reference=if(value.thicknessMm>0&&value.cementParts+value.sandParts>0&&value.bagKg>0)
         runCatching{CostEngine.measure(1000/value.thicknessMm,value.copy(waste=0.0))}.getOrNull()else null
@@ -24,12 +26,8 @@ fun MaterialSpecFields(value:MaterialSpec,onChange:(MaterialSpec)->Unit,rateUnit
     }
     Text("المكونات حسب الخلطة المستخدمة في الحساب.",style=MaterialTheme.typography.bodySmall)
     ExpandableSection("تغيير الخلطة والهالك"){
-        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-            SpecNumber("أسمنت",value.cementParts,"جزء",Modifier.weight(1f)){onChange(value.copy(cementParts=it))}
-            SpecNumber("رمل",value.sandParts,"جزء",Modifier.weight(1f)){onChange(value.copy(sandParts=it))}
-        }
         SpecNumber("هالك الخامات",value.waste,"%"){onChange(value.copy(waste=it))}
-        SpecNumber("وزن شيكارة الأسمنت",value.bagKg,"كجم"){onChange(value.copy(bagKg=it))}
+        SpecNumber("وزن شيكارة الأسمنت",value.bagKg,"كجم"){onChange(MortarMix.withBags(value.copy(bagKg=it),MortarMix.bags(value)))}
     }
     ExpandableSection("الأسعار — اختيارية"){
         TextFieldX("نوع الأسمنت وماركته",value.cementName,{onChange(value.copy(cementName=it))})
@@ -47,7 +45,7 @@ fun MaterialSpecFields(value:MaterialSpec,onChange:(MaterialSpec)->Unit,rateUnit
         SpecNumber("معدل المادة الإضافية",value.extraRate,"وحدة/م²"){onChange(value.copy(extraRate=it))}
         SpecNumber("سعر وحدة الإضافة",value.extraPrice,"جنيه"){onChange(value.copy(extraPrice=it))}
         SpecNumber("معامل الحجم الجاف",value.dryFactor,"معامل"){onChange(value.copy(dryFactor=it))}
-        SpecNumber("كثافة الأسمنت الحجمية",value.cementDensity,"كجم/م³"){onChange(value.copy(cementDensity=it))}
+        SpecNumber("كثافة الأسمنت الحجمية",value.cementDensity,"كجم/م³"){if(it>0)onChange(MortarMix.withBags(value.copy(cementDensity=it),MortarMix.bags(value)))}
     }
     com.fayroz.sitecalculator.domain.MaterialReview.specError(value)?.let{Text(it,color=MaterialTheme.colorScheme.error)}
 }

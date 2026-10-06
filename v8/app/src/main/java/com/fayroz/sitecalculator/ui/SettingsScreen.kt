@@ -123,7 +123,7 @@ fun SettingsScreen(
             item{PageHeader("عن الحسابات")}
             item{
                 BoxCard{
-                    Text("Fayroz Site Calculator 9.3.0",fontWeight=FontWeight.Black)
+                    Text("Fayroz Site Calculator 9.4.0",fontWeight=FontWeight.Black)
                     ExpandableSection("ملاحظات الحسابات"){
                     Text("""• التكرار بيتطبق مرة واحدة فقط في التجميع.
 • صافي الحصر منفصل عن هالك الخامات والشراء.

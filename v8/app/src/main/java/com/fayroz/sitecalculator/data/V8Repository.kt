@@ -193,6 +193,15 @@ class V8Repository(context:Context){
         editor.commit()
     }.getOrDefault(false)
 
+    fun calculatorTemplates(toolId:String):List<Pair<String,Map<String,String>>> = runCatching{
+        val arr=org.json.JSONArray(pref("templates.$toolId","[]"))
+        (0 until arr.length()).map{i->val o=arr.getJSONObject(i);val values=o.getJSONObject("values");o.getString("name") to values.keys().asSequence().associateWith{values.getString(it)}}
+    }.getOrDefault(emptyList())
+    fun saveCalculatorTemplate(toolId:String,name:String,values:Map<String,String>){
+        val next=listOf(name to values)+calculatorTemplates(toolId).filterNot{it.first==name}
+        setPref("templates.$toolId",org.json.JSONArray().apply{next.take(20).forEach{(label,v)->put(JSONObject().put("name",label).put("values",JSONObject(v)))}}.toString())
+    }
+
     fun appearance():String=prefs.getString("appearance","system")?:"system"
     fun setAppearance(value:String)=prefs.edit().putString("appearance",value).apply()
 

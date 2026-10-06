@@ -235,5 +235,45 @@ class DomainTest {
     assertEquals(150.0,updated.sections.single().spaces.single().takeoffs.single().material!!.cementPrice,0.0)
     assertEquals(150.0,updated.calculations.single().inputs["cementPrice"]!!.toDouble(),0.0)
  }
+
+ @Test fun siteMixBagsArePerSandNotPerWetMortar(){
+    val a=calc("plaster","_bagsPerSand" to "5","_mortarMode" to "sand","_sandAvailable" to "1","thickness" to "20","waste" to "0")
+    assertEquals(1.0,a.outputs.first{it.label=="رمل"}.value,1e-9)
+    assertEquals(250.0,a.outputs.first{it.label=="أسمنت فعلي"}.value,1e-9)
+    assertEquals(5.0,a.outputs.first{it.label=="شراء أسمنت"}.value,0.0)
+    assertEquals((1+250.0/1440)/1.33,a.outputs.first{it.label=="مونة منفذة"}.value,1e-9)
+ }
+ @Test fun migratedLegacyMixPreservesAllQuantities(){
+    val def=CalculatorLibrary.all.first{it.id=="plaster"};val raw=def.fields.associate{it.key to it.default}+mapOf("area" to "100")
+    val old=CalculatorLibrary.evaluate(def,raw);val next=CalculatorLibrary.evaluate(def,raw+(MortarMix.key to MortarMix.bags(raw).toString()))
+    old.outputs.zip(next.outputs).forEach{(a,b)->assertEquals(a.value,b.value,1e-9)}
+ }
+ @Test fun stockCalculationRespectsBothMaterials(){
+    val a=calc("plaster","_bagsPerSand" to "5","_mortarMode" to "stock","_sandAvailable" to "2","_bagsAvailable" to "5","thickness" to "20","waste" to "5")
+    assertEquals(1.0,a.outputs.first{it.label=="رمل"}.value,1e-9)
+    assertEquals(250.0,a.outputs.first{it.label=="أسمنت فعلي"}.value,1e-9)
+    val b=calc("plaster","_bagsPerSand" to "5","_mortarMode" to "stock","_sandAvailable" to "0.5","_bagsAvailable" to "5","thickness" to "20","waste" to "5")
+    assertEquals(.5,b.outputs.first{it.label=="رمل"}.value,1e-9)
+    assertEquals(125.0,b.outputs.first{it.label=="أسمنت فعلي"}.value,1e-9)
+ }
+ @Test fun bagsMixWorksForMasonryAndReverseCalculator(){
+    val a=calc("masonry","area" to "100","_bagsPerSand" to "5")
+    assertEquals(5.0,a.outputs.first{it.label=="أسمنت فعلي"}.value/50/a.outputs.first{it.label=="رمل"}.value,1e-9)
+    val b=calc("reverse_mortar","bags" to "5","_bagsPerSand" to "5")
+    assertEquals(1.0,b.outputs.first{it.label=="رمل مطلوب"}.value,1e-9)
+ }
+ @Test fun projectSpecUsesBagsAndMatchesCalculator(){
+    val spec=CostEngine.defaultSpec("محارة الحوائط",mapOf("plasterBagsPerSand" to "5","plasterThickness" to "20"))!!
+    val quantities=CostEngine.measure(100.0,spec)
+    val a=calc("plaster","area" to "100","thickness" to "20","_bagsPerSand" to "5")
+    assertEquals(quantities.first,a.outputs.first{it.label=="أسمنت فعلي"}.value,1e-9)
+    assertEquals(quantities.second,a.outputs.first{it.label=="رمل"}.value,1e-9)
+    val small=MortarMix.withBags(spec.copy(bagKg=25.0),5.0)
+    assertEquals(5.0,MortarMix.bags(small),1e-9)
+ }
+ @Test fun invalidSiteMixAndNegativeDimensionsCannotProduceAResult(){
+    listOf("0","-1","abc").forEach{bags->assertTrue(runCatching{calc("plaster","area" to "100","_bagsPerSand" to bags)}.isFailure)}
+    assertTrue(runCatching{calc("plaster","area" to "4","_areaMethod" to "dimensions","_areaLength" to "-2","_areaWidth" to "-2")}.isFailure)
+ }
 }
 

@@ -25,11 +25,11 @@ object CalculatorLibrary {
         fun addDef(id:String,title:String,g:Int,fields:List<CalcField>,formula:String,solve:(Map<String,Double>)->CalcAnswer){add(CalcDef(id,title,groups[g],fields,formula,solve))}
         fun mortar(id:String,title:String,thick:String,sand:String){
             addDef(id,title,0,listOf(area,f("thickness","متوسط السمك","مم",thick),f("cement","أسمنت في الخلطة","جزء","1"),f("sand","رمل في الخلطة","جزء",sand),f("dry","معامل الحجم الجاف","معامل","1.33"),f("density","كثافة الأسمنت الحجمية","كجم/م³","1440"),f("bag","وزن الشيكارة","كجم","50"),waste(),f("cementPrice","سعر شيكارة الأسمنت","جنيه","0",false),f("sandPrice","سعر متر الرمل","جنيه/م³","0",false),f("extraRate","معدل الإضافة","وحدة/م²","0",false),f("extraPrice","سعر وحدة الإضافة","جنيه","0",false)),
-                "حجم منفذ = المساحة × السمك؛ الحجم الجاف = المنفذ × المعامل × (1 + الهالك/100). توزيع الخلطة بالحجم."){v->
+                "حجم منفذ = المساحة × السمك؛ الحجم الجاف = المنفذ × المعامل × (1 + الهالك/100). الأسمنت = متر الرمل × الشكاير لكل متر × وزن الشيكارة؛ ناتج المونة تقديري حسب معامل الحجم الجاف."){v->
                 val wet=v("area")*v("thickness")/1000;val dry=wet*v("dry")*(1+v("waste")/100)
                 val kg=dry*v("cement")/(v("cement")+v("sand"))*v("density");val sandM=dry*v("sand")/(v("cement")+v("sand"))
-                val bags=ceil(kg/v("bag"));val extra=v("area")*v("extraRate")*(1+v("waste")/100)
-                CalcAnswer(listOf(o("مونة منفذة",wet,"م³"),o("أسمنت فعلي",kg,"كجم"),o("شراء أسمنت",bags,"شيكارة"),o("رمل",sandM,"م³"),o("مادة إضافية",extra,"وحدة"),o("تكلفة الاستهلاك",kg/v("bag")*v("cementPrice")+sandM*v("sandPrice")+extra*v("extraPrice"),"جنيه")),"خلطة حجمية، والسمك متوسط التنفيذ. الشكاير تُقرب بعد تجميع الكمية.",bags*v("cementPrice")+sandM*v("sandPrice")+extra*v("extraPrice"),kg/v("bag")*v("cementPrice")+sandM*v("sandPrice")+extra*v("extraPrice"))
+                val bags=ceil(kg/v("bag")-1e-9);val extra=v("area")*v("extraRate")*(1+v("waste")/100)
+                CalcAnswer(listOf(o("مونة منفذة",wet,"م³"),o("أسمنت فعلي",kg,"كجم"),o("شراء أسمنت",bags,"شيكارة"),o("رمل",sandM,"م³"),o("مادة إضافية",extra,"وحدة"),o("تكلفة الاستهلاك",kg/v("bag")*v("cementPrice")+sandM*v("sandPrice")+extra*v("extraPrice"),"جنيه")),"عدد شكاير على متر رمل، والسمك متوسط التنفيذ. الشكاير تُقرب بعد تجميع الكمية.",bags*v("cementPrice")+sandM*v("sandPrice")+extra*v("extraPrice"),kg/v("bag")*v("cementPrice")+sandM*v("sandPrice")+extra*v("extraPrice"))
             }
         }
         mortar("plaster","مونة المحارة","15","4")
@@ -78,7 +78,7 @@ object CalculatorLibrary {
                 val l=v("brickL")/100;val w=v("brickW")/100;val h=v("brickH")/100;val j=v("joint")/1000;val t=v("wall")/100
                 val courses=max(1.0,round((t+j)/(w+j)));val net=v("area")/((l+j)*(h+j))*courses
                 val wet=(v("area")*t-net*l*w*h).coerceAtLeast(0.0);val dry=wet*v("dry")
-                val kg=dry*v("cement")/(v("cement")+v("sand"))*1440;val sm=dry*v("sand")/(v("cement")+v("sand"));val bricks=ceil(net*(1+v("waste")/100));val bags=ceil(kg/50)
+                val kg=dry*v("cement")/(v("cement")+v("sand"))*1440;val sm=dry*v("sand")/(v("cement")+v("sand"));val bricks=ceil(net*(1+v("waste")/100));val bags=ceil(kg/50-1e-9)
                 CalcAnswer(listOf(o("طبقات عبر السمك",courses,"طبقة"),o("وحدات شراء",bricks,"وحدة"),o("مونة منفذة",wet,"م³"),o("أسمنت",bags,"شيكارة"),o("رمل",sm,"م³"),o("أسمنت فعلي",kg,"كجم")),"تقدير لرص طولي منتظم؛ عدد الطبقات المدعوم يطابق عرض الوحدة. للرص المختلف استخدم مقاس وجه الرص الفعلي. البلوك المجوف محسوب بالأبعاد الخارجية.",bricks/1000*v("brickPrice")+bags*v("cementPrice")+sm*v("sandPrice"),net*(1+v("waste")/100)/1000*v("brickPrice")+kg/50*v("cementPrice")+sm*v("sandPrice"))
             }
         }
@@ -124,8 +124,10 @@ object CalculatorLibrary {
         "سقف جبس بورد"->"gypsum"
         else->""
     }}
-    fun defaults(def:CalcDef,project:Map<String,String>):Map<String,String> = def.fields.associate{field->
-        field.key to (project["recipe.${def.id}.${field.key}"]?:project[field.key]?.takeIf{field.key in setOf("cementPrice","sandPrice")}?:field.default)
+    fun defaults(def:CalcDef,project:Map<String,String>):Map<String,String> {
+        val result=def.fields.associate{field->field.key to (project["recipe.${def.id}.${field.key}"]?:project[field.key]?.takeIf{field.key in setOf("cementPrice","sandPrice")}?:field.default)}
+        val mix=project["recipe.${def.id}._bagsPerSand"]?:project[when(def.id){"splash"->"splashBagsPerSand";"screed"->"screedBagsPerSand";else->"plasterBagsPerSand"}]?.takeIf{def.id in mortarIds}
+        return if(mix!=null)result+(MortarMix.key to mix)else result
     }
     fun recipe(def:CalcDef,inputs:Map<String,String>,quantity:Double):Map<String,String> = def.fields.associate{it.key to it.default}+inputs+
         ((if(def.fields.any{it.key=="area"})"area" else if(def.fields.any{it.key=="length"})"length" else "count") to quantity.toString())
@@ -136,13 +138,31 @@ object CalculatorLibrary {
         if(mode=="area")return number(raw["area"].orEmpty())?:0.0
         val thickness=number(raw["thickness"].orEmpty())?:0.0
         require(thickness>0){"متوسط السمك يجب أن يكون أكبر من صفر"}
-        val volume=if(mode=="unit")1.0 else number(raw["_volume"].orEmpty())?:0.0
+        val volume=when(mode){
+            "unit"->1.0
+            "sand","stock"->{
+                val mixed=MortarMix.normalize(raw);val ratio=MortarMix.bags(mixed)
+                val available=number(raw["_sandAvailable"])?:(if(mode=="sand")1.0 else 0.0)
+                require(available>0){"أدخل كمية الرمل المتاحة أكبر من صفر"}
+                val usable=if(mode=="stock"){
+                    val bags=number(raw["_bagsAvailable"])?:0.0
+                    require(bags>0){"أدخل شكاير الأسمنت المتاحة أكبر من صفر"}
+                    minOf(available,bags/ratio)
+                }else available
+                val density=number(mixed["density"])?:1440.0;val bag=number(mixed["bag"])?:50.0;val dry=number(mixed["dry"])?:1.33
+                require(density>0&&bag>0&&dry>0){"راجع معاملات الخلطة"}
+                usable*(1+ratio*bag/density)/dry
+            }
+            else->number(raw["_volume"].orEmpty())?:0.0
+        }
         require(volume>0&&volume.isFinite()){ "حجم المونة يجب أن يكون أكبر من صفر" }
         val waste=number(raw["waste"].orEmpty())?:0.0
-        return volume*1000/thickness/(if(mode=="coverage")1+waste/100 else 1.0)
+        return volume*1000/thickness/(if(mode in setOf("coverage","sand","stock"))1+waste/100 else 1.0)
     }
     fun evaluate(def:CalcDef,raw:Map<String,String>):CalcAnswer {
-        val normalized=if(def.id in mortarIds)raw+("area" to mortarArea(raw).toString())else raw
+        if(raw["_areaMethod"]=="dimensions")require((number(raw["_areaLength"].orEmpty())?:0.0)>0&&(number(raw["_areaWidth"].orEmpty())?:0.0)>0){"أدخل طول المسطح وعرضه أكبر من صفر"}
+        val mixed=if(MortarMix.isMix(def))MortarMix.normalize(raw)else raw
+        val normalized=if(def.id in mortarIds)mixed+("area" to mortarArea(mixed).toString())else mixed
         val values=def.fields.associate{field->
             val text=normalized[field.key].orEmpty().map{if(it.isDigit())it.digitToInt().digitToChar()else it}.joinToString("").replace('٫','.').replace(',','.').replace("٬","")
             val v=if(text.isBlank()&&!field.required)0.0 else text.toDoubleOrNull()
@@ -163,7 +183,7 @@ object CalculatorLibrary {
         if(def.id in mortarIds){
             val area=values["area"]?:0.0
             return answer.copy(outputs=listOf(CalcOutput("مساحة التغطية عند السمك المدخل",area,"م²"))+answer.outputs,
-                explanation=answer.explanation+" القيم وفق الخلطة المدخلة. تغطية الطرطشة تقدير حجمي يُراجع باستهلاك الموقع.")
+                explanation=MortarMix.summary(raw)+". "+answer.explanation+" القيم وفق الخلطة المدخلة. تغطية الطرطشة تقدير حجمي يُراجع باستهلاك الموقع.")
         }
         return answer
     }

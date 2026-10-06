@@ -134,7 +134,8 @@ fun CalculatorResultCards(def:CalcDef,inputs:Map<String,String>,answer:CalcAnswe
         else->BoxCard{Text(def.formula);Text(answer.explanation)}
     }
     BoxCard{ExpandableSection("المدخلات والخلطة وطريقة الحساب"){
-        def.fields.forEach{MetricRow(it.label,if(mortar&&it.key=="area")"${fmt(CalculatorLibrary.mortarArea(inputs))} م²" else "${inputs[it.key]} ${it.unit}")}
+        if(MortarMix.isMix(def))MetricRow("الخلطة المستخدمة",MortarMix.summary(inputs))
+        def.fields.filter{it.key !in setOf("cement","sand")}.forEach{MetricRow(it.label,if(mortar&&it.key=="area")"${fmt(CalculatorLibrary.mortarArea(inputs))} م²" else "${inputs[it.key]} ${it.unit}")}
         Text(def.formula);Text(answer.explanation)
     }}
 }

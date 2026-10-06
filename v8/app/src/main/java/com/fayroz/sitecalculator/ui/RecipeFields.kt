@@ -20,13 +20,14 @@ fun RecipeFields(def:CalcDef,quantity:Double,inputs:Map<String,String>,onChange:
         onChange(updated)
     }
     TextFieldX("اسم الصنف والمواصفة",inputs["_materialName"].orEmpty(),{update("_materialName",it)},placeholder="مثال: سيراميك أرضية بيج 60 × 60")
-    val normal=def.fields.filter{it.key !in setOf("area","length","count")&&!it.key.contains("price",true)&&it.key !in setOf("dry","density","extraRate","cement","sand","bag","waste")}
+    if(MortarMix.isMix(def))NumberFieldX("شكاير الأسمنت على متر الرمل",inputs[MortarMix.key]?:exact(MortarMix.bags(inputs)),{update(MortarMix.key,it)},"شيكارة/م³ رمل")
+    val normal=MortarMix.basic(def).filter{it.key !in setOf("area","length","count")}
     normal.forEach{f->CalcInputField(f,inputs[f.key]?:f.default,{update(f.key,it)},inputs["_unit.${f.key}"],{update("_unit.${f.key}",it)})}
     TextButton(onClick={prices=!prices}){Text("الأسعار — اختيارية")}
     if(prices)def.fields.filter{it.key.contains("price",true)}.forEach{f->CalcInputField(f,inputs[f.key]?:f.default,{update(f.key,it)},inputs["_unit.${f.key}"],{update("_unit.${f.key}",it)})}
     TextButton(onClick={more=!more}){Text("إعدادات إضافية ومصنعية")}
     if(more){
-        def.fields.filter{it.key in setOf("dry","density","extraRate","cement","sand","bag","waste")}.forEach{f->CalcInputField(f,inputs[f.key]?:f.default,{update(f.key,it)},inputs["_unit.${f.key}"],{update("_unit.${f.key}",it)})}
+        def.fields.filter{it !in normal&&it.key !in setOf("area","length","count","cement","sand")&&!it.key.contains("price",true)}.forEach{f->CalcInputField(f,inputs[f.key]?:f.default,{update(f.key,it)},inputs["_unit.${f.key}"],{update("_unit.${f.key}",it)})}
         listOf("_laborRate" to "المصنعية للوحدة","_transportRate" to "النقل للوحدة","_equipmentRate" to "المعدات للوحدة").forEach{(key,label)->NumberFieldX(label,inputs[key]?:"0",{update(key,it)},"جنيه/$quantityUnit")}
     }
 
