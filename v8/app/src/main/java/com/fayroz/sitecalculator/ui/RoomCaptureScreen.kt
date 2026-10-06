@@ -491,7 +491,7 @@ private fun OpeningRow(
                 }
                 Text("معاينة المقاس والارتفاع فقط؛ موضع الفتحة الأفقي غير مسجل.",style=MaterialTheme.typography.labelSmall)
             }
-            NumberFieldX("العدد",count,{count=it;onChange(opening.copy(count=if(com.fayroz.sitecalculator.domain.MortarMix.number(it)?.let{v->v>=1&&v<=Int.MAX_VALUE&&v==kotlin.math.floor(v)}==true)n(it).toInt()else 0))},"عدد")
+            NumberFieldX("العدد",count,{count=it;onChange(opening.copy(count=if(com.fayroz.sitecalculator.domain.MortarMix.number(it)?.let{v->v>=1&&v<=Int.MAX_VALUE&&v==kotlin.math.floor(v)}==true)n(it).toInt()else 0))},"عدد",error=if(com.fayroz.sitecalculator.domain.MortarMix.number(count)?.let{v->v>=1&&v<=Int.MAX_VALUE&&v==kotlin.math.floor(v)}!=true)"اكتب عددًا صحيحًا يبدأ من ١"else null)
         }
     }
 }

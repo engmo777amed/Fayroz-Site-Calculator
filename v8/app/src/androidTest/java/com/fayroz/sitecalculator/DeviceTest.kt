@@ -362,5 +362,23 @@ class DeviceTest {
         assertEquals(1,V8Repository(context).recentCalcs().size)
     }
  }
+
+ @Test fun mortarWasteAndUnfinishedInputsSurviveLeavingCalculator(){
+    val intent=Intent(context,MainActivity::class.java).putExtra("calculator","plaster")
+    ActivityScenario.launch<MainActivity>(intent).use{
+        type("المساحة الصافية","23.5");type("شكاير الأسمنت على متر الرمل","6.5")
+        clickText("إعداداتي وتفاصيل إضافية");type("الهالك","8")
+        device.pressBack();compose.waitForIdle()
+    }
+    ActivityScenario.launch<MainActivity>(intent).use{
+        field("المساحة الصافية").assertTextEquals("23.5");field("شكاير الأسمنت على متر الرمل").assertTextEquals("6.5")
+        clickText("إعداداتي وتفاصيل إضافية");field("الهالك").assertTextEquals("8")
+        clickText("خامات لمساحة");clickText("مكونات ١ م³ مونة");clickText("احسب واعرض النتيجة");clickText("حفظ النتيجة")
+        device.pressBack();device.pressBack();compose.waitForIdle()
+    }
+    ActivityScenario.launch<MainActivity>(intent).use{
+        clickText("إعداداتي وتفاصيل إضافية");field("الهالك").assertTextEquals("8")
+    }
+ }
 }
 

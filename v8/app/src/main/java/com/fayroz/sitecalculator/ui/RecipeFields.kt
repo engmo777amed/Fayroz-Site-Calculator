@@ -42,7 +42,7 @@ fun CalcInputField(field:CalcField,value:String,onChange:(String)->Unit,unitPref
         if(n(displayValue)!=n(converted)||value.isBlank())displayValue=converted
     }
     val number=MortarMix.number(value)
-    val invalid=value.isNotBlank()&&(number==null||(!field.signed&&number<0)||(field.required&&number<=0))
+    val invalid=value.isNotBlank()&&(number==null||(!field.signed&&number<0)||(field.required&&number<=0)||(field.key in setOf("count","steps","layers","sides","faces","coats","conductors","pack")&&field.unit in setOf("عدد","قطعة","وجه","درجة","طبقة","شبكة","موصل","عبوة")&&number!=kotlin.math.floor(number)))
     val error=if(invalid)"راجع ${field.label}"else null
     if(field.unit in listOf("م","سم","مم")){
         NumberUnitField(field.label,displayValue,{raw->displayValue=raw;onChange(if(raw.isBlank())"" else convertLength(raw,displayUnit,field.unit))},displayUnit,{unit->displayUnit=unit;onUnitChange(unit)},help="الوحدة المختارة واضحة بجوار الرقم؛ التحويل يحافظ على القيمة.")

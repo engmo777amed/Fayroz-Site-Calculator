@@ -165,7 +165,7 @@ class V8Repository(context:Context){
     fun exportBackup():String=JSONObject().apply{
         put("version",9)
         put("projects",org.json.JSONArray(prefs.getString("projects","[]")?:"[]"))
-        put("settings",JSONObject().apply{prefs.all.forEach{(key,value)->if(key!="projects"&&value is String)put(key,value)}})
+        put("settings",JSONObject().apply{prefs.all.forEach{(key,value)->if(key !in setOf("projects","before_import","corrupt_projects","last_good_projects")&&!key.startsWith("draft_")&&!key.startsWith("pref_draft.")&&value is String)put(key,value)}})
     }.toString()
 
     fun importBackup(raw:String,merge:Boolean=false):Boolean=runCatching{
@@ -198,7 +198,7 @@ class V8Repository(context:Context){
         val editor=prefs.edit().putString("before_import",before).putString("last_good_projects",prefs.getString("projects","[]"))
             .putString("projects",V8Codec.encodeProjects(next))
         val settings=root.optJSONObject("settings")
-        settings?.keys()?.forEach{key->if(key!="projects"&&!key.startsWith("draft_")&&key !in setOf("before_import","corrupt_projects","last_good_projects")){
+        settings?.keys()?.forEach{key->if(key!="projects"&&!key.startsWith("draft_")&&!key.startsWith("pref_draft.")&&key !in setOf("before_import","corrupt_projects","last_good_projects")){
             if(!merge||!prefs.contains(key))editor.putString(key,settings.getString(key))
         }}
         if(!merge){editor.remove("active_location");prefs.all.keys.filter{it.startsWith("draft_")||it.startsWith("pref_draft.")}.forEach{editor.remove(it)}}

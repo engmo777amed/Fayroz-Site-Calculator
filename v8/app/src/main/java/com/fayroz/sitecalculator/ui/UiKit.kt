@@ -115,6 +115,7 @@ fun NumberFieldX(
     help:String?=null,
     error:String?=null
 ){
+    val shownError=error?:if(value.isNotBlank()&&com.fayroz.sitecalculator.domain.MortarMix.number(value)==null)"اكتب رقمًا صحيحًا"else null
     Column(modifier,verticalArrangement=Arrangement.spacedBy(3.dp)){
         Text(label,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedTextField(
@@ -122,8 +123,8 @@ fun NumberFieldX(
             onValueChange={raw->onChange(raw.filter{it.isDigit()||it=='.'||it==','||it=='٫'||it=='-'} )},
             modifier=Modifier.fillMaxWidth().semantics{contentDescription="إدخال $label"},
             singleLine=true,
-            isError=error!=null,
-            supportingText=if(error!=null){{Text(error)}}else null,
+            isError=shownError!=null,
+            supportingText=if(shownError!=null){{Text(shownError)}}else null,
             keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
             suffix={Text(unit,style=MaterialTheme.typography.labelSmall)},
             trailingIcon=if(help!=null){{HelpDot(label,help)}}else null,
