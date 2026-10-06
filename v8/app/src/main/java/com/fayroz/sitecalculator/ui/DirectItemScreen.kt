@@ -81,7 +81,7 @@ fun DirectItemScreen(
                 }
             }
 
-            if(n(waste)<0)item{Text("الهالك لا يمكن أن يكون سالبًا.",color=MaterialTheme.colorScheme.error)}
+            if(com.fayroz.sitecalculator.domain.MortarMix.number(waste)?.let{it>=0}!=true)item{Text("الهالك لا يمكن أن يكون سالبًا.",color=MaterialTheme.colorScheme.error)}
             if(n(quantity)>0&&n(waste)>=0){
                 item{
                     BoxCard{
@@ -94,7 +94,7 @@ fun DirectItemScreen(
                 item{
                     Button(
                         onClick={ if(sectionId.isNotBlank()) onSave(sectionId,space) },
-                        enabled=sectionId.isNotBlank(),
+                        enabled=sectionId.isNotBlank()&&com.fayroz.sitecalculator.domain.MortarMix.number(quantity)?.let{it>0}==true&&com.fayroz.sitecalculator.domain.MortarMix.number(waste)?.let{it>=0}==true,
                         modifier=Modifier.fillMaxWidth().heightIn(min=50.dp)
                     ){
                         Icon(Icons.Rounded.Save,null)

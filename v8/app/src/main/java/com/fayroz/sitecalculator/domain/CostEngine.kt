@@ -112,11 +112,11 @@ object CostEngine {
             val def=CalculatorLibrary.all.first{it.id==key.first}
             val raw=CalculatorLibrary.recipe(def,key.second,group.sumOf{it.quantity})
             val answer=runCatching{CalculatorLibrary.evaluate(def,raw)}.getOrNull()
-            if(answer!=null)addAll(calculatorPurchases(def,raw,answer).map{p->if(raw["_materialName"].isNullOrBlank()&&def.id !in CalculatorLibrary.mortarIds)p.copy(identity=group.first().itemId+":"+raw.toSortedMap().toString())else p})
+            if(answer!=null)addAll(calculatorPurchases(def,raw,answer).map{p->if(raw["_materialName"].isNullOrBlank()&&def.id !in CalculatorLibrary.mortarIds&&p.packageUnit!="شيكارة"&&p.material!=(raw["_sandName"]?:"رمل"))p.copy(identity=group.first().itemId+":"+raw.toSortedMap().toString())else p})
         }
         rows.filter{it.issue==null&&it.calculatorInputs["_savedCalculation"]=="true"}.forEach{r->
             val def=CalculatorLibrary.all.first{it.id==r.calculatorId}
-            runCatching{CalculatorLibrary.evaluate(def,r.calculatorInputs)}.getOrNull()?.let{addAll(calculatorPurchases(def,r.calculatorInputs,it).map{p->if(r.calculatorInputs["_materialName"].isNullOrBlank()&&def.id !in CalculatorLibrary.mortarIds)p.copy(identity=r.itemId)else p})}
+            runCatching{CalculatorLibrary.evaluate(def,r.calculatorInputs)}.getOrNull()?.let{addAll(calculatorPurchases(def,r.calculatorInputs,it).map{p->if(r.calculatorInputs["_materialName"].isNullOrBlank()&&def.id !in CalculatorLibrary.mortarIds&&p.packageUnit!="شيكارة"&&p.material!=(r.calculatorInputs["_sandName"]?:"رمل"))p.copy(identity=r.itemId)else p})}
         }
         rows.filter{it.issue==null&&it.spec!=null}.groupBy{Triple(it.spec!!.bagKg,it.spec.cementPrice,it.spec.cementName)}.forEach{(key,group)->
             val kg=group.sumOf{it.cementKg};if(kg>0){val bags=ceil(kg/key.first).toInt();add(Purchase("${key.third} (${java.math.BigDecimal.valueOf(key.first).stripTrailingZeros().toPlainString()} كجم)","كجم",kg,bags,key.second,bags*key.second,"شيكارة",key.first))}
@@ -155,7 +155,7 @@ object CostEngine {
             "grout"->listOf(packageRow("روبة فواصل",out("روبة"),"كجم",out("عبوات"),v("price")))
             "gypsum"->listOf(packageRow("ألواح جبس",out("مساحة تغطية بالهالك"),"م²",out("ألواح"),v("price"),"لوح"))
             "masonry","blocks"->listOf(
-                Purchase(if(def.id=="masonry")"طوب" else "بلوك","وحدة",out("وحدات شراء"),null,v("brickPrice")/1000,out("وحدات شراء")/1000*v("brickPrice")),
+                Purchase(stockName(if(def.id=="masonry")"طوب" else "بلوك"),"وحدة",out("وحدات شراء"),null,v("brickPrice")/1000,out("وحدات شراء")/1000*v("brickPrice")),
                 packageRow("أسمنت (50 كجم)",out("أسمنت فعلي"),"كجم",out("أسمنت"),v("cementPrice"),"شيكارة"),
                 Purchase(raw["_sandName"]?:"رمل","م³",out("رمل"),null,v("sandPrice"),out("رمل")*v("sandPrice")))
             "gypsum_system"->{val a=v("area")*(1+v("waste")/100);listOf(

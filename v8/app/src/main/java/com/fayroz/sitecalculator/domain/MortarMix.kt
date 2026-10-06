@@ -8,7 +8,7 @@ object MortarMix {
     fun number(s:String?):Double?=s.orEmpty().map{if(it.isDigit())it.digitToInt().digitToChar()else it}.joinToString("").replace('٫','.').replace(',','.').replace("٬","").toDoubleOrNull()?.takeIf{it.isFinite()}
     fun bags(raw:Map<String,String>):Double=number(raw[key])?:((number(raw["cement"])?:1.0)/(number(raw["sand"])?:4.0)*(number(raw["density"])?:1440.0)/(number(raw["bag"])?:50.0))
     fun bags(s:MaterialSpec):Double=if(s.sandParts>0&&s.bagKg>0)s.cementParts/s.sandParts*s.cementDensity/s.bagKg else 0.0
-    fun withBags(s:MaterialSpec,bags:Double)=s.copy(cementParts=bags*s.bagKg/s.cementDensity,sandParts=1.0)
+    fun withBags(s:MaterialSpec,bags:Double)=s.copy(cementParts=if(s.cementDensity>0&&bags.isFinite()&&s.bagKg.isFinite())bags*s.bagKg/s.cementDensity else -1.0,sandParts=1.0)
     fun normalize(raw:Map<String,String>):Map<String,String>{
         if(key !in raw)return raw
         val bags=number(raw[key]);val bag=number(raw["bag"])?:50.0;val density=number(raw["density"])?:1440.0

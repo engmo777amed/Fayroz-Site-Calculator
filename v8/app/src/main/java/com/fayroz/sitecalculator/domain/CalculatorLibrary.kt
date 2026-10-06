@@ -160,7 +160,7 @@ object CalculatorLibrary {
         return volume*1000/thickness/(if(mode in setOf("coverage","sand","stock"))1+waste/100 else 1.0)
     }
     fun evaluate(def:CalcDef,raw:Map<String,String>):CalcAnswer {
-        if(raw["_areaMethod"]=="dimensions")require((number(raw["_areaLength"].orEmpty())?:0.0)>0&&(number(raw["_areaWidth"].orEmpty())?:0.0)>0){"أدخل طول المسطح وعرضه أكبر من صفر"}
+        if(raw["_areaMethod"]=="dimensions"&&(def.id !in mortarIds||(raw["_mortarMode"]?:"area")=="area"))require((number(raw["_areaLength"].orEmpty())?:0.0)>0&&(number(raw["_areaWidth"].orEmpty())?:0.0)>0){"أدخل طول المسطح وعرضه أكبر من صفر"}
         val mixed=if(MortarMix.isMix(def))MortarMix.normalize(raw)else raw
         val normalized=if(def.id in mortarIds)mixed+("area" to mortarArea(mixed).toString())else mixed
         val values=def.fields.associate{field->
@@ -195,7 +195,12 @@ object CalculatorLibrary {
             "reverse_mortar"->output("مساحة يمكن تنفيذها")
             "faces"->output("صافي البياض")
             "stairs_finish"->output("صافي الكسوة")
-            "points"->output("نقاط")
+            "points"->output("نقاط").copy(unit="عدد")
+            "fill"->output("حجم منفذ")
+            "earth_levels"->answer.outputs.first()
+            "form_column"->output("مساحة الشدة")
+            "pipe_insulation"->output("صافي سطح")
+            "cutting"->CalcOutput("قطع مطلوبة",number(raw["count"])?:0.0,"عدد")
             else->when {
                 def.id in mortarIds->CalcOutput("صافي التنفيذ",mortarArea(raw),"م²")
                 def.fields.any{it.key=="area"}->CalcOutput("صافي التنفيذ",number(raw["area"])?:0.0,"م²")

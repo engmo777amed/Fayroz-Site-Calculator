@@ -18,7 +18,9 @@ object BackupArchive {
     val photos=repository.loadProjects().flatMap{it.sections}.flatMap{it.spaces}.flatMap{it.photoUris}.distinct()
     var total=0L
     val exportLimit=LIMIT-1024*1024
-    ZipOutputStream(stream).use{zip->
+    val staged=File.createTempFile("site-backup-",".zip",context.cacheDir)
+    try{
+    ZipOutputStream(staged.outputStream()).use{zip->
        val mapping=JSONObject()
        photos.forEachIndexed{i,uri->
           val path="photos/$i.bin"
@@ -30,6 +32,9 @@ object BackupArchive {
        val json=root.toString().toByteArray();total+=json.size;require(total<=exportLimit){"حجم النسخة كبير؛ قلل الصور المرفقة ثم حاول مجددًا"}
        zip.putNextEntry(ZipEntry("backup.json"));zip.write(json);zip.closeEntry()
     }
+    require(staged.length()<=LIMIT){"حجم النسخة أكبر من الحد"}
+    staged.inputStream().use{it.copyTo(stream)}
+    }finally{staged.delete()}
  }
  fun preview(bytes:ByteArray):String=runCatching{
     val raw=if(bytes.firstOrNull()=='P'.code.toByte())ZipInputStream(bytes.inputStream()).use{zip->

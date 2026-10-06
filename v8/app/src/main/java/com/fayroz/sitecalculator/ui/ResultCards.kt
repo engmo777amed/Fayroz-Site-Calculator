@@ -106,8 +106,8 @@ fun CalculatorResultCards(def:CalcDef,inputs:Map<String,String>,answer:CalcAnswe
         if(mortar){
             MetricRow("الرمل المطلوب","${fmt(lines.first{it.label=="رمل"}.value)} م³",true)
             val kg=lines.first{it.label=="أسمنت فعلي"}.value
-            MetricRow("الأسمنت الفعلي","${fmt(kg)} كجم",true)
-            Text("استهلاك ${fmt(kg/n(inputs["bag"].orEmpty()))} شيكارة × ${inputs["bag"]} كجم",style=MaterialTheme.typography.bodySmall)
+            MetricRow("الأسمنت الفعلي","${displayAmount(kg,"كجم")} كجم",true)
+            Text("استهلاك ${displayAmount(kg/n(inputs["bag"].orEmpty()),"شيكارة")} شيكارة × ${inputs["bag"]} كجم",style=MaterialTheme.typography.bodySmall)
             MetricRow("شراء الأسمنت","${fmt(lines.first{it.label=="شراء أسمنت"}.value)} شيكارة",true)
             Text("الهالك المستخدم: ${inputs["waste"]}%",style=MaterialTheme.typography.bodySmall)
             MetricRow("تغطي عند سمك ${inputs["thickness"]} مم","${fmt(CalculatorLibrary.mortarArea(inputs))} م²")
@@ -119,7 +119,7 @@ fun CalculatorResultCards(def:CalcDef,inputs:Map<String,String>,answer:CalcAnswe
     when{
         view==0->BoxCard{
             Text("نتائج الحساب",fontWeight=FontWeight.Bold)
-            ExpandableSection("تفاصيل النتائج"){lines.forEach{MetricRow(it.label,"${fmt(it.value)} ${it.unit}")}}
+            ExpandableSection("تفاصيل النتائج"){lines.filterNot{it.label in setOf("صافي التنفيذ","المساحة")&&def.fields.any{f->f.key=="area"}}.forEach{MetricRow(it.label,"${displayAmount(it.value,it.unit)} ${it.unit}")}}
         }
         view==1&&priced->{
             val purchase=CostEngine.calculatorPurchases(def,inputs,answer)
@@ -139,3 +139,5 @@ fun CalculatorResultCards(def:CalcDef,inputs:Map<String,String>,answer:CalcAnswe
         Text(def.formula);Text(answer.explanation)
     }}
 }
+
+private fun displayAmount(value:Double,unit:String):String=if(unit in setOf("كجم","شيكارة","جنيه","جنيه/م²"))java.math.BigDecimal.valueOf(value).setScale(if(unit=="كجم")1 else 2,java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()else fmt(value)

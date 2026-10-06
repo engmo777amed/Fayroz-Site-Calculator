@@ -29,12 +29,14 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
             put(field.key,seed?.inputs?.get(field.key)?:if(project!=null)CalculatorLibrary.defaults(def,project.defaults)[field.key]?:field.default else if(field.key in setOf("area","length","count","bags")||field.default.isBlank())field.default else repository.pref("calc.$toolId.${field.key}",field.default))
             seed?.inputs?.get("_unit.${field.key}")?.let{unit->put("_unit.${field.key}",unit)}
         }
-        if(seed==null)putAll(repository.calculatorDraft(draftKey))
+        val draft=if(seed==null)repository.calculatorDraft(draftKey)else emptyMap()
+        putAll(draft)
         seed?.inputs?.filterKeys{it.startsWith("_")}?.forEach{(k,v)->put(k,v)}
-        if(MortarMix.isMix(def))put(MortarMix.key,seed?.let{it.inputs[MortarMix.key]?:exact(MortarMix.bags(this))}?:project?.let{CalculatorLibrary.defaults(def,it.defaults)[MortarMix.key]?:exact(MortarMix.bags(this))}?:repository.pref("calc.$toolId.${MortarMix.key}",exact(MortarMix.bags(this))))
+        if(MortarMix.isMix(def)&&!(seed==null&&containsKey(MortarMix.key)))put(MortarMix.key,seed?.let{it.inputs[MortarMix.key]?:exact(MortarMix.bags(this))}?:project?.let{CalculatorLibrary.defaults(def,it.defaults)[MortarMix.key]?:exact(MortarMix.bags(this))}?:repository.pref("calc.$toolId.${MortarMix.key}",exact(MortarMix.bags(this))))
         put("_mortarMode",seed?.inputs?.get("_mortarMode")?:get("_mortarMode")?:"area")
         if(seed==null&&def.id in CalculatorLibrary.mortarIds){
             listOf("area","unit","coverage","sand","stock").forEach{mode->putIfAbsent("_waste.$mode",repository.pref("calc.$toolId._waste.$mode",if(mode=="unit")"0"else "5"))}
+            if(draft.isNotEmpty())put("_waste.${get("_mortarMode")}",get("waste")?:"5")
             put("waste",get("_waste.${get("_mortarMode")}")?:"5")
         }
         put("_previousMode",seed?.inputs?.get("_mortarMode")?:"area")
@@ -53,7 +55,7 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
         return fieldKey !in setOf("area","length","width","height","count","bags","packs","steps","intervals","start","end","landing","perimeter","tail","boxes","deduct")&&
             !key.contains("price",true)&&(def.fields.any{it.key==fieldKey&&it.default.isNotBlank()}||key==MortarMix.key||key.startsWith("_waste."))
     }
-    fun specification()=raw.filterKeys(::isSetting)
+    fun specification()=raw.filterKeys{isSetting(it)&&(it!="waste"||!mortarModeSupported(def))}
     fun rememberSpecification(){if(mortarModeSupported(def))raw["_waste.${raw["_mortarMode"]?:"area"}"]=raw["waste"]?:"5";specification().forEach{(key,value)->repository.setPref("calc.$toolId.$key",value)}}
     var savedSnapshot by remember{mutableStateOf<Map<String,String>?>(null)}
     var savedId by remember{mutableStateOf(seed?.inputs?.get("_savedId")?:java.util.UUID.randomUUID().toString())}
@@ -93,6 +95,8 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
         raw["_quantityCopiedAt"]=System.currentTimeMillis().toString()
         includeInProject=false
         raw["_areaMethod"]="ready"
+        raw["_mortarMode"]="area"
+        if(mortar)raw["waste"]=raw["_waste.area"]?:"5"
         raw.remove("_areaLength");raw.remove("_areaWidth")
         if(line!=null&&line.unit==UnitType.AREA&&def.fields.any{it.key=="area"})raw["area"]=exact(line.quantity)
         if(line!=null&&line.unit==UnitType.LENGTH&&def.fields.any{it.key=="length"})raw["length"]=exact(line.quantity)

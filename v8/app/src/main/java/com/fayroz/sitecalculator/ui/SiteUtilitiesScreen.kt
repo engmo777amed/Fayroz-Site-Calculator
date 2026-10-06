@@ -27,7 +27,7 @@ fun SiteUtilityScreen(toolId:String,onBack:()->Unit,repository:V8Repository?=nul
     val savedId=remember{saved["_savedId"]?:java.util.UUID.randomUUID().toString()}
     val parts=remember{mutableStateListOf<AreaPart>().apply{repeat(saved["parts"]?.toIntOrNull()?:1){i->add(AreaPart(saved["length.$i"].orEmpty(),saved["width.$i"].orEmpty(),saved["deduct.$i"]=="true",saved["name.$i"].orEmpty()))}}}
     val total=parts.sumOf{val a=lengthMeters(it.length,unit)*lengthMeters(it.width,unit);if(it.deduct)-a else a}
-    val inputs=buildMap{put("_label",label);put("value",value);put("type",type);put("unit",unit);put("parts",parts.size.toString());parts.forEachIndexed{i,p->put("name.$i",p.name);put("length.$i",p.length);put("width.$i",p.width);put("deduct.$i",p.deduct.toString())}}
+    val inputs=buildMap{put("_savedId",savedId);put("_label",label);put("value",value);put("type",type);put("unit",unit);put("parts",parts.size.toString());parts.forEachIndexed{i,p->put("name.$i",p.name);put("length.$i",p.length);put("width.$i",p.width);put("deduct.$i",p.deduct.toString())}}
     val lines=if(toolId=="area")listOf(MaterialLine("المساحة الصافية","${fmt(total)} م²"))else buildList{
         val x=n(value)
         when(type){
