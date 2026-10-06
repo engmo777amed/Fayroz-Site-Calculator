@@ -117,7 +117,10 @@ fun NumberFieldX(
 ){
     val shownError=error?:if(value.isNotBlank()&&com.fayroz.sitecalculator.domain.MortarMix.number(value)==null)"اكتب رقمًا صحيحًا"else null
     Column(modifier,verticalArrangement=Arrangement.spacedBy(3.dp)){
-        Text(label,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+            Text(label,Modifier.weight(1f),style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            if(help!=null)HelpDot(label,help)
+        }
         OutlinedTextField(
             value=value,
             onValueChange={raw->onChange(raw.filter{it.isDigit()||it=='.'||it==','||it=='٫'||it=='-'} )},
@@ -127,7 +130,6 @@ fun NumberFieldX(
             supportingText=if(shownError!=null){{Text(shownError)}}else null,
             keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),
             suffix={Text(unit,style=MaterialTheme.typography.labelSmall)},
-            trailingIcon=if(help!=null){{HelpDot(label,help)}}else null,
             shape=RoundedCornerShape(12.dp)
         )
     }
@@ -145,7 +147,10 @@ fun NumberUnitField(
 ){
     var menu by remember{mutableStateOf(false)}
     Column(modifier,verticalArrangement=Arrangement.spacedBy(3.dp)){
-        Text(label,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+            Text(label,Modifier.weight(1f),style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            if(help!=null)HelpDot(label,help)
+        }
         Box{
             OutlinedTextField(
                 value=value,
@@ -159,8 +164,7 @@ fun NumberUnitField(
                         Icon(Icons.Rounded.ExpandMore,null,Modifier.size(16.dp))
                     }
                 },
-                trailingIcon=if(help!=null){{HelpDot(label,help)}}else null,
-                shape=RoundedCornerShape(12.dp)
+                    shape=RoundedCornerShape(12.dp)
             )
             DropdownMenu(expanded=menu,onDismissRequest={menu=false}){
                 lengthUnits.forEach{u->
