@@ -290,5 +290,16 @@ class DeviceTest {
         shot("updated-prices")
     }
  }
+
+ @Test fun deletingStandaloneCalculationRefreshesTheListImmediately(){
+    val repository=V8Repository(context)
+    repository.saveRecentCalc(SavedCalculation(toolId="rectangle",title="حساب للحذف",summary="مساحة 12 م²"))
+    ActivityScenario.launch(MainActivity::class.java).use{
+        clickText("المحفوظات");assertText("حساب للحذف")
+        clickText("حذف");clickText("حذف")
+        assertTrue(repository.recentCalcs().isEmpty())
+        assertText("لا توجد حسابات محفوظة");shot("deleted-saved-calculation")
+    }
+ }
 }
 

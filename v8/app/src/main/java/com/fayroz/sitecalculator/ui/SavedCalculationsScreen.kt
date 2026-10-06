@@ -11,7 +11,8 @@ import com.fayroz.sitecalculator.core.SavedCalculation
 fun SavedCalculationsScreen(recent:List<SavedCalculation>,onDelete:(String)->Unit={},onOpen:(SavedCalculation)->Unit){
     var search by remember{mutableStateOf("")}
     var delete by remember{mutableStateOf<SavedCalculation?>(null)}
-    val values=recent.filter{search.isBlank()||it.title.contains(search)||it.summary.contains(search)}
+    var removedIds by remember{mutableStateOf(emptySet<String>())}
+    val values=recent.filter{it.id !in removedIds&&(search.isBlank()||it.title.contains(search)||it.summary.contains(search))}
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
         item{PageHeader("الحسابات المحفوظة","افتح الحساب لمراجعة مدخلاته أو تعديله")}
         item{TextFieldX("بحث",search,{search=it})}
@@ -21,6 +22,6 @@ fun SavedCalculationsScreen(recent:List<SavedCalculation>,onDelete:(String)->Uni
         }}}
         if(values.isEmpty())item{EmptyState("لا توجد حسابات محفوظة","احسب ثم اضغط حفظ النتيجة.")}
     }
-    delete?.let{c->AlertDialog(onDismissRequest={delete=null},title={Text("حذف الحساب؟")},text={Text(c.title)},confirmButton={TextButton(onClick={onDelete(c.id);delete=null}){Text("حذف")}},dismissButton={TextButton(onClick={delete=null}){Text("إلغاء")}})}
+    delete?.let{c->AlertDialog(onDismissRequest={delete=null},title={Text("حذف الحساب؟")},text={Text(c.title)},confirmButton={TextButton(onClick={onDelete(c.id);removedIds=removedIds+c.id;delete=null}){Text("حذف")}},dismissButton={TextButton(onClick={delete=null}){Text("إلغاء")}})}
 }
 
