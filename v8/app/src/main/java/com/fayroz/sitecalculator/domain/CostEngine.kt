@@ -150,6 +150,7 @@ object CostEngine {
         }
         fun stockName(fallback:String)=raw["_materialName"]?.takeIf{it.isNotBlank()}?:fallback
         return when(def.id){
+            "stirrups"->listOf(Purchase(stockName("حديد كانات قطر ${v("diameter")} مم"),"كجم",out("وزن"),null,v("price")/1000,answer.cost))
             "tile"->listOf(packageRow("بلاط / رخام / جرانيت",out("بعد الهالك"),"م²",out("عبوات الشراء"),v("price"),"كرتونة"))
             "skirting"->listOf(packageRow("وزرات",v("length")*(1+v("waste")/100),"م ط",out("عبوات"),v("price")))
             "paint"->listOf(packageRow("دهان",out("استهلاك دهان"),"لتر",out("عبوات"),v("price")))

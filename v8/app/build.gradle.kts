@@ -11,17 +11,24 @@ android {
         minSdk = 26
         targetSdk = 35
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 17
-        versionName = "9.6.0"
+        versionCode = 18
+        versionName = "9.7.0"
         manifestPlaceholders["appLabel"] = "Fayroz Site Calculator"
     }
     buildTypes {
+        create("preview") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".preview"
+            manifestPlaceholders["appLabel"] = "Fayroz Site Calculator 9.7 Preview"
+            matchingFallbacks += listOf("debug")
+        }
         getByName("release") {
             applicationIdSuffix = ".v9"
             manifestPlaceholders["appLabel"] = "Fayroz Site Calculator 9"
         }
     }
     buildFeatures { compose = true; buildConfig = true }
+    testBuildType = providers.gradleProperty("deviceBuildType").orElse("debug").get()
     testOptions { unitTests.isReturnDefaultValues = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

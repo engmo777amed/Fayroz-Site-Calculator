@@ -11,6 +11,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.fayroz.sitecalculator.core.*
@@ -48,6 +50,8 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
         if(seed==null){putIfAbsent("_materialName",starting["_materialName"].orEmpty());listOf("_laborRate","_transportRate","_equipmentRate").forEach{k->starting[k]?.let{putIfAbsent(k,it)}};putAll(PriceBook.apply(def,this,book))}
         if(seed!=null&&seed.inputs.isEmpty()&&seed.sourceQuantity>0&&def.fields.any{it.key=="area"})put("area",exact(seed.sourceQuantity))
     }}
+    val focusManager=LocalFocusManager.current
+    val keyboard=LocalSoftwareKeyboardController.current
     val context=LocalContext.current
     var detailed by remember{mutableStateOf(false)}
     var quickEdit by remember{mutableStateOf(false)}
@@ -107,13 +111,22 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
         if(line!=null&&line.unit==UnitType.LENGTH&&def.fields.any{it.key=="length"})raw["length"]=exact(line.quantity)
     }
     fun showResult(){
+        focusManager.clearFocus()
+        keyboard?.hide()
         error=attempt.exceptionOrNull()?.message
-        if(error==null){rememberSpecification();stage=1}
+        if(error==null){
+            rememberSpecification();stage=1
+            scope.launch{
+                withFrameNanos { }
+                val resultIndex=if(seed==null)4 else 5
+                listState.animateScrollToItem(resultIndex.coerceAtMost((listState.layoutInfo.totalItemsCount-1).coerceAtLeast(0)))
+            }
+        }
         else scope.launch{listState.animateScrollToItem(0)}
     }
     fun saveResult(){
         if(result==null){error=attempt.exceptionOrNull()?.message;return}
-        val next=result.copy(inputs=result.inputs+mapOf("_label" to label,"_source" to source,"_sectionId" to sectionId.orEmpty(),"_spaceId" to spaceId.orEmpty(),"_savedId" to savedId,"_savedAt" to System.currentTimeMillis().toString(),"_sourceItem" to sourceItem,"_includeInProject" to (includeInProject&&sourceItem.isBlank()&&source!="حساب مستقل").toString()))
+        val next=result.copy(inputs=result.inputs+mapOf("_label" to label,"_source" to source,"_sectionId" to sectionId.orEmpty(),"_spaceId" to spaceId.orEmpty(),"_savedId" to savedId,"_savedAt" to System.currentTimeMillis().toString(),"_sourceItem" to sourceItem,"_includeInProject" to (includeInProject&&def.id !in com.fayroz.sitecalculator.domain.ExtraCalculators.ids&&sourceItem.isBlank()&&source!="حساب مستقل").toString()))
         rememberSpecification()
         if(project!=null&&(source!="حساب مستقل"||project.calculations.any{it.id==savedId}))onSave(next,sectionId,spaceId)
         else repository.saveRecentCalc(SavedCalculation(id=savedId,toolId=next.toolId,title=next.title,summary=next.lines.joinToString(" • "){"${it.label}: ${it.value}"},sourceQuantity=next.sourceQuantity,unit=next.sourceUnit,inputs=next.inputs,cost=next.cost,explanation=next.explanation))
@@ -135,7 +148,10 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
         LazyColumn(state=listState,modifier=Modifier.fillMaxSize(),contentPadding=PaddingValues(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
             run{
                 if(seed!=null)item{Text("أسعار محفوظة بتاريخ الحساب",style=MaterialTheme.typography.labelSmall)}
+                item{ExtraCalculatorInputs(def,raw){key,value->raw[key]=value;error=null}}
                 item{BasicCalculatorInputs(def,raw){key,value->raw[key]=value;error=null}}
+                item{CalculatorDiagram(def,effective,answer){key,value->raw[key]=value;error=null}}
+                item{ExtraCalculatorTable(def,raw){key,value->raw[key]=value;error=null}}
                 if(stage==1&&answer!=null)item{CalculatorResultCards(def,effective,answer,label)}
                 if(stage==1&&answer==null)item{Text(attempt.exceptionOrNull()?.message?:"راجع البيانات",color=MaterialTheme.colorScheme.error)}
                 item{BoxCard{ExpandableSection("إعداداتي وتفاصيل إضافية",error!=null&&def.fields.filter{it !in MortarMix.basic(def)}.any{error?.contains(it.label)==true}){
@@ -165,7 +181,7 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
                 if(sourceItem.isNotBlank())item{Text("مصدر الكمية: $sourceItem • نسخة من الحصر وقت التعبئة",style=MaterialTheme.typography.bodySmall)}
                 item{BoxCard{ExpandableSection("اسم الحساب ومكان الحفظ"){
                     TextFieldX("اسم الحساب",label,{label=it})
-                    if(project!=null&&source!="حساب مستقل"){
+                    if(project!=null&&source!="حساب مستقل"&&def.id !in com.fayroz.sitecalculator.domain.ExtraCalculators.ids){
                         Row{Checkbox(includeInProject,{includeInProject=it},enabled=sourceItem.isBlank());Text("إضافة الحساب لحصر وتكلفة وشراء المشروع",Modifier.weight(1f))}
                         Text(if(sourceItem.isBlank())"اترك الاختيار مغلقًا لحفظ حساب مرجعي فقط." else "الكمية من بند موجود بالفعل؛ يُحفظ الحساب كمرجع لمنع حسابها مرتين.",style=MaterialTheme.typography.bodySmall)
                     }
@@ -214,7 +230,7 @@ private fun BasicCalculatorInputs(def:com.fayroz.sitecalculator.domain.CalcDef,r
             Text("المساحة: ${raw["area"]?:"0"} م²")
         }else def.fields.first{it.key=="area"}.let{CalcInputField(it,raw["area"].orEmpty(),{set("area",it)})}
     }
-    val fields=MortarMix.basic(def).filter{it.key!="area"}
+    val fields=MortarMix.basic(def).filter{it.key!="area"&&diagramInputVisible(def.id,it.key,raw)}
     fields.chunked(2).forEach{pair->
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){pair.forEach{field->
             Column(Modifier.weight(1f)){CalcInputField(field,raw[field.key].orEmpty(),{set(field.key,it)},raw["_unit.${field.key}"],{set("_unit.${field.key}",it)})}

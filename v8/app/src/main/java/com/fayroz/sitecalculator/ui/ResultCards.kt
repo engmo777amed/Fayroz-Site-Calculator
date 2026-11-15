@@ -70,7 +70,7 @@ fun PurchaseCards(purchases:List<CostEngine.Purchase>,complete:Boolean){
 fun CalculatorResultCards(def:CalcDef,inputs:Map<String,String>,answer:CalcAnswer,scope:String){
     val missing=MaterialReview.missing(def,inputs)
     val mortar=def.id in CalculatorLibrary.mortarIds
-    val lines=answer.outputs.filter{it.unit !in setOf("جنيه","جنيه/م²")&&it.value!=0.0}
+    val lines=answer.outputs.filter{it.unit !in setOf("جنيه","جنيه/م²")&&!(def.id=="slope"&&it.label=="نسبة 1 إلى"&&it.value==0.0)}
     val stock=CostEngine.calculatorPurchases(def,inputs,answer)
     BoxCard{
         Text("النتيجة",style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold)
@@ -90,10 +90,11 @@ fun CalculatorResultCards(def:CalcDef,inputs:Map<String,String>,answer:CalcAnswe
         if(missing.isNotEmpty()){Text("التكلفة غير مكتملة",color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall);Text(missing.joinToString("، "),style=MaterialTheme.typography.labelSmall)}
         ExpandableSection("التفاصيل وطريقة الحساب"){
             if(mortar){MetricRow("مونة منفذة","${fmt(lines.first{it.label=="مونة منفذة"}.value)} م³");Text("الهالك المستخدم: ${inputs["waste"]}%",style=MaterialTheme.typography.bodySmall)}
-            if(stock.isNotEmpty()&&!mortar)lines.filter{it.label.contains("فائض")||it.unit.contains("/")}.forEach{MetricRow(it.label,"${displayAmount(it.value,it.unit)} ${it.unit}")}
+            if(stock.isNotEmpty()&&!mortar)lines.forEach{MetricRow(it.label,"${displayAmount(it.value,it.unit)} ${it.unit}")}
             if(stock.isEmpty()&&lines.size>3)lines.drop(3).forEach{MetricRow(it.label,"${displayAmount(it.value,it.unit)} ${it.unit}")}
             if(answer.consumedCost>0)MetricRow("تكلفة الاستهلاك قبل تقريب العبوات","${money(answer.consumedCost)} جنيه")
             if(MortarMix.isMix(def))Text(MortarMix.summary(inputs),style=MaterialTheme.typography.bodySmall)
+            if(def.id=="slope" && n(inputs["slope"].orEmpty())==0.0)Text("أفقي — الميل 0%")
             Text(def.formula,style=MaterialTheme.typography.bodySmall);Text(answer.explanation,style=MaterialTheme.typography.bodySmall)
         }
     }

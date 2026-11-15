@@ -19,6 +19,6 @@ object MortarMix {
     fun summary(raw:Map<String,String>):String="${format(bags(raw))} شيكارة × ${format(number(raw["bag"])?:50.0)} كجم على ١ م³ رمل"
     private fun format(v:Double)=java.math.BigDecimal.valueOf(v).setScale(3,java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
     fun isMix(def:CalcDef)=def.fields.any{it.key=="cement"}&&def.fields.any{it.key=="sand"}
-    fun basic(def:CalcDef)=def.fields.filter{f->!f.key.contains("price",true)&&f.key !in setOf("cement","sand","bag","density","dry","waste","extraRate")&&
+    fun basic(def:CalcDef)=if(def.id in ExtraCalculators.ids)def.fields else def.fields.filter{f->!f.key.contains("price",true)&&f.key !in setOf("cement","sand","bag","density","dry","waste","extraRate")&&
         ((f.required&&f.default.isBlank())||f.key in setOf("area","length","count","thickness","coats","rate","coverage","wall","bags","tileW","tileH","tileL","pack","piece","roll","layers","sides","slope","start","end","brickL","brickW","brickH","boardL","boardW","strip","tread","riser","jointW","jointD","rollL","rollW","conductors"))}
 }

@@ -29,11 +29,12 @@ fun ToolsScreen(recent:List<SavedCalculation>,hasActiveProject:Boolean,onOpen:(S
     val listed=CalculatorLibrary.all.filter{it.id !in setOf("footing","beam","column","wall_concrete")||it.id in favorites}
     val filtered=listed.filter{d->(group==null||group==d.group||(group=="المفضلة"&&d.id in favorites))&&(search.isBlank()||d.title.contains(search)||d.group.contains(search))}
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-        item{PageHeader(group?:"أقسام الحاسبات",if(group==null)"اختار نوع العمل، ثم الحاسبة المطلوبة" else "الحاسبات / $group")}
+        item{PageHeader(group?:"أقسام الحاسبات",if(group==null)"حاسبات الموقع • اختار نوع العمل أو ابحث مباشرة" else "الحاسبات / $group")}
         if(group!=null)item{TextButton(onClick={group=null;search=""}){Text("رجوع للأقسام")}}
         item{TextFieldX("بحث في الحاسبات",search,{search=it},placeholder="اسم الحاسبة أو نوع العمل")}
         if(group==null&&search.isBlank()){
             item{OutlinedButton(onClick={group="المفضلة"},modifier=Modifier.fillMaxWidth()){Text("المفضلة ★ (${favorites.size})")}}
+            if(recent.isNotEmpty())item{Text("آخر الحسابات",fontWeight=FontWeight.Bold);recent.take(3).forEach{calc->TextButton(onClick={onOpenSaved(calc)}){Text(calc.title)}}}
             val sections=CalculatorLibrary.groups.chunked(2)
             items(sections.size){i->Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
                 sections[i].forEach{g->Surface(onClick={group=g},modifier=Modifier.weight(1f).heightIn(min=64.dp),shape=RoundedCornerShape(12.dp),tonalElevation=2.dp){Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){

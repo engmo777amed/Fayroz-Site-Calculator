@@ -42,7 +42,7 @@ jobs:
         if: always()
         run: adb pull /sdcard/Download/site-v9-screenshots ./screenshots || true
       - name: Build APK
-        run: gradle :app:assembleDebug :app:assembleRelease --stacktrace
+        run: gradle :app:assembleDebug :app:assembleRelease :app:assemblePreview --stacktrace
       - name: Copy signing utility
         run: |
           mkdir -p signing-tools

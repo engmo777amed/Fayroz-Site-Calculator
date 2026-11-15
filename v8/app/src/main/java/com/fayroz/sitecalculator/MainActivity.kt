@@ -46,7 +46,7 @@ class MainActivity:ComponentActivity(){
             }
             var appearance by remember{mutableStateOf(repository.appearance())}
             var active by remember{mutableStateOf(repository.activeLocation())}
-            var tab by remember{mutableStateOf(RootTab.HOME)}
+            var tab by remember{mutableStateOf(RootTab.TOOLS)}
             var route by remember{mutableStateOf<Route>(
                 intent.getStringExtra("calculator")?.takeIf{id->(CalculatorLibrary.all.any{it.id==id}||id in setOf("convert","area"))}?.let{Route.Tool(it)}?:Route.Root
             )}
@@ -164,8 +164,8 @@ class MainActivity:ComponentActivity(){
                             bottomBar={
                                 NavigationBar{
                                     NavigationBarItem(
-                                        selected=tab==RootTab.HOME,onClick={tab=RootTab.HOME},
-                                        icon={Icon(Icons.Rounded.Home,null)},label={Text("الرئيسية")}
+                                        selected=tab==RootTab.TOOLS,onClick={tab=RootTab.TOOLS},
+                                        icon={Icon(Icons.Rounded.Calculate,null)},label={Text("الحاسبات")}
                                     )
                                     NavigationBarItem(
                                         selected=tab==RootTab.PROJECTS,onClick={tab=RootTab.PROJECTS},
@@ -176,8 +176,8 @@ class MainActivity:ComponentActivity(){
                                         icon={Icon(Icons.Rounded.History,null)},label={Text("المحفوظات")}
                                     )
                                     NavigationBarItem(
-                                        selected=tab==RootTab.TOOLS,onClick={tab=RootTab.TOOLS},
-                                        icon={Icon(Icons.Rounded.Calculate,null)},label={Text("الحاسبات")}
+                                        selected=tab==RootTab.HOME,onClick={tab=RootTab.HOME},
+                                        icon={Icon(Icons.Rounded.Home,null)},label={Text("الرئيسية")}
                                     )
                                 }
                             }

@@ -2,10 +2,10 @@ package com.fayroz.sitecalculator.domain
 
 /** Price identity includes product specification and purchase packaging, never work quantity. */
 object PriceBook {
-    val stockKeys=setOf("pack","piece","roll","tileW","tileH","tileL","boardL","boardW","brickL","brickW","brickH","rollL","rollW","profileL","stock","pieceArea","diameter")
+    val stockKeys=setOf("pack","piece","roll","tileW","tileH","tileL","boardL","boardW","brickL","brickW","brickH","rollL","rollW","profileL","stock","pieceArea","diameter","diameterY")
     fun specification(def:CalcDef,raw:Map<String,String>):String = buildString{
         append(raw["_materialName"].orEmpty().trim())
-        def.fields.filter{it.key in stockKeys}.sortedBy{it.key}.forEach{f->
+        def.fields.filter{it.key in stockKeys && (it.key!="diameterY" || (MortarMix.number(raw[it.key])?:0.0)>0)}.sortedBy{it.key}.forEach{f->
             val text=raw[f.key]?:f.default
             val number=MortarMix.number(text)
             append('|');append(f.key);append('=');append(if(number!=null)java.math.BigDecimal.valueOf(number).stripTrailingZeros().toPlainString()else text)

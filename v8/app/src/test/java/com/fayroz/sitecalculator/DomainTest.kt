@@ -83,7 +83,8 @@ class DomainTest {
  @Test fun allCalculatorDefinitionsHaveUniqueIds(){assertEquals(CalculatorLibrary.all.size,CalculatorLibrary.all.map{it.id}.distinct().size);assertTrue(CalculatorLibrary.all.size>=50)}
  @Test fun allCalculatorsEvaluateRepresentativeInputs(){CalculatorLibrary.all.forEach{d->
     val v=d.fields.associate{it.key to (it.default.ifBlank{when(it.key){"diameter"->"16";"pieceArea"->"0.02";"wall"->"12";else->"2"}})}
-    val a=CalculatorLibrary.evaluate(d,v);assertTrue(d.id,a.outputs.all{it.value.isFinite()})
+    val sample=v+when(d.id){"blocks"->mapOf("wall" to "20","brickL" to "40","brickW" to "20","brickH" to "20");"stairs_concrete"->mapOf("run" to "0.6","rise" to "0.34","steps" to "2");else->emptyMap()}+CalculatorVisualsTest.tableExample(d.id)
+    val a=CalculatorLibrary.evaluate(d,sample);assertTrue(d.id,a.outputs.all{it.value.isFinite()})
  }}
  @Test fun materialReviewValidatesEachPartAndAllowsMissingPrices(){
     val t=Takeoff(name="محارة الأسقف",unit=UnitType.AREA,kind=CalcKind.CEILING,material=MaterialSpec(),parts=listOf(WorkPart(name="جزء",length=2.0,width=3.0)))
