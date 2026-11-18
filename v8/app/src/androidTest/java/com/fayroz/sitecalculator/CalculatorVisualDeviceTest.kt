@@ -57,12 +57,15 @@ class CalculatorVisualDeviceTest {
         val repo=V8Repository(context);repo.clearCalculatorDraft("garage_ramp.independent")
         launch("garage_ramp").use{
             revealNode(hasContentDescription("إدخال فرق المنسوب نزولًا")).performTextReplacement("2")
-            reveal("المجسم ثلاثي الأبعاد")
+            compose.onNodeWithText("المعاينة").performClick()
+            compose.onNodeWithContentDescription("مجسم ثلاثي الأبعاد من المدخلات الحالية").assertIsDisplayed()
             dismissSystemDialog()
             compose.onNodeWithText("احسب واعرض النتيجة").performClick()
             shot("ramp-after-calculate")
             compose.onNode(SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsActions.ScrollToIndex)).performScrollToNode(hasText("20 %"));assertTrue(compose.onAllNodesWithText("20 %").fetchSemanticsNodes().isNotEmpty());compose.waitForIdle();shot("ramp-result")
-            reveal("المجسم ثلاثي الأبعاد");shot("ramp-diagram")
+            compose.onNodeWithText("المعاينة").performClick()
+            compose.onNodeWithContentDescription("مجسم ثلاثي الأبعاد من المدخلات الحالية").assertIsDisplayed()
+            shot("ramp-diagram")
             compose.onNodeWithText("حفظ النتيجة").performClick()
         }
         val saved=repo.recentCalcs().first{it.toolId=="garage_ramp"}
