@@ -65,7 +65,7 @@ private fun project(solid: CalculatorSolid,width: Float,height: Float,yaw: Doubl
 }
 
 @Composable
-internal fun CalculatorSolidView(solid: CalculatorSolid,answer: CalcAnswer,isRamp: Boolean=false) {
+internal fun CalculatorSolidView(solid: CalculatorSolid,answer: CalcAnswer?=null,isRamp: Boolean=false) {
     val initialYaw=if(isRamp).65 else -.65
     val initialZoom=if(isRamp)1.14f else 1f
     var yaw by remember { mutableDoubleStateOf(initialYaw) }
@@ -87,8 +87,11 @@ internal fun CalculatorSolidView(solid: CalculatorSolid,answer: CalcAnswer,isRam
     }
     val outline=MaterialTheme.colorScheme.onSurface
     val studio=Brush.verticalGradient(listOf(Color(0xFF123D48),Color(0xFF061C26)))
+    if(answer==null) Text("مثال توضيحي قابل للدوران",style=MaterialTheme.typography.labelMedium)
     Canvas(Modifier.fillMaxWidth().height(220.dp)
-        .semantics { contentDescription="مجسم ثلاثي الأبعاد من المدخلات الحالية" }
+        .semantics {
+            contentDescription=if(answer==null)"مجسم توضيحي ثلاثي الأبعاد" else "مجسم ثلاثي الأبعاد من المدخلات الحالية"
+        }
         .transformable(transform)
         .pointerInput(Unit) {
             detectTapGestures { point ->
@@ -122,6 +125,13 @@ internal fun CalculatorSolidView(solid: CalculatorSolid,answer: CalcAnswer,isRam
                 Surface3.Steel -> Color(0xFFA8B8BD)
                 Surface3.Insulation -> Color(0xFFB4BE5D)
                 Surface3.Plywood -> Color(0xFFD0A169)
+                Surface3.Brick -> Color(0xFFC27E59)
+                Surface3.Plaster -> Color(0xFFDCD9CE)
+                Surface3.Asphalt -> Color(0xFF5B6064)
+                Surface3.Gravel -> Color(0xFFA99479)
+                Surface3.Copper -> Color(0xFFD19A65)
+                Surface3.Accent -> Color(0xFF53C7BA)
+                Surface3.WetSoil -> Color(0xFF7E5239)
             }
             val normal=(face.points[1]-face.points[0]).cross(face.points[2]-face.points[0])
             val norm=sqrt(normal.dot(normal))
@@ -136,7 +146,7 @@ internal fun CalculatorSolidView(solid: CalculatorSolid,answer: CalcAnswer,isRam
             val high=lerp(material,Color.White,if(face.surface==Surface3.Water).32f else .18f).copy(alpha=alpha)
             if(bottom-top>1f) drawPath(path,Brush.verticalGradient(listOf(high,low),top,bottom))
             else drawPath(path,low)
-            if(face.surface in setOf(Surface3.Concrete,Surface3.Excavation,Surface3.Plywood) && face.points.size==4 &&
+            if(face.surface in setOf(Surface3.Concrete,Surface3.Excavation,Surface3.Plywood,Surface3.Gravel,Surface3.Brick,Surface3.Asphalt) && face.points.size==4 &&
                 projectedFaces.size<=160 && (bottom-top)>8.dp.toPx()) {
                 val a=projected.points[0]
                 val x=projected.points[1]-a
@@ -209,6 +219,7 @@ internal fun CalculatorSolidView(solid: CalculatorSolid,answer: CalcAnswer,isRam
         Text("امتداد الجزء: ${fmt(width)} × ${fmt(depth)} × ${fmt(height)} م",style=MaterialTheme.typography.labelMedium)
     }
     if(solid.note.isNotBlank()) Text(solid.note,style=MaterialTheme.typography.bodySmall)
+    if(answer==null) return
     val results=if(hasTank)answer.outputs.filter{it.label in setOf("سعة كلية","حجم السائل","حجم فارغ","حجم مفيد")}else answer.outputs.take(3)
     val shown=if(isRamp)answer.outputs.filter { it.label in setOf("ميل الجزء الرئيسي","الطول المائل الكلي","فرق المنسوب نزولًا") } else results
     shown.chunked(2).forEach { pair ->

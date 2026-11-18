@@ -117,4 +117,23 @@ class CalculatorContinuationTest {
         assertEquals(((lengths+widths)*14).toInt(),solid.faces.size)
         assertEquals(2.0,solid.faces.filter{it.part=="اتجاه الطول"}.flatMap{it.points}.maxOf{it.x},1e-12)
     }
+    @Test fun rectangularModelTracksBothMeasurements() {
+        val (solid,_)=scene("rectangle","length" to "4","width" to "2","count" to "1")
+        val points=solid.faces.flatMap{it.points}
+        assertEquals(4.0,points.maxOf{it.x},1e-12)
+        assertEquals(2.0,points.maxOf{it.y},1e-12)
+    }
+    @Test fun everyCalculatorHasAVolumetricReferenceScene() {
+        val ids=CalculatorLibrary.all.map { it.id } + listOf("area","convert")
+        for(id in ids) {
+            val shape=requireNotNull(CalculatorReferenceScenes.forTool(id)) { id }
+            val points=shape.faces.flatMap { it.points }
+            assertTrue(id,shape.faces.size>=5)
+            assertTrue(id,points.all { it.x.isFinite() && it.y.isFinite() && it.z.isFinite() })
+            assertTrue(id,points.maxOf { it.x }-points.minOf { it.x }>.01)
+            assertTrue(id,points.maxOf { it.y }-points.minOf { it.y }>.01)
+            assertTrue(id,points.maxOf { it.z }-points.minOf { it.z }>.01)
+            assertTrue(id,shape.note.startsWith("مثال توضيحي"))
+        }
+    }
 }

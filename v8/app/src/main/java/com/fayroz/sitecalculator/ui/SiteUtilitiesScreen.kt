@@ -12,6 +12,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.fayroz.sitecalculator.core.*
 import com.fayroz.sitecalculator.data.V8Repository
+import com.fayroz.sitecalculator.domain.CalculatorReferenceScenes
 
 private data class AreaPart(val length:String="",val width:String="",val deduct:Boolean=false,val name:String="")
 @Composable
@@ -52,6 +53,11 @@ fun SiteUtilityScreen(toolId:String,onBack:()->Unit,repository:V8Repository?=nul
     }}}){padding->Column(Modifier.fillMaxSize().padding(padding)){
         LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             run{
+                item{BoxCard{
+                    Text("المجسم ثلاثي الأبعاد",style=MaterialTheme.typography.titleSmall)
+                    val scene=remember(toolId){CalculatorReferenceScenes.forTool(toolId)}
+                    scene?.let { CalculatorSolidView(it) }
+                }}
                 item{ExpandableSection("اسم الحساب — اختياري"){TextFieldX("اسم الحساب",label,{label=it})}}
                 if(toolId=="convert")item{BoxCard{
                     ChoiceFieldX("نوع التحويل",type,listOf("طول","مساحة","حجم","وزن"),{type=it;unit=when(it){"طول"->"م";"مساحة"->"م²";"وزن"->"كجم";else->"م³"}})

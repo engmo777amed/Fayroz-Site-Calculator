@@ -7,14 +7,14 @@ internal data class Point3(val x: Double, val y: Double, val z: Double) {
     fun cross(p: Point3) = Point3(y*p.z-z*p.y,z*p.x-x*p.z,x*p.y-y*p.x)
     fun dot(p: Point3) = x*p.x+y*p.y+z*p.z
 }
-internal enum class Surface3 { Concrete, Excavation, Tank, Water, Tile, Steel, Insulation, Plywood }
+internal enum class Surface3 { Concrete, Excavation, Tank, Water, Tile, Steel, Insulation, Plywood, Brick, Plaster, Asphalt, Gravel, Copper, Accent, WetSoil }
 internal data class Face3(val points: List<Point3>, val surface: Surface3, val part: String)
 internal data class CalculatorSolid(val faces: List<Face3>, val note: String = "")
 
 internal object CalculatorGeometry {
     private val boxes = setOf("raft","footing","beam","column","wall_concrete","excavation")
     val supported = boxes + setOf("round_column","garage_ramp","tank","cylindrical_tank","sloped_excavation","variable_volume","tile_layout",
-        "steel","mesh","stairs_concrete","stairs_finish","insulation","pipe_insulation","sealant","form_beam","form_column")
+        "steel","mesh","stairs_concrete","stairs_finish","insulation","pipe_insulation","sealant","form_beam","form_column","rectangle","diagonal","triangle","trapezoid","circle","coordinate_area")
     private fun rect(x: Double,y: Double,l: Double,w: Double,z: Double) =
         listOf(Point3(x,y,z),Point3(x+l,y,z),Point3(x+l,y+w,z),Point3(x,y+w,z))
 
@@ -44,6 +44,59 @@ internal object CalculatorGeometry {
             if(count>1) "المجسم لعنصر واحد؛ الحصر يشمل العدد المدخل." else ""
         )
         return when(id) {
+            "rectangle","diagonal","triangle","trapezoid","coordinate_area" -> {
+                val plan=when(id){
+                    "rectangle","diagonal"->rect(0.0,0.0,l,w,0.0)
+                    "triangle"->listOf(Point3(0.0,0.0,0.0),Point3(v("base"),0.0,0.0),Point3(v("base")/2,h,0.0))
+                    "trapezoid"->{
+                        val a=v("a");val b=v("b");val shift=(a-b)/2
+                        listOf(Point3(0.0,0.0,0.0),Point3(a,0.0,0.0),Point3(shift+b,h,0.0),Point3(shift,h,0.0))
+                    }
+                    else->{
+                        val rows=ExtraCalculators.tableValues(id,raw)
+                        val origin=rows.first()
+                        rows.map { Point3(it.getValue("x")-origin.getValue("x"),it.getValue("y")-origin.getValue("y"),0.0) }
+                    }
+                }
+                val span=max(plan.maxOf{it.x}-plan.minOf{it.x},plan.maxOf{it.y}-plan.minOf{it.y})
+                val depth=span*.035
+                val top=plan.map{it.copy(z=depth)}
+                val parts=connect(plan,top,Surface3.Tile,"المسطح")
+                val guide=if(id=="diagonal"){
+                    val length=hypot(l,w)
+                    val a=-w*.006/length*span
+                    val b=l*.006/length*span
+                    val strip=listOf(Point3(a,b,depth),Point3(l+a,w+b,depth),Point3(l-a,w-b,depth),Point3(-a,-b,depth))
+                    connect(strip,strip.map{it.copy(z=depth+span*.004)},Surface3.Accent,"القطر")
+                }else emptyList()
+                val note=when(id){
+                    "triangle","trapezoid"->"المجسم للقاعدة والارتفاع المدخلين. موضع القمة أو القاعدة العليا في المنتصف توضيحي."
+                    "rectangle"->"يعرض مسطحًا واحدًا. لا يحدد هذا الحساب شكل الخصم أو موضعه."
+                    else->"السمك هنا لإظهار حدود المسطح فقط."
+                }
+                CalculatorSolid(parts+guide,note)
+            }
+            "circle" -> {
+                val radius=v("diameter")/2
+                val opening=v("inner")/2
+                val depth=radius*.07
+                val a=ring(radius,0.0,false)
+                val b=ring(radius,depth,false)
+                val sides=connect(a,b,Surface3.Tile,"المسطح",cap=opening<=0)
+                if(opening<=0)CalculatorSolid(sides,"السمك هنا لإظهار حدود المسطح فقط.")
+                else{
+                    val c=ring(opening,0.0,false)
+                    val d=ring(opening,depth,false)
+                    val inner=connect(d,c,Surface3.Tile,"الحد الداخلي",cap=false)
+                    val caps=listOf(a to c,b to d).flatMap { (outside,inside)->
+                        outside.indices.map { i->
+                            val j=(i+1)%outside.size
+                            Face3(listOf(outside[i],outside[j],inside[j],inside[i]),Surface3.Tile,"المسطح الحلقي")
+                        }
+                    }
+                    CalculatorSolid(sides+inner+caps,"السمك هنا لإظهار حدود الحلقة فقط.")
+                }
+            }
             "steel" -> CalculatorSolid(
                 rod(l,v("diameter")/2000,0.0,0.0,false,"السيخ"),
                 "المجسم لسيخ واحد. الحصر يشمل العدد المدخل."

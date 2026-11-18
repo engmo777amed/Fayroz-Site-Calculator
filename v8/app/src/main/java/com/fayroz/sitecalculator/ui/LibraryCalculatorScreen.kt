@@ -76,10 +76,8 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
     var error by remember{mutableStateOf<String?>(null)}
     val listState=androidx.compose.foundation.lazy.rememberLazyListState()
     val scope=rememberCoroutineScope()
-    val visualFirst=firstOpenVisual(toolId)
-    val prefixCount=(if(seed!=null)1 else 0)+(if(family!=null)1 else 0)
-    val visualIndex=prefixCount+if(visualFirst)0 else 2
-    val inputsIndex=prefixCount+if(visualFirst)1 else 0
+    val visualIndex=(if(seed!=null)1 else 0)+(if(family!=null)1 else 0)
+    val inputsIndex=visualIndex+1
     fun jumpTo(index:Int) {
         focusManager.clearFocus()
         keyboard?.hide()
@@ -130,7 +128,7 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
             rememberSpecification();stage=1
             scope.launch{
                 withFrameNanos { }
-                val resultIndex=4+(if(seed!=null)1 else 0)+(if(family!=null)1 else 0)
+                val resultIndex=visualIndex+4
                 listState.animateScrollToItem(resultIndex.coerceAtMost((listState.layoutInfo.totalItemsCount-1).coerceAtLeast(0)))
             }
         }
@@ -170,13 +168,12 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
                         family.firstOrNull { familyModeTitle(it)==mode && it!=toolId }?.let(onSwitchMode)
                     })
                 }
-                if(visualFirst) item{
+                item{
                     TextButton(onClick={jumpTo(inputsIndex)}){Text("المدخلات ↓")}
                     CalculatorDiagram(def,effective,answer){key,value->raw[key]=value;error=null}
                 }
                 item{ExtraCalculatorInputs(def,raw){key,value->raw[key]=value;error=null}}
                 item{BasicCalculatorInputs(def,raw){key,value->raw[key]=value;error=null}}
-                if(!visualFirst) item{CalculatorDiagram(def,effective,answer){key,value->raw[key]=value;error=null}}
                 item{ExtraCalculatorTable(def,raw){error=null}}
                 if(stage==1&&answer!=null)item{CalculatorResultCards(def,effective,answer,label)}
                 if(stage==1&&answer==null)item{Text(attempt.exceptionOrNull()?.message?:"راجع البيانات",color=MaterialTheme.colorScheme.error)}

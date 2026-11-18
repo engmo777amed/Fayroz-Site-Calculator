@@ -32,13 +32,13 @@ class CalculatorVisualDeviceTest {
     }
     private fun revealNode(matcher:SemanticsMatcher):SemanticsNodeInteraction{
         compose.onNode(SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsActions.ScrollToIndex)).performScrollToNode(matcher)
-        return compose.onNode(matcher).assertIsDisplayed()
+        return compose.onNode(matcher).performScrollTo().assertIsDisplayed()
     }
     private fun reveal(text:String){revealNode(hasText(text))}
     private fun launch(tool:String?=null)=ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java).apply{tool?.let{putExtra("calculator",it)}})
     private fun shot(name:String){val f=File(context.getExternalFilesDir(null),"screenshots/v98-$name.png");f.parentFile!!.mkdirs();assertTrue(UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).takeScreenshot(f))}
     private fun captureApp(name:String){
-        val file=File(context.getExternalFilesDir(null),"screenshots/v991-app-$name.png")
+        val file=File(context.getExternalFilesDir(null),"screenshots/v992-app-$name.png")
         file.parentFile!!.mkdirs()
         val bitmap=compose.onRoot().captureToImage().asAndroidBitmap()
         file.outputStream().use { assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)) }
@@ -106,6 +106,26 @@ class CalculatorVisualDeviceTest {
             reveal("62 %")
         }
     }
+    @Test fun masonryShowsWallModelFromCatalog(){
+        launch().use {
+            compose.onNodeWithText("المونة والمباني").performClick()
+            reveal("طوب أحمر ومونة")
+            compose.onNodeWithText("طوب أحمر ومونة").performClick()
+            compose.onNodeWithContentDescription("مجسم توضيحي ثلاثي الأبعاد").assertIsDisplayed()
+            captureApp("masonry")
+        }
+    }
+    @Test fun cableShowsCutawayWithCameraControls(){launch("cables").use{
+        compose.onNodeWithContentDescription("مجسم توضيحي ثلاثي الأبعاد").assertIsDisplayed()
+        revealNode(hasText("جانبي")).performClick()
+        revealNode(hasText("منظور")).performClick()
+        captureApp("cables")
+    }}
+    @Test fun proctorShowsEquipmentBeforeMeasurementExample(){launch("proctor").use{
+        compose.onNodeWithContentDescription("مجسم توضيحي ثلاثي الأبعاد").assertIsDisplayed()
+        captureApp("proctor")
+        reveal("منحنى بقراءات مثال. أدخل قياساتك لرسم منحنى المشروع.")
+    }}
     @Test fun moistureCalculationDisplaysKnownAnswer(){launch("soil_moisture").use{
         compose.onNodeWithText("احسب واعرض النتيجة").performClick()
         reveal("كتلة الماء 20 جم ÷ كتلة التربة الجافة 100 جم × ١٠٠")
