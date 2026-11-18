@@ -241,11 +241,8 @@ class MainActivity:ComponentActivity(){
                                         route=Route.Tool(calc.toolId,MaterialResult(calc.toolId,calc.title,calc.sourceQuantity,calc.unit,emptyList(),calc.explanation,calc.inputs+("_savedId" to calc.id),calc.cost),pid)
                                     }
                                     RootTab.TOOLS->ToolsScreen(
-                                        recent=repository.recentCalcs(),
-                                        hasActiveProject=activeProject()!=null,
                                         onOpen={id->route=Route.Tool(id)},
-                                        repository=repository,
-                                        onOpenSaved=::openSaved
+                                        repository=repository
                                     )
                                 }}
                             }
@@ -401,6 +398,13 @@ class MainActivity:ComponentActivity(){
                     }
 
                     is Route.Tool->{
+                        LaunchedEffect(r.toolId, r.seed) {
+                            if (r.seed == null) {
+                                val history = repository.pref("recent_tool_ids", "").split('|').filter { it.isNotBlank() }
+                                val recentId=toolFamilies.entries.firstOrNull { r.toolId in it.value }?.key ?: r.toolId
+                                repository.setPref("recent_tool_ids", (listOf(recentId) + history.filterNot { it == recentId }).take(12).joinToString("|"))
+                            }
+                        }
                         val back={
                             route=if(r.returnToProject&&r.projectId!=null)Route.ProjectDetail(r.projectId) else Route.Root
                         }
@@ -415,6 +419,7 @@ class MainActivity:ComponentActivity(){
                                 repository=repository,
                                 project=targetProject,
                                 onBack=back,
+                                onSwitchMode={id->route=r.copy(toolId=id)},
                                 onSave={result,sectionId,spaceId->
                                     if(targetProject!=null)saveCalculation(targetProject.id,result,sectionId,spaceId)
                                 }

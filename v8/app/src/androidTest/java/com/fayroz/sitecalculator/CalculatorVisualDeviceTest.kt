@@ -29,23 +29,24 @@ class CalculatorVisualDeviceTest {
         val device=UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
         if(device.findObject(By.text("System UI isn't responding"))!=null)device.findObject(By.text("Wait"))?.click()
     }
-    private fun reveal(text:String){
-        compose.onNode(SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsActions.ScrollToIndex)).performScrollToNode(hasText(text))
-        compose.onNodeWithText(text).assertIsDisplayed()
+    private fun revealNode(matcher:SemanticsMatcher):SemanticsNodeInteraction{
+        compose.onNode(SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsActions.ScrollToIndex)).performScrollToNode(matcher)
+        return compose.onNode(matcher).assertIsDisplayed()
     }
+    private fun reveal(text:String){revealNode(hasText(text))}
     private fun launch(tool:String?=null)=ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java).apply{tool?.let{putExtra("calculator",it)}})
-    private fun shot(name:String){val f=File(context.getExternalFilesDir(null),"screenshots/v97-$name.png");f.parentFile!!.mkdirs();assertTrue(UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).takeScreenshot(f))}
+    private fun shot(name:String){val f=File(context.getExternalFilesDir(null),"screenshots/v98-$name.png");f.parentFile!!.mkdirs();assertTrue(UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).takeScreenshot(f))}
     @Test fun startsAtCalculatorSections(){launch().use{compose.onNodeWithText("أقسام الحاسبات").assertIsDisplayed();shot("sections")}}
     @Test fun rampNumbersUpdateDrawingAndPersist(){
         val repo=V8Repository(context);repo.clearCalculatorDraft("garage_ramp.independent")
         launch("garage_ramp").use{
             compose.onNodeWithContentDescription("إدخال فرق المنسوب نزولًا").performScrollTo().performTextReplacement("2")
-            compose.onNodeWithText("الرسم التوضيحي المتغير").performScrollTo().assertIsDisplayed()
+            reveal("الرسم التوضيحي المتغير")
             dismissSystemDialog()
             compose.onNodeWithText("احسب واعرض النتيجة").performClick()
             shot("ramp-after-calculate")
             reveal("20 %");compose.waitForIdle();shot("ramp-result")
-            compose.onNodeWithText("الرسم التوضيحي المتغير").performScrollTo().assertIsDisplayed();shot("ramp-diagram")
+            reveal("الرسم التوضيحي المتغير");shot("ramp-diagram")
             compose.onNodeWithText("حفظ النتيجة").performClick()
         }
         val saved=repo.recentCalcs().first{it.toolId=="garage_ramp"}
@@ -59,6 +60,15 @@ class CalculatorVisualDeviceTest {
         compose.onAllNodesWithContentDescription("إدخال الطول الأفقي الرئيسي").assertCountEquals(0)
         compose.onNodeWithContentDescription("إدخال الميل الرئيسي").performScrollTo().assertIsDisplayed()
         shot("ramp-mode")
+    }}
+    @Test fun rampSolidRespondsToEditsAndCameraButtons(){launch("garage_ramp").use{
+        compose.onNodeWithContentDescription("إدخال عرض الرامب للمجسم").performScrollTo().performTextReplacement("3")
+        compose.onNodeWithContentDescription("إدخال سمك البلاطة الرأسي للمجسم").performScrollTo().performTextReplacement("20")
+        revealNode(hasContentDescription("مجسم ثلاثي الأبعاد من المدخلات الحالية"))
+        revealNode(hasText("علوي")).performClick()
+        revealNode(hasText("منظور")).performClick()
+        revealNode(hasContentDescription("مجسم ثلاثي الأبعاد من المدخلات الحالية"))
+        shot("ramp-solid")
     }}
     @Test fun moistureCalculationDisplaysKnownAnswer(){launch("soil_moisture").use{
         compose.onNodeWithText("احسب واعرض النتيجة").performClick()

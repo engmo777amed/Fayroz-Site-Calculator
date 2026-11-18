@@ -31,10 +31,19 @@ fun CalculatorDiagram(def:CalcDef,raw:Map<String,String>,answer:CalcAnswer?,upda
     val color=MaterialTheme.colorScheme.primary
     val accent=MaterialTheme.colorScheme.tertiary
     BoxCard{
-        Text("الرسم التوضيحي المتغير",style=MaterialTheme.typography.titleSmall)
-        Text("الرسم توضيحي؛ التفاصيل والسمك قد تكون مكبرة. اختار بُعدًا لتعديله.",style=MaterialTheme.typography.labelSmall)
         val displayable=dims.all{(MortarMix.number(raw[it.key])?:0.0).let{v->kotlin.math.abs(v)<=1e8&&(v==0.0||kotlin.math.abs(v)>=1e-8)}}
-        if(answer==null||!displayable){Text("أكمل القيم الصحيحة لظهور المعاينة.",style=MaterialTheme.typography.bodySmall)}else{
+        val solid=remember(id,raw,answer,displayable) {
+            if(answer==null || !displayable || id !in CalculatorGeometry.supported) null
+            else CalculatorGeometry.create(id,raw,answer)
+        }
+        Text(if(solid==null)"الرسم التوضيحي المتغير"else "المجسم ثلاثي الأبعاد",style=MaterialTheme.typography.titleSmall)
+        if(answer==null||!displayable){
+            Text("راجع المدخلات لظهور المعاينة.",style=MaterialTheme.typography.bodySmall)
+        }else if(solid!=null){
+            CalculatorSolidView(solid,answer)
+        }else{
+            if(id=="garage_ramp")Text("أدخل عرض الرامب وسمك البلاطة لعرض المجسم.")
+            if(id=="tile_layout")Text("المجسم يحتاج سمك البلاطة، ويعرض شبكات حتى ٤٠٠ قطعة.")
             Canvas(Modifier.fillMaxWidth().height(200.dp).semantics{contentDescription="رسم ${def.title} من المدخلات الحالية؛ الأبعاد متاحة في الأزرار أسفل الرسم"}){
                 drawCalculator(id,raw,answer,color,accent)
             }

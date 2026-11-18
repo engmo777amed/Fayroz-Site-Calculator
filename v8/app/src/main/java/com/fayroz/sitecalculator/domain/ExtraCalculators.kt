@@ -14,7 +14,7 @@ object ExtraCalculators {
     private val site="أدوات الموقع"
     private val tests="اختبارات الموقع"
     val definitions:List<CalcDef> = listOf(
-        def("garage_ramp","ميل مدخل الجراج",site,listOf(f("rise","فرق المنسوب نزولًا","م","1.2",false),f("length","الطول الأفقي الرئيسي","م","10",false),f("slope","الميل الرئيسي","%","12",false),f("topLength","طول الانتقال العلوي","م","0",false),f("topSlope","ميل الانتقال العلوي","%","5",false),f("bottomLength","طول الانتقال السفلي","م","0",false),f("bottomSlope","ميل الانتقال السفلي","%","5",false),f("start","منسوب البداية","م","0",false,true)),"الميل = فرق المنسوب ÷ الطول الأفقي × 100؛ الأجزاء تجمع بفروق مناسيبها."){error("اختار طريقة الحساب")},
+        def("garage_ramp","ميل مدخل الجراج",site,listOf(f("rise","فرق المنسوب نزولًا","م","1.2",false),f("length","الطول الأفقي الرئيسي","م","10",false),f("slope","الميل الرئيسي","%","12",false),f("topLength","طول الانتقال العلوي","م","0",false),f("topSlope","ميل الانتقال العلوي","%","5",false),f("bottomLength","طول الانتقال السفلي","م","0",false),f("bottomSlope","ميل الانتقال السفلي","%","5",false),f("start","منسوب البداية","م","0",false,true),f("rampWidth","عرض الرامب للمجسم","م","",false),f("rampThickness","سمك البلاطة الرأسي للمجسم","سم","",false)),"الميل = فرق المنسوب ÷ الطول الأفقي × 100؛ الأجزاء تجمع بفروق مناسيبها."){error("اختار طريقة الحساب")},
         def("level_survey","ميزانية من قراءات الميزان أو الليزر",site,listOf(f("start","منسوب المرجع","م","100",false,true),f("back","القراءة الخلفية","م","1.5")),"منسوب خط النظر = المرجع + الخلفية؛ النقطة = خط النظر − قراءة القامة."){error("أدخل قراءات النقاط")},
         def("level_closure","مراجعة غلق الميزانية",site,listOf(f("start","منسوب البداية المعلوم","م","100",false,true),f("end","منسوب النهاية المعلوم","م","100",false,true)),"خطأ الغلق = البداية + مجموع الخلفيات − مجموع الأماميات − النهاية؛ التصحيح حسب مسافة القطاع."){error("أدخل قطاعات الميزانية")},
         def("sloped_excavation","حفر بجوانب مائلة ومساحة عمل","الأعمال الترابية",listOf(f("length","طول المنشأ","م","4"),f("width","عرض المنشأ","م","3"),f("depth","عمق الحفر","م","2"),f("working","مساحة العمل لكل جانب","م","0.5",false),f("sideX","ميل جانبي الطول أفقي/رأسي","معامل","0.5",false),f("sideY","ميل جانبي العرض أفقي/رأسي","معامل","0.5",false)),"الحجم بالتكامل لمستطيل تتزايد أبعاده خطيًا مع العمق؛ ميل كل زوج جوانب متماثل."){v->val l=v.v("length")+2*v.v("working");val w=v.v("width")+2*v.v("working");val h=v.v("depth");val x=v.v("sideX");val y=v.v("sideY");a(o("حجم الحفر",l*w*h+(l*y+w*x)*h*h+4*x*y*h*h*h/3,"م³"),o("طول السطح",l+2*x*h,"م"),o("عرض السطح",w+2*y*h,"م"),note="مساحة العمل تضاف للقاع؛ كل زوج جوانب له الميل نفسه. هذا حصر حجم وليس تحديد ميل آمن للتربة.")},
@@ -22,12 +22,27 @@ object ExtraCalculators {
         def("bar_schedule","تفريدة حديد بأشكال متعددة","حصر الحديد",listOf(f("diameter","قطر السيخ","مم","12"),f("a","الضلع A على مركز السيخ","م","1"),f("b","الضلع B على مركز السيخ","م","1",false),f("c","الضلع C على مركز السيخ","م","1",false),f("addition","إضافات أطوال التفريدة المعتمدة","م","0",false),f("count","عدد القطع","عدد","1")),"أطوال أجزاء على مركز السيخ + إضافات مدخلة من التفريدة؛ الوزن = الطول × القطر²/162."){error("اختار شكل التفريدة")},
         def("mixed_cutting","تقطيع أطوال مختلفة","حصر الحديد",listOf(f("stock","طول الخام","م","12"),f("kerf","فاقد القص لكل قطعة","مم","0",false)),"توزيع First Fit Decreasing؛ يحتسب فاقد كل قطعة، ولا يدعي الحل الأمثل."){error("أدخل قائمة القطع")},
         def("stair_layout","تقسيم درجات السلم ومناسيبها","الخرسانة والشدات",listOf(f("rise","ارتفاع القلبة","م","1.7"),f("steps","عدد القوائم","عدد","10"),f("run","الطول الأفقي للنوايم دون البسطات","م","2.7"),f("start","منسوب البداية","م","0",false,true)),"عدد النوايم = القوائم − 1 لقلبة بين بسطتين؛ مقاس القائمة = الارتفاع ÷ القوائم."){v->require(v.v("steps")>=2){"القلبة تحتاج قائمتين على الأقل"};a(o("ارتفاع القائمة",v.v("rise")/v.v("steps")*100,"سم"),o("عدد النوايم",v.v("steps")-1,"عدد"),o("عرض النائمة",v.v("run")/(v.v("steps")-1)*100,"سم"),o("منسوب النهاية",v.v("start")+v.v("rise"),"م"),note="قلبة مستقيمة بين بسطتين؛ الطول المدخل لا يشمل البسطات. المقاسات للمراجعة وفق اشتراطات المشروع.")},
-        def("concrete_supply","صبة الخرسانة والتوريد","الخرسانة والشدات",listOf(f("volume","حجم التوريد المطلوب شامل الاحتياطي","م³","50"),f("truck","سعة الحمولة","م³","8"),f("rate","معدل الصب","م³/ساعة","20"),f("cycle","زمن دورة السيارة الكامل","دقيقة","60")),"الحمولات = تقريب الحجم ÷ السعة لأعلى؛ فاصل الحمولة الكاملة = السعة ÷ المعدل."){v->a(o("عدد الحمولات",ceil(v.v("volume")/v.v("truck")),"حمولة"),o("مدة الصب النظرية",v.v("volume")/v.v("rate"),"ساعة"),o("فاصل الحمولات الكاملة",v.v("truck")/v.v("rate")*60,"دقيقة"),o("عدد سيارات للتدوير تقديري",ceil(v.v("cycle")/(v.v("truck")/v.v("rate")*60)),"سيارة"),o("حمولة آخر سيارة",v.v("volume")-(ceil(v.v("volume")/v.v("truck"))-1)*v.v("truck"),"م³"),note="لا يضيف احتياطيًا ثانيًا. جدولة نظرية دون توقفات؛ زمن الدورة يشمل الذهاب والتفريغ والعودة.")},
+        def("concrete_supply","صبة الخرسانة والتوريد","الخرسانة والشدات",
+            listOf(f("volume","حجم التوريد المطلوب شامل الاحتياطي","م³","50"),f("truck","سعة الحمولة","م³","8"),
+                f("rate","معدل الصب","م³/ساعة","20"),f("cycle","زمن دورة السيارة الكامل","دقيقة","60")),
+            "الحمولات = تقريب الحجم ÷ السعة لأعلى؛ فاصل بدء تفريغ حمولتين كاملتين = السعة ÷ المعدل."
+        ){ v ->
+            val volume=v.v("volume")
+            val capacity=v.v("truck")
+            val rate=v.v("rate")
+            val loads=ceil(volume/capacity)
+            val interval=capacity/rate*60
+            val fleet=min(loads,ceil(v.v("cycle")/interval))
+            a(o("عدد الحمولات",loads,"حمولة"),o("مدة الصب النظرية",volume/rate,"ساعة"),
+                o("فاصل الحمولات الكاملة",interval,"دقيقة"),o("عدد سيارات للتدوير تقديري",fleet,"سيارة"),
+                o("حمولة آخر سيارة",volume-(loads-1)*capacity,"م³"),
+                note="زمن الدورة من بدء تفريغ سيارة إلى جاهزيتها لبدء تفريغ حمولة جديدة؛ يشمل التفريغ والعودة وإعادة التحميل والذهاب. الأسطول لا يتجاوز إجمالي الحمولات. التقدير يفترض صبًا متصلًا دون توقفات.")
+        },
         def("haulage","حمولة نقل خامات الموقع","الأعمال الترابية",listOf(f("volume","حجم الخامة في حالة النقل","م³","50"),f("capacity","سعة الصندوق","م³","10"),f("density","كثافة الخامة في حالة النقل","طن/م³","1.6"),f("payload","الحمولة الوزنية المسموحة","طن","15")),"حجم الحمولة = الأقل من سعة الصندوق والحمولة الوزنية ÷ الكثافة."){v->val load=min(v.v("capacity"),v.v("payload")/v.v("density"));a(o("حجم حمولة مسموح",load,"م³"),o("وزن الحمولة",load*v.v("density"),"طن"),o("عدد الرحلات",ceil(v.v("volume")/load),"رحلة"),o("إجمالي الوزن",v.v("volume")*v.v("density"),"طن"),note="الحجم والكثافة لنفس حالة النقل؛ الالتزام بالحمولة الفعلية المسموحة.")},
         def("coordinate_area","مساحة أرض من إحداثيات",site,emptyList(),"مساحة المضلع من إحداثيات محلية مترية مرتبة؛ رفض التقاطع الذاتي."){error("أدخل النقاط")},
         def("cylindrical_tank","حجم خزان دائري ومستوى امتلاء","حصر السباكة",listOf(f("diameter","القطر الداخلي","م","2"),f("length","طول الأسطوانة أو ارتفاعها","م","4"),f("fill","ارتفاع السائل من القاع","م","1",false)),"الرأسي: مساحة الدائرة × ارتفاع السائل. الأفقي: مساحة القطعة الدائرية × طول الخزان."){error("اختار اتجاه الخزان")},
         def("consumption_check","مقارنة الاستهلاك الفعلي بالمحسوب",site,listOf(f("quantity","كمية العمل المنفذة","وحدة عمل","100"),f("rate","معدل الاستهلاك المتوقع","خامة/وحدة عمل","2"),f("issued","كمية خامة مصروفة","وحدة خامة","250",false),f("returned","مرتجع خامة","وحدة خامة","10",false),f("balance","رصيد لم يستهلك","وحدة خامة","20",false)),"الاستهلاك الفعلي = المصروف − المرتجع − الرصيد؛ يقارن بالمعدل المدخل."){v->val used=v.v("issued")-v.v("returned")-v.v("balance");require(used>=0){"المرتجع والرصيد أكبر من المصروف"};val expected=v.v("quantity")*v.v("rate");a(o("استهلاك متوقع",expected,"وحدة خامة"),o("استهلاك فعلي",used,"وحدة خامة"),o("معدل فعلي",used/v.v("quantity"),"خامة/وحدة عمل"),o("فرق الاستهلاك",used-expected,"وحدة خامة"),o("فرق نسبي",(used/expected-1)*100,"%"),note="خامة واحدة ووحدة موحدة لكل مقارنة؛ لا يغير معدل القالب تلقائيًا.")},
-        def("tile_layout","توزيع البلاط على غرفة مستطيلة","الأرضيات والكسوات",listOf(f("length","طول الغرفة","م","4"),f("width","عرض الغرفة","م","3"),f("tileL","طول البلاطة","سم","60"),f("tileW","عرض البلاطة","سم","60"),f("joint","عرض الفاصل","مم","3",false)),"صفوف شبكة مستقيمة بفواصل بين القطع؛ وضع طرفي أو متمركز دون افتراض إعادة استخدام القصاصات."){error("اختار نقطة بدء التوزيع")},
+        def("tile_layout","توزيع البلاط على غرفة مستطيلة","الأرضيات والكسوات",listOf(f("length","طول الغرفة","م","4"),f("width","عرض الغرفة","م","3"),f("tileL","طول البلاطة","سم","60"),f("tileW","عرض البلاطة","سم","60"),f("joint","عرض الفاصل","مم","3",false),f("tileThickness","سمك البلاطة للمجسم","مم","",false)),"صفوف شبكة مستقيمة بفواصل بين القطع؛ وضع طرفي أو متمركز دون افتراض إعادة استخدام القصاصات."){error("اختار نقطة بدء التوزيع")},
         def("variable_volume","حجوم متغيرة ومتدرجة","الخرسانة والشدات",listOf(f("baseL","طول القاعدة السفلية","م","4"),f("baseW","عرض القاعدة السفلية","م","3"),f("topL","طول القاعدة العلوية","م","2"),f("topW","عرض القاعدة العلوية","م","1"),f("height","الارتفاع العمودي","م","2")),"V = h/6 × (مساحة القاع + 4 × مساحة المنتصف + مساحة القمة)، للأبعاد المتغيرة خطيًا."){v->val b=v.v("baseL")*v.v("baseW");val t=v.v("topL")*v.v("topW");val m=(v.v("baseL")+v.v("topL"))*(v.v("baseW")+v.v("topW"))/4;a(o("الحجم",v.v("height")/6*(b+4*m+t),"م³"),note="مستطيلات متوازية تتغير أبعادها خطيًا؛ ليس جمعًا تلقائيًا لأشكال أو مناسيب متعددة.")},
         def("soil_moisture","المحتوى المائي للتربة",tests,listOf(f("tare","وزن العلبة","جم","20",false),f("wet","العلبة والتربة الرطبة","جم","140"),f("dry","العلبة والتربة الجافة","جم","120")),"الرطوبة = (الرطب − الجاف) ÷ (الجاف − العلبة) × 100."){v->require(v.v("wet")>=v.v("dry")&&v.v("dry")>v.v("tare")){"راجع ترتيب أوزان العلبة والرطب والجاف"};a(o("المحتوى المائي",(v.v("wet")-v.v("dry"))/(v.v("dry")-v.v("tare"))*100,"%"))},
         def("sand_cone","كثافة التربة بالمخروط الرملي",tests,listOf(f("sandBefore","وزن الرمل قبل الاختبار","جم","6000"),f("sandAfter","وزن الرمل المتبقي","جم","2000",false),f("coneSand","رمل المخروط والصفيحة بالمعايرة","جم","1000",false),f("sandDensity","كثافة رمل المعايرة","جم/سم³","1.5"),f("soilMass","كتلة التربة الرطبة المستخرجة","جم","4000"),f("moisture","المحتوى المائي","%","10",false),f("maxDensity","أقصى كثافة جافة من بروكتور","جم/سم³","2")),"حجم الحفرة = (الرمل المصروف − رمل المخروط) ÷ كثافة الرمل؛ الجافة = الرطبة ÷ (1 + w/100)."){v->val sand=v.v("sandBefore")-v.v("sandAfter")-v.v("coneSand");require(sand>0){"راجع أوزان الرمل ومعايرة المخروط"};val volume=sand/v.v("sandDensity");val wet=v.v("soilMass")/volume;val dry=wet/(1+v.v("moisture")/100);a(o("حجم الحفرة",volume,"سم³"),o("كثافة رطبة",wet,"جم/سم³"),o("كثافة جافة",dry,"جم/سم³"),o("نسبة الدمك",dry/v.v("maxDensity")*100,"%"),note="تستخدم معايرة المخروط والصفيحة وكثافة الرمل الخاصة بالاختبار؛ لا حكم قبول تلقائي.")},
@@ -45,7 +60,7 @@ object ExtraCalculators {
     val ids:Set<String> get()=definitions.map{it.id}.toSet()
     private fun compression(id:String,title:String)=def(id,title,tests,listOf(f("load","حمل الكسر","كيلونيوتن","500"),f("a","عرض وجه التحميل أو القطر","مم","150"),f("b","طول وجه التحميل للمكعب","مم","150")),"المقاومة = الحمل بالكيلونيوتن × 1000 ÷ مساحة التحميل بالمليمتر المربع."){error("اختار شكل العينة")}
     fun activeField(id:String,key:String,raw:Map<String,String>):Boolean=when(id){
-        "garage_ramp"->when(raw["_rampMode"]?:"slope"){
+        "garage_ramp"->key in setOf("rampWidth","rampThickness") || when(raw["_rampMode"]?:"slope"){
             "slope"->key in setOf("rise","length","start")
             "length"->key in setOf("rise","slope","start")
             "drop"->key in setOf("length","slope","start")
@@ -56,9 +71,17 @@ object ExtraCalculators {
             "L","rectangle"->key!="c"
             else->true
         }
+        "form_column" -> when(key) {
+            "width" -> formMember(raw)=="column"
+            "faces" -> formMember(raw)=="wall"
+            else -> true
+        }
         "concrete_compression","mortar_compression"->raw["_specimen"]!="cylinder"||key!="b"
         else->true
     }
+    fun formMember(raw:Map<String,String>):String =
+        raw["_formMember"] ?: if ((MortarMix.number(raw["faces"]) ?: 0.0)>0) "wall" else "column"
+
     val tables=mapOf(
         "level_survey" to Table(listOf(Column("reading","قراءة أمامية أو وسطية","م")),1),
         "level_closure" to Table(listOf(Column("back","خلفية","م"),Column("fore","أمامية","م"),Column("distance","مسافة القطاع","م",true)),1),
@@ -92,15 +115,62 @@ object ExtraCalculators {
                 }
                 val totalL=l+if(mode=="parts")vv("topLength")+vv("bottomLength")else 0.0
                 val slant=hypot(l,l*slope/100)+if(mode=="parts")hypot(vv("topLength"),vv("topLength")*vv("topSlope")/100)+hypot(vv("bottomLength"),vv("bottomLength")*vv("bottomSlope")/100)else 0.0
-                a(o("فرق المنسوب نزولًا",drop,"م"),o("الطول الأفقي الكلي",totalL,"م"),o("ميل الجزء الرئيسي",slope,"%"),o("الطول المائل الكلي",slant,"م"),o("زاوية الجزء الرئيسي",atan(slope/100)*180/PI,"درجة"),o("نسبة ميل الرئيسي 1 إلى",100/slope,""),o("منسوب النهاية",vv("start")-drop,"م"),note="الطول الأفقي يختلف عن المائل. الأجزاء انتقالات مستقيمة بميول مستقلة. لا تتضمن النتيجة اعتماد ميل أو فحص خلوص سيارة.")
+                val summary=a(o("فرق المنسوب نزولًا",drop,"م"),o("الطول الأفقي الكلي",totalL,"م"),o("ميل الجزء الرئيسي",slope,"%"),o("الطول المائل الكلي",slant,"م"),o("زاوية الجزء الرئيسي",atan(slope/100)*180/PI,"درجة"),o("نسبة ميل الرئيسي 1 إلى",100/slope,""),o("منسوب النهاية",vv("start")-drop,"م"),note="الطول الأفقي يختلف عن المائل. الأجزاء انتقالات مستقيمة بميول مستقلة. لا تتضمن النتيجة اعتماد ميل أو فحص خلوص سيارة.")
+                if(mode!="parts") summary else {
+                    var level=vv("start")
+                    val segments=listOf(Triple("العلوي",vv("topLength"),vv("topSlope")),
+                        Triple("الرئيسي",l,slope),Triple("السفلي",vv("bottomLength"),vv("bottomSlope")))
+                    val details=segments.filter { it.second>0 }.flatMap { (label,horizontal,grade) ->
+                        val fall=horizontal*grade/100
+                        val from=level
+                        level-=fall
+                        listOf(o("$label — أفقي",horizontal,"م"),o("$label — مائل",hypot(horizontal,fall),"م"),
+                            o("$label — الميل",grade,"%"),o("$label — منسوب البداية",from,"م"),o("$label — منسوب النهاية",level,"م"))
+                    }
+                    summary.copy(outputs=summary.outputs+details)
+                }
             }
             "bar_schedule"->{val shape=raw["_shape"]?:"straight";val length=when(shape){"straight"->vv("a");"L"->{require(vv("b")>0);vv("a")+vv("b")};"U"->{require(vv("b")>0&&vv("c")>0);vv("a")+vv("b")+vv("c")};"rectangle"->{require(vv("b")>0);2*(vv("a")+vv("b"))};else->error("شكل غير معروف")}+vv("addition");a(o("طول القطعة",length,"م"),o("إجمالي أطوال",length*vv("count"),"م"),o("وزن",length*vv("count")*vv("diameter").pow(2)/162,"كجم"),note="الأطوال مدخلة على مركز السيخ؛ إضافات وأطوال الثني من التفريدة المعتمدة، دون اقتراح تراكب أو خطافات تلقائيًا.")}
             "cylindrical_tank"->{val r=vv("diameter")/2;val h=vv("fill");val horizontal=raw["_tankOrientation"]=="horizontal";require(h<=if(horizontal)2*r else vv("length")){"ارتفاع السائل يتجاوز ارتفاع الخزان"};val total=PI*r*r*vv("length");val filled=if(horizontal)(r*r*acos(((r-h)/r).coerceIn(-1.0,1.0))-(r-h)*sqrt(max(0.0,2*r*h-h*h)))*vv("length") else PI*r*r*h;a(o("سعة كلية",total,"م³"),o("حجم السائل",filled,"م³"),o("السائل باللتر",filled*1000,"لتر"),o("حجم فارغ",total-filled,"م³"))}
+            "form_column" -> {
+                if(formMember(raw)=="wall") {
+                    val faces=vv("faces")
+                    require(if(raw["_formMember"]==null) faces>0 else faces==1.0||faces==2.0) {
+                        "عدد أوجه الحائط المحتسبة يجب أن يكون وجهًا واحدًا أو وجهين"
+                    }
+                }
+                null // The definition owns the area and price formula.
+            }
+            "slump"->{
+                val measured=definitions.first{it.id==id}.solve(v)
+                val shape=when(raw["_slumpShape"]){
+                    "shear"->"هبوط قص؛ راجع صلاحية القياس وطريقة إعادة الاختبار."
+                    "collapse"->"انهيار؛ راجع صلاحية القياس وطريقة إعادة الاختبار."
+                    else->"هبوط حقيقي حسب الملاحظة المسجلة."
+                }
+                measured.copy(explanation="شكل الهبوط: $shape ${measured.explanation}")
+            }
             "concrete_compression","mortar_compression"->{val area=if(raw["_specimen"]=="cylinder")PI*vv("a").pow(2)/4 else vv("a")*vv("b");a(o("مساحة التحميل",area,"مم²"),o("مقاومة الضغط",vv("load")*1000/area,"ميجاباسكال"),note="نتيجة عينة واحدة دون معاملات تصحيح شكل/عمر أو حكم قبول مجموعة. شكل وأبعاد العينة يجب أن تطابق الاختبار.")}
-            "tile_layout"->{val x=tileAxis(vv("length"),vv("tileL")/100,vv("joint")/1000,raw["_tileStart"]=="center");val y=tileAxis(vv("width"),vv("tileW")/100,vv("joint")/1000,raw["_tileStart"]=="center");a(o("أعمدة قطع",x.size.toDouble(),"عدد"),o("صفوف قطع",y.size.toDouble(),"عدد"),o("قطعة أول طرف بالطول",x.first()*100,"سم"),o("قطعة آخر طرف بالطول",x.last()*100,"سم"),o("قطعة أول طرف بالعرض",y.first()*100,"سم"),o("قطعة آخر طرف بالعرض",y.last()*100,"سم"),o("قطع أماكن التركيب",x.size.toDouble()*y.size,"قطعة"),note="توزيع مستقيم بفواصل داخلية. لا يشمل فاصل محيطي، أو عوائق، أو تحسين إعادة استعمال القصاصات؛ الشراء من حاسبة الكراتين.")}
+            "tile_layout"->{val x=tileAxis(vv("length"),vv("tileL")/100,vv("joint")/1000,raw["_tileStart"]=="center");val y=tileAxis(vv("width"),vv("tileW")/100,vv("joint")/1000,raw["_tileStart"]=="center");a(o("أعمدة قطع",x.size.toDouble(),"عدد"),o("صفوف قطع",y.size.toDouble(),"عدد"),o("قطعة أول طرف بالطول",x.first()*100,"سم"),o("قطعة آخر طرف بالطول",x.last()*100,"سم"),o("قطعة أول طرف بالعرض",y.first()*100,"سم"),o("قطعة آخر طرف بالعرض",y.last()*100,"سم"),o("قطع أماكن التركيب",x.size.toDouble()*y.size,"قطعة"),note="توزيع مستقيم بفواصل داخلية؛ عند نهاية داخل فاصل يتوزع المتبقي على قطعتين بدل قطعة سالبة أو صفرية. لا يشمل فاصل محيطي، أو عوائق، أو تحسين إعادة استعمال القصاصات؛ الشراء من حاسبة الكراتين.")}
             "level_survey"->{val hi=vv("start")+vv("back");CalcAnswer(listOf(o("منسوب خط النظر",hi,"م"))+tableValues(id,raw).mapIndexed{i,r->o("منسوب نقطة ${i+1}",hi-r.getValue("reading"),"م")},"محطة جهاز واحدة؛ نقطة الانتقال تحتاج خلفية جديدة في محطة مستقلة.")}
             "level_closure"->{val rows=tableValues(id,raw);val err=vv("start")+rows.sumOf{it.getValue("back")-it.getValue("fore")}-vv("end");val total=rows.sumOf{it.getValue("distance")};var dist=0.0;var level=vv("start");val out=mutableListOf(o("خطأ الغلق",err*1000,"مم"));rows.forEachIndexed{i,r->dist+=r.getValue("distance");level+=r.getValue("back")-r.getValue("fore");out+=o("منسوب مصحح محطة ${i+1}",level-err*dist/total,"م")};CalcAnswer(out,"توزيع التصحيح بنسبة مسافة كل قطاع. لا حد قبول افتراضي؛ راجع طريقة المشروع.")}
-            "section_volumes"->{val rows=tableValues(id,raw);require(rows.zipWithNext().all{(a,b)->b.getValue("station")>a.getValue("station")}){"المحطات يجب أن تزيد بالترتيب"};var cut=0.0;var fill=0.0;rows.zipWithNext().forEach{(a,b)->val d=b.getValue("station")-a.getValue("station");cut+=d*(a.getValue("cut")+b.getValue("cut"))/2;fill+=d*(a.getValue("fill")+b.getValue("fill"))/2};a(o("حجم حفر",cut,"م³"),o("حجم ردم",fill,"م³"),note="متوسط مساحتي الطرفين؛ لا يعالج تغيرًا غير مقاس بين المحطات.")}
+            "section_volumes"->{
+                val rows=tableValues(id,raw)
+                require(rows.zipWithNext().all{(a,b)->b.getValue("station")>a.getValue("station")}){"المحطات يجب أن تزيد بالترتيب"}
+                var cut=0.0
+                var fill=0.0
+                val details=rows.zipWithNext().flatMapIndexed { i,(a,b) ->
+                    val d=b.getValue("station")-a.getValue("station")
+                    val segmentCut=d*(a.getValue("cut")+b.getValue("cut"))/2
+                    val segmentFill=d*(a.getValue("fill")+b.getValue("fill"))/2
+                    cut+=segmentCut
+                    fill+=segmentFill
+                    val label="المسافة ${i+1}–${i+2}"
+                    listOf(o("$label — طول",d,"م"),o("$label — حفر",segmentCut,"م³"),o("$label — ردم",segmentFill,"م³"))
+                }
+                CalcAnswer(listOf(o("حجم حفر",cut,"م³"),o("حجم ردم",fill,"م³"))+details,
+                    "متوسط مساحتي الطرفين؛ لا يعالج تغيرًا غير مقاس بين المحطات.")
+            }
             "mixed_cutting"->{val bins=cutPlan(raw,vv("stock"),vv("kerf")/1000);val total=tableValues(id,raw).sumOf{it.getValue("piece")*it.getValue("count")};val saw=tableValues(id,raw).sumOf{it.getValue("count")}*vv("kerf")/1000;CalcAnswer(listOf(o("أسياخ خام",bins.size.toDouble(),"سيخ"),o("أطوال قطع صافية",total,"م"),o("فاقد قص",saw,"م"),o("فضلات متبقية",bins.size*vv("stock")-total-saw,"م"),o("استغلال خام",total/(bins.size*vv("stock"))*100,"%"))+bins.mapIndexed{i,b->o("متبقي خام ${i+1}",vv("stock")-b.sum()-b.size*vv("kerf")/1000,"م")},"خطة تقريبية First Fit Decreasing؛ فاقد لكل قطعة بما فيها الأخيرة. ليست ضمانًا لأقل عدد خام ممكن.")}
             "coordinate_area"->{val rows=tableValues(id,raw);val points=rows.map{it.getValue("x") to it.getValue("y")};require(points.distinct().size==points.size){"نقاط مكررة؛ لا تكرر نقطة البداية في النهاية"};val origin=points.first();val p=points.map{(x,y)->(x-origin.first) to (y-origin.second)};require(!selfIntersects(p)){"حدود المضلع تتقاطع أو تتلامس؛ راجع ترتيب النقاط"};val pairs=p.zip(p.drop(1)+p.first());val area=abs(pairs.sumOf{(a,b)->a.first*b.second-b.first*a.second})/2;require(area>1e-10){"المضلع بلا مساحة صالحة"};a(o("المساحة",area,"م²"),o("المحيط",pairs.sumOf{(a,b)->hypot(a.first-b.first,a.second-b.second)},"م"),note="إحداثيات مستوية مترية؛ لا تستخدم خطوط الطول والعرض الجغرافية مباشرة.")}
             "sieve"->{val rows=tableValues(id,raw);require(rows.zipWithNext().all{(a,b)->a.getValue("size")>b.getValue("size")}&&rows.last().getValue("size")==0.0){"رتب المناخل تنازليًا، وصفر للوعاء الأخير"};val sum=rows.sumOf{it.getValue("mass")};require(abs(sum-vv("sampleMass"))<=max(0.01,vv("sampleMass")*0.001)){"مجموع الكتل لا يطابق كتلة العينة ضمن 0.1%؛ راجع القراءات"};var retained=0.0;CalcAnswer(rows.map{r->retained+=r.getValue("mass");o(if(r.getValue("size")==0.0)"مار الوعاء"else "مار منخل ${r.getValue("size")} مم",max(0.0,100-retained/vv("sampleMass")*100),"%")},"التدرج من المناخل الأكبر للأصغر؛ فحص اتزان الكتلة حسابي وليس حد قبول مواصفة. لا حدود تدرج افتراضية.")}
@@ -109,12 +179,23 @@ object ExtraCalculators {
         }
     }
     fun tileAxis(span:Double,piece:Double,joint:Double,center:Boolean):List<Double> {
-        require(span>0&&piece>0&&joint>=0)
+        require(span.isFinite() && piece.isFinite() && joint.isFinite() && span>0 && piece>0 && joint>=0)
         val count=ceil((span+joint)/(piece+joint)-1e-10).toInt().coerceAtLeast(1)
         require(count<=500){"عدد الصفوف كبير؛ راجع الوحدات"}
-        if(count==1)return listOf(span)
-        return if(center){val edge=(span-(count-2)*piece-(count-1)*joint)/2;require(edge>0);listOf(edge)+List(count-2){piece}+edge}
-        else List(count-1){piece}+(span-(count-1)*(piece+joint))
+        if(count==1) return listOf(span)
+
+        val usable=span-(count-1)*joint
+        require(usable>0){"الفواصل لا تترك مساحة موجبة للقطع؛ راجع عرض الفاصل"}
+        val last=usable-(count-1)*piece
+        val paired=(usable-(count-2)*piece)/2
+        // Keep as many whole tiles as possible, but share the residual across two
+        // pieces when a full-size tile would leave the end inside a joint.
+        return when {
+            !center && last>Math.ulp(span)*4 -> List(count-1){piece}+last
+            paired<=0 -> List(count){usable/count}
+            center -> listOf(paired)+List(count-2){piece}+paired
+            else -> List(count-2){piece}+listOf(paired,paired)
+        }
     }
     fun cutPlan(raw:Map<String,String>,stock:Double,kerf:Double):List<List<Double>> {
         val rows=tableValues("mixed_cutting",raw);require(rows.sumOf{it.getValue("count")}<=2000){"الحد الأقصى 2000 قطعة في الخطة"}

@@ -24,8 +24,11 @@ import com.fayroz.sitecalculator.data.V8Repository
 
 @Composable
 fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repository,project:Project?,
-    onBack:()->Unit,onSave:(MaterialResult,String?,String?)->Unit){
+    onBack:()->Unit,onSwitchMode:(String)->Unit,onSave:(MaterialResult,String?,String?)->Unit){
     val def=CalculatorLibrary.all.firstOrNull{it.id==toolId}?:return
+    val family=if(seed==null)toolFamilies.values.firstOrNull { toolId in it } else null
+    val title=family?.firstOrNull()?.let(::familyTitle) ?: def.title
+    val category=toolCategories.firstOrNull { area -> area.sections.any { (family?.firstOrNull() ?: toolId) in it.ids } }?.title ?: def.group
     val book=repository.centralPrices()+project?.defaults.orEmpty()
     val starting=CalculatorLibrary.defaults(def,book)
     val draftKey="$toolId.${project?.id?:"independent"}"
@@ -118,7 +121,7 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
             rememberSpecification();stage=1
             scope.launch{
                 withFrameNanos { }
-                val resultIndex=if(seed==null)4 else 5
+                val resultIndex=4+(if(seed!=null)1 else 0)+(if(family!=null)1 else 0)
                 listState.animateScrollToItem(resultIndex.coerceAtMost((listState.layoutInfo.totalItemsCount-1).coerceAtLeast(0)))
             }
         }
@@ -137,21 +140,30 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
     if(templateDialog)AlertDialog(onDismissRequest={templateDialog=false},title={Text("حفظ إعداداتي")},text={TextFieldX("اسم الإعداد",templateName,{templateName=it})},confirmButton={TextButton(enabled=templateName.isNotBlank()&&answer!=null,onClick={repository.saveCalculatorTemplate(toolId,templateName.trim(),specification());templates=repository.calculatorTemplates(toolId);templateDialog=false;Toast.makeText(context,"تم حفظ الإعداد ✓",Toast.LENGTH_SHORT).show()}){Text("حفظ الإعداد")}},dismissButton={TextButton(onClick={templateDialog=false}){Text("إلغاء")}})
     DisposableEffect(toolId,seed){onDispose{if(seed==null&&savedSnapshot!=raw.toMap())repository.saveCalculatorDraft(draftKey,raw.toMap())}}
     BackHandler{onBack()}
-    Scaffold(topBar={TopAppBar(title={Column{Text(def.title,fontWeight=FontWeight.Bold,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis);Text("الحاسبات / ${def.group}",style=MaterialTheme.typography.labelSmall,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)}},navigationIcon={TextButton(onClick=onBack){Text("رجوع")}})},
+    Scaffold(topBar={TopAppBar(title={Column{Text(title,fontWeight=FontWeight.Bold,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis);Text("الحاسبات / $category",style=MaterialTheme.typography.labelSmall,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)}},navigationIcon={TextButton(onClick=onBack){Text("رجوع")}})},
         bottomBar={Surface(shadowElevation=8.dp){Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
             error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
             Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
-                Button(onClick={if(stage==0)showResult() else saveResult()},modifier=Modifier.weight(1f)){Text(if(stage==0)"احسب واعرض النتيجة" else "حفظ النتيجة")}
+                Button(onClick={if(stage==0)showResult() else saveResult()},modifier=Modifier.weight(1f)){Text(when {
+                    toolId=="flood_test" -> if(stage==0)"عرض القراءات المسجلة" else "حفظ القراءات"
+                    stage==0 -> "احسب واعرض النتيجة"
+                    else -> "حفظ النتيجة"
+                })}
             }
         }}}
     ){padding->Column(Modifier.fillMaxSize().padding(padding)){
         LazyColumn(state=listState,modifier=Modifier.fillMaxSize(),contentPadding=PaddingValues(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
             run{
                 if(seed!=null)item{Text("أسعار محفوظة بتاريخ الحساب",style=MaterialTheme.typography.labelSmall)}
+                if (family != null) item {
+                    ChoiceFieldX("طريقة الحساب",familyModeTitle(toolId),family.map(::familyModeTitle),{ mode ->
+                        family.firstOrNull { familyModeTitle(it)==mode && it!=toolId }?.let(onSwitchMode)
+                    })
+                }
                 item{ExtraCalculatorInputs(def,raw){key,value->raw[key]=value;error=null}}
                 item{BasicCalculatorInputs(def,raw){key,value->raw[key]=value;error=null}}
                 item{CalculatorDiagram(def,effective,answer){key,value->raw[key]=value;error=null}}
-                item{ExtraCalculatorTable(def,raw){key,value->raw[key]=value;error=null}}
+                item{ExtraCalculatorTable(def,raw){error=null}}
                 if(stage==1&&answer!=null)item{CalculatorResultCards(def,effective,answer,label)}
                 if(stage==1&&answer==null)item{Text(attempt.exceptionOrNull()?.message?:"راجع البيانات",color=MaterialTheme.colorScheme.error)}
                 item{BoxCard{ExpandableSection("إعداداتي وتفاصيل إضافية",error!=null&&def.fields.filter{it !in MortarMix.basic(def)}.any{error?.contains(it.label)==true}){
@@ -159,7 +171,7 @@ fun LibraryCalculatorScreen(toolId:String,seed:MaterialResult?,repository:V8Repo
                     TextButton(onClick={templateName=def.title;templateDialog=true}){Text("حفظ إعداداتي باسم")}
                     Text("الهالك ${raw["waste"]?:"0"}%"+(if(MortarMix.isMix(def))" • الشيكارة ${raw["bag"]?:"50"} كجم" else ""),style=MaterialTheme.typography.bodySmall)
                     val basic=MortarMix.basic(def)
-                    def.fields.filter{f->f !in basic&&!f.key.contains("price",true)&&f.key !in setOf("cement","sand")}.forEach{field->CalcInputField(field,raw[field.key].orEmpty(),{raw[field.key]=it;error=null},raw["_unit.${field.key}"],{raw["_unit.${field.key}"]=it})}
+                    def.fields.filter{f->f !in basic&&!f.key.contains("price",true)&&f.key !in setOf("cement","sand")&&diagramInputVisible(def.id,f.key,raw)}.forEach{field->CalcInputField(field,raw[field.key].orEmpty(),{raw[field.key]=it;error=null},raw["_unit.${field.key}"],{raw["_unit.${field.key}"]=it})}
                     TextFieldX("اسم الصنف والمواصفة",raw["_materialName"].orEmpty(),{raw["_materialName"]=it},placeholder="اختياري")
                     if(MortarMix.isMix(def)){
                         TextFieldX("نوع الأسمنت وماركته",raw["_cementName"]?:"أسمنت",{raw["_cementName"]=it})
@@ -233,7 +245,16 @@ private fun BasicCalculatorInputs(def:com.fayroz.sitecalculator.domain.CalcDef,r
     val fields=MortarMix.basic(def).filter{it.key!="area"&&diagramInputVisible(def.id,it.key,raw)}
     fields.chunked(2).forEach{pair->
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){pair.forEach{field->
-            Column(Modifier.weight(1f)){CalcInputField(field,raw[field.key].orEmpty(),{set(field.key,it)},raw["_unit.${field.key}"],{set("_unit.${field.key}",it)})}
+            Column(Modifier.weight(1f)){
+                val label=when {
+                    field.key=="height" && def.id in setOf("raft","footing") -> "السمك"
+                    field.key=="width" && def.id=="wall_concrete" -> "سمك الحائط"
+                    field.key=="length" && def.id=="column" -> "طول قطاع العمود"
+                    field.key=="width" && def.id=="column" -> "عرض قطاع العمود"
+                    else -> field.label
+                }
+                CalcInputField(field.copy(label=label),raw[field.key].orEmpty(),{set(field.key,it)},raw["_unit.${field.key}"],{set("_unit.${field.key}",it)})
+            }
         }}
     }
     if(MortarMix.isMix(def)){

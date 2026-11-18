@@ -51,6 +51,28 @@ class CalculatorVisualsTest {
  @Test fun proctorKeepsMeasuredPeak(){assertEquals(2.0,value(calc("proctor"),"أعلى كثافة جافة مقاسة"),1e-10);assertEquals(10.0,value(calc("proctor"),"الرطوبة عند أعلى نقطة مقاسة"),1e-10)}
  @Test fun sieveBalancesMass(){assertEquals(90.0,value(calc("sieve"),"مار منخل 4.75 مم"),1e-10);reject("sieve","_row.2.mass" to "100")}
  @Test fun tileAxisPreservesSpan(){for(center in listOf(false,true))for(span in listOf(.3,.6,1.2,4.0)){val x=ExtraCalculators.tileAxis(span,.6,.003,center);assertTrue(x.all{it>0&&it<=.6+1e-9});assertEquals(span,x.sum()+(x.size-1)*.003,1e-9)}}
+ @Test fun tileLayoutAtJointBoundaries(){
+  for(center in listOf(false,true)) {
+   for(span in listOf(.600,.601,.603,1.203,1.204,1.206,1.207)) {
+    val pieces=ExtraCalculators.tileAxis(span,.600,.003,center)
+    assertTrue("span=$span center=$center pieces=$pieces",pieces.all{it>0&&it<=.600+1e-12})
+    assertEquals(span,pieces.sum()+(pieces.size-1)*.003,1e-12)
+    if(center) assertEquals(pieces.first(),pieces.last(),1e-12)
+   }
+   val a=calc("tile_layout","length" to "1.204","width" to "1.206","tileL" to "60","tileW" to "60","joint" to "3","_tileStart" to if(center)"center" else "edge")
+   assertTrue(value(a,"قطعة آخر طرف بالطول")>0)
+   assertTrue(value(a,"قطعة آخر طرف بالعرض")>0)
+  }
+ }
+ @Test fun concreteFleetIsLimitedByLoads(){
+  for((volume,loads,fleet) in listOf(Triple(4,1,1),Triple(8,1,1),Triple(16,2,2),Triple(48,6,3),Triple(49,7,3))){
+   val a=calc("concrete_supply","volume" to volume.toString(),"truck" to "8","rate" to "20","cycle" to "60")
+   assertEquals(loads.toDouble(),value(a,"عدد الحمولات"),0.0)
+   assertEquals(fleet.toDouble(),value(a,"عدد سيارات للتدوير تقديري"),0.0)
+   assertEquals((volume-(loads-1)*8).toDouble(),value(a,"حمولة آخر سيارة"),1e-10)
+   assertEquals(24.0,value(a,"فاصل الحمولات الكاملة"),1e-10)
+  }
+ }
  @Test fun mixedCuttingConservesLength(){val a=calc("mixed_cutting","kerf" to "3");assertEquals(2.0,value(a,"أسياخ خام"),1e-10);assertEquals(24.0,value(a,"أطوال قطع صافية")+value(a,"فاقد قص")+value(a,"فضلات متبقية"),1e-10)}
  @Test fun slopedExcavationReducesToBox(){assertEquals(40.0,value(calc("sloped_excavation","sideX" to "0","sideY" to "0"),"حجم الحفر"),1e-10)}
  @Test fun variableVolumeBoxLimit(){assertEquals(24.0,value(calc("variable_volume","topL" to "4","topW" to "3"),"الحجم"),1e-10)}
