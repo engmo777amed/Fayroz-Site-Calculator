@@ -7,13 +7,14 @@ internal data class Point3(val x: Double, val y: Double, val z: Double) {
     fun cross(p: Point3) = Point3(y*p.z-z*p.y,z*p.x-x*p.z,x*p.y-y*p.x)
     fun dot(p: Point3) = x*p.x+y*p.y+z*p.z
 }
-internal enum class Surface3 { Concrete, Excavation, Tank, Water, Tile }
+internal enum class Surface3 { Concrete, Excavation, Tank, Water, Tile, Steel, Insulation, Plywood }
 internal data class Face3(val points: List<Point3>, val surface: Surface3, val part: String)
 internal data class CalculatorSolid(val faces: List<Face3>, val note: String = "")
 
 internal object CalculatorGeometry {
     private val boxes = setOf("raft","footing","beam","column","wall_concrete","excavation")
-    val supported = boxes + setOf("round_column","garage_ramp","tank","cylindrical_tank","sloped_excavation","variable_volume","tile_layout")
+    val supported = boxes + setOf("round_column","garage_ramp","tank","cylindrical_tank","sloped_excavation","variable_volume","tile_layout",
+        "steel","mesh","stairs_concrete","stairs_finish","insulation","pipe_insulation","sealant","form_beam","form_column")
     private fun rect(x: Double,y: Double,l: Double,w: Double,z: Double) =
         listOf(Point3(x,y,z),Point3(x+l,y,z),Point3(x+l,y+w,z),Point3(x,y+w,z))
 
@@ -43,6 +44,91 @@ internal object CalculatorGeometry {
             if(count>1) "المجسم لعنصر واحد؛ الحصر يشمل العدد المدخل." else ""
         )
         return when(id) {
+            "steel" -> CalculatorSolid(
+                rod(l,v("diameter")/2000,0.0,0.0,false,"السيخ"),
+                "المجسم لسيخ واحد. الحصر يشمل العدد المدخل."
+            )
+            "mesh" -> {
+                val cover=v("cover")/100
+                val steelL=l-2*cover
+                val steelW=w-2*cover
+                val nL=out("أسياخ اتجاه الطول للشبكة").toInt().coerceAtLeast(2)
+                val nW=out("أسياخ اتجاه العرض للشبكة").toInt().coerceAtLeast(2)
+                val rL=v("diameter")/2000
+                val rW=(v("diameterY").takeIf { it>0 } ?: v("diameter"))/2000
+                fun visibleIndices(count: Int): List<Int> {
+                    val shown=count.coerceAtMost(28)
+                    return List(shown) { (it.toDouble()*(count-1)/(shown-1)).roundToInt() }
+                }
+                val bars=visibleIndices(nL).flatMap { rod(steelL,rL,steelW*it/(nL-1),rL,false,"اتجاه الطول") } +
+                    visibleIndices(nW).flatMap { rod(steelW,rW,steelL*it/(nW-1),2*rL+rW,true,"اتجاه العرض") }
+                val note=buildList {
+                    add("شبكة واحدة بين حدود الغطاء. طول التراكب مسجل في الحصر؛ موضعه غير مدخل.")
+                    if(nL>28||nW>28) add("عرض مختصر للأسياخ؛ العدد الكامل في النتيجة.")
+                    if(v("layers")>1) add("توزيع الشبكات رأسيًا يحتاج مناسيبها.")
+                }.joinToString(" ")
+                CalculatorSolid(bars,note)
+            }
+            "stairs_concrete" -> {
+                val run=v("run"); val rise=v("rise"); val steps=v("steps").toInt()
+                val tread=v("tread")/100; val riser=v("riser")/100
+                // Draw the exact profile only when both dimension sets describe the same flight.
+                if(steps !in 1..120 || abs(run-tread*steps)>1e-6 || abs(rise-riser*steps)>1e-6) return null
+                val waist=v("waist")/100
+                val slant=hypot(run,rise)
+                val dx=waist*rise/slant
+                val dz=-waist*run/slant
+                fun across(profile: List<Pair<Double,Double>>, label: String): List<Face3> {
+                    val side=profile.map { (x,z)->Point3(x,0.0,z) }
+                    return connect(side,side.map { it.copy(y=w) },Surface3.Concrete,label)
+                }
+                val base=across(listOf(0.0 to 0.0,run to rise,run+dx to rise+dz,dx to dz),"بطنية السلم")
+                val stairs=(0 until steps).flatMap { i ->
+                    val x=i*tread; val z=i*riser
+                    across(listOf(x to z,x to z+riser,x+tread to z+riser),"درجة ${i+1}")
+                }
+                val note=if(v("landingVolume")>0)"البسطات في الحصر. أبعادها ومواقعها غير مدخلة في المجسم." else ""
+                CalculatorSolid(base+stairs,note)
+            }
+            "stairs_finish" -> {
+                val steps=v("steps").toInt()
+                if(steps !in 1..120) return null
+                val tread=v("tread")/100; val riser=v("riser")/100
+                val faces=(0 until steps).flatMap { i ->
+                    val x=i*tread; val z=i*riser
+                    val riserFace=listOf(Point3(x,0.0,z),Point3(x,w,z),Point3(x,w,z+riser),Point3(x,0.0,z+riser))
+                    val treadFace=rect(x,0.0,tread,w,z+riser)
+                    listOf(Face3(riserFace,Surface3.Plywood,"قائمة ${i+1}"),Face3(treadFace,Surface3.Tile,"نائمة ${i+1}"))
+                }
+                CalculatorSolid(faces,"يعرض أسطح الكسوة. البسطات تحتاج أبعادًا ومواقع.")
+            }
+            "pipe_insulation" -> CalculatorSolid(
+                connect(ring(v("diameter")/2000,0.0,true),ring(v("diameter")/2000,l,true),
+                    Surface3.Insulation,"السطح الخارجي",cap=false),
+                "السطح الخارجي فقط. سمك العزل غير مدخل."
+            )
+            "sealant" -> CalculatorSolid(
+                box(0.0,0.0,l,v("jointW")/1000,v("jointD")/1000,Surface3.Tile,"مادة ملء الفاصل"),
+                "يمثل الجزء المملوء بالعرض والعمق المدخلين."
+            )
+            "insulation" -> CalculatorSolid(
+                box(0.0,0.0,v("boardL"),v("boardW"),v("thickness")/100,Surface3.Insulation,"لوح العزل"),
+                "المجسم للوح واحد؛ توزيع الألواح يحتاج شكل المسطح."
+            )
+            "form_beam" -> {
+                val p=rect(0.0,0.0,l,w,0.0); val q=rect(0.0,0.0,l,w,h)
+                CalculatorSolid(listOf(Face3(p,Surface3.Plywood,"قاع الشدة")) +
+                    listOf(0,2).map { i -> Face3(listOf(p[i],p[i+1],q[i+1],q[i]),Surface3.Plywood,"جانب الشدة") },
+                    "يعرض الأوجه المحتسبة لكمرة واحدة. سماكة ألواح الشدة غير مدخلة.")
+            }
+            "form_column" -> {
+                val wall=ExtraCalculators.formMember(raw)=="wall"
+                if(wall && v("faces")!=1.0) return null
+                val p=rect(0.0,0.0,l,w,0.0); val q=rect(0.0,0.0,l,w,h)
+                val faces=if(wall) listOf(Face3(listOf(p[0],p[1],q[1],q[0]),Surface3.Plywood,"وجه الحائط"))
+                    else connect(p,q,Surface3.Plywood,"وجه العمود",cap=false)
+                CalculatorSolid(faces,"يعرض الأوجه المحتسبة لعنصر واحد.")
+            }
             "round_column" -> {
                 val r=v("diameter")/2
                 CalculatorSolid(connect(ring(r,0.0,false),ring(r,h,false),Surface3.Concrete,"العمود"),
@@ -133,6 +219,16 @@ internal object CalculatorGeometry {
             }
             else -> null
         }
+    }
+
+    private fun rod(length: Double,radius: Double,cross: Double,z: Double,alongY: Boolean,part: String): List<Face3> {
+        fun end(position: Double) = List(12) { i ->
+            val angle=2*PI*i/12
+            val across=cross+radius*cos(angle)
+            val height=z+radius*sin(angle)
+            if(alongY) Point3(across,position,height) else Point3(position,across,height)
+        }
+        return connect(end(0.0),end(length),Surface3.Steel,part)
     }
 
     private fun ring(r: Double, along: Double, horizontal: Boolean): List<Point3> = (0 until 48).map { index ->

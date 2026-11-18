@@ -11,15 +11,15 @@ android {
         minSdk = 26
         targetSdk = 35
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 19
-        versionName = "9.8.0-preview"
+        versionCode = 20
+        versionName = "9.9.0-preview"
         manifestPlaceholders["appLabel"] = "Fayroz Site Calculator"
     }
     buildTypes {
         create("preview") {
             initWith(getByName("debug"))
             applicationIdSuffix = ".preview98"
-            manifestPlaceholders["appLabel"] = "Fayroz Site Calculator 9.8 Preview"
+            manifestPlaceholders["appLabel"] = "Fayroz Site Calculator 9.9 Preview"
             matchingFallbacks += listOf("debug")
         }
         getByName("release") {

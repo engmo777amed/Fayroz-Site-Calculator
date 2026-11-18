@@ -91,4 +91,30 @@ class CalculatorContinuationTest {
         assertEquals(4.0, water.maxOf { it.x }, 1e-12)
         assertEquals(2 * PI, answer.outputs.first { it.label == "حجم السائل" }.value, 1e-12)
     }
+    @Test fun stairGeometryUsesMeasuredTreadAndRiser() {
+        val (solid, answer)=scene("stairs_concrete","width" to "1.1","run" to "1.2","rise" to ".68",
+            "steps" to "4","tread" to "30","riser" to "17","waist" to "15")
+        val points=solid.faces.filter{it.part.startsWith("درجة")}.flatMap{it.points}
+        assertEquals(1.2,points.maxOf{it.x},1e-12)
+        assertEquals(1.1,points.maxOf{it.y},1e-12)
+        assertEquals(.68,points.maxOf{it.z},1e-12)
+        assertEquals(.5*.30*.17*1.1*4,answer.outputs.first{it.label=="درجات"}.value,1e-12)
+    }
+
+    @Test fun insulationBoardDimensionsAreInMeters() {
+        val (solid,_)=scene("insulation","area" to "12","boardL" to "1.2","boardW" to ".6","thickness" to "5")
+        val points=solid.faces.flatMap{it.points}
+        assertEquals(1.2,points.maxOf{it.x},1e-12)
+        assertEquals(.6,points.maxOf{it.y},1e-12)
+        assertEquals(.05,points.maxOf{it.z},1e-12)
+    }
+
+    @Test fun meshContainsOneSolidRodForEveryBarInSmallGrid() {
+        val (solid,answer)=scene("mesh","length" to "2","width" to "1","cover" to "0","spacing" to "50",
+            "diameter" to "12","spacingY" to "50","diameterY" to "10","layers" to "1")
+        val lengths=answer.outputs.first{it.label=="أسياخ اتجاه الطول للشبكة"}.value
+        val widths=answer.outputs.first{it.label=="أسياخ اتجاه العرض للشبكة"}.value
+        assertEquals(((lengths+widths)*14).toInt(),solid.faces.size)
+        assertEquals(2.0,solid.faces.filter{it.part=="اتجاه الطول"}.flatMap{it.points}.maxOf{it.x},1e-12)
+    }
 }

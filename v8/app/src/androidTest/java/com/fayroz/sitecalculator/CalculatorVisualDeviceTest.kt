@@ -38,7 +38,7 @@ class CalculatorVisualDeviceTest {
     private fun launch(tool:String?=null)=ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java).apply{tool?.let{putExtra("calculator",it)}})
     private fun shot(name:String){val f=File(context.getExternalFilesDir(null),"screenshots/v98-$name.png");f.parentFile!!.mkdirs();assertTrue(UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).takeScreenshot(f))}
     private fun captureApp(name:String){
-        val file=File(context.getExternalFilesDir(null),"screenshots/v98-app-$name.png")
+        val file=File(context.getExternalFilesDir(null),"screenshots/v99-app-$name.png")
         file.parentFile!!.mkdirs()
         val bitmap=compose.onRoot().captureToImage().asAndroidBitmap()
         file.outputStream().use { assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)) }
@@ -77,8 +77,27 @@ class CalculatorVisualDeviceTest {
         revealNode(hasContentDescription("مجسم ثلاثي الأبعاد من المدخلات الحالية"))
         captureApp("ramp-solid")
     }}
+    @Test fun sieveShowsLabImageAndMeasuredCurve(){
+        V8Repository(context).saveCalculatorDraft("sieve.independent",mapOf(
+            "sampleMass" to "100","_rows" to "5",
+            "_row.0.size" to "9.5","_row.0.mass" to "0",
+            "_row.1.size" to "4.75","_row.1.mass" to "11",
+            "_row.2.size" to "2.36","_row.2.mass" to "27",
+            "_row.3.size" to "0.6","_row.3.mass" to "30",
+            "_row.4.size" to "0","_row.4.mass" to "32"
+        ))
+        launch("sieve").use {
+            revealNode(hasContentDescription("صورة توضيحية لمناخل معمل التدرج الحبيبي"))
+            revealNode(hasContentDescription("نسبة المار (%) حسب فتحة المنخل (مم) · مقياس لوغاريتمي"))
+            captureApp("sieve")
+            compose.onNodeWithText("احسب واعرض النتيجة").performClick()
+            reveal("62 %")
+        }
+    }
     @Test fun moistureCalculationDisplaysKnownAnswer(){launch("soil_moisture").use{
         compose.onNodeWithText("احسب واعرض النتيجة").performClick()
-        reveal("20 %");shot("moisture")
+        reveal("كتلة الماء 20 جم ÷ كتلة التربة الجافة 100 جم × ١٠٠")
+        assertTrue(compose.onAllNodesWithText("20 %").fetchSemanticsNodes().isNotEmpty())
+        captureApp("moisture")
     }}
 }

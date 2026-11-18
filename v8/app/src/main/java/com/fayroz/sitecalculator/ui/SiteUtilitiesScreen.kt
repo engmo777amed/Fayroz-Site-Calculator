@@ -71,7 +71,21 @@ fun SiteUtilityScreen(toolId:String,onBack:()->Unit,repository:V8Repository?=nul
                 }
             }
             if(stage==1){
-                item{BoxCard{Text("ملخص الحساب");Text(label);Text("حساب مستقل");lines.forEach{MetricRow(it.label,it.value,true)}}}
+                item{BoxCard{
+                    Text("الرسم التوضيحي المتغير",style=MaterialTheme.typography.titleSmall)
+                    if(toolId=="convert"){
+                        VisualMetric("القيمة الأصلية","${fmt(n(value))} $unit",Modifier.fillMaxWidth())
+                        lines.forEach{VisualMetric(it.label,it.value,Modifier.fillMaxWidth())}
+                    }else{
+                        val added=parts.filterNot { it.deduct }.sumOf { lengthMeters(it.length,unit)*lengthMeters(it.width,unit) }
+                        val deducted=added-total
+                        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                            VisualMetric("مساحات مضافة","${fmt(added)} م²",Modifier.weight(1f))
+                            VisualMetric("مساحات مخصومة","${fmt(deducted)} م²",Modifier.weight(1f))
+                        }
+                        VisualMetric("المساحة الصافية","${fmt(total)} م²",Modifier.fillMaxWidth())
+                    }
+                }}
                 if(toolId=="area")item{BoxCard{Text("الأجزاء والخصومات");parts.forEachIndexed{i,p->MetricRow(p.name.ifBlank{"جزء ${i+1}"}+(if(p.deduct)" — خصم" else " — إضافة"),"${fmt(lengthMeters(p.length,unit)*lengthMeters(p.width,unit))} م²")}}}
                 item{OutlinedButton(onClick={context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_TEXT,label+"\n"+lines.joinToString("\n"){"${it.label}: ${it.value}"})},"مشاركة النتيجة"))},modifier=Modifier.fillMaxWidth()){Text("تصدير / مشاركة النتيجة")}}
             }

@@ -11,6 +11,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -20,16 +22,26 @@ import androidx.compose.ui.unit.dp
 import com.fayroz.sitecalculator.domain.*
 import kotlin.math.*
 
+private val geometryDiagrams=setOf(
+    "compaction","consumption_check","flood_test","sand_cone","asphalt_core","steel","pipes",
+    "wires","cables","conduits","skirting","kerb","pipe_insulation","garage_ramp",
+    "slope","levels","floor_slope","stairs_concrete","stairs_finish","stair_layout","mesh",
+    "stirrups","bar_schedule","cutting","mixed_cutting","coordinate_area","level_survey","level_closure",
+    "section_volumes","tile_layout","skirting_cut","cylindrical_tank","tank","sloped_excavation","variable_volume",
+    "circle","round_column","triangle","trapezoid","rectangle","diagonal","faces",
+    "spacing","trays","masonry","blocks","footing","raft","beam",
+    "column","wall_concrete","excavation","form_column","form_beam","insulation","tile",
+    "rolls","sealant","grout","concrete_compression","mortar_compression","slump",
+)
+
 /** Geometry is derived from the same inputs/answer used by the calculator, never a second solver. */
 @Composable
 fun CalculatorDiagram(def:CalcDef,raw:Map<String,String>,answer:CalcAnswer?,update:(String,String)->Unit){
     val id=def.id
-    val noDiagram=setOf("concrete_supply","haulage","reverse_mortar","reverse_coverage","spray","fittings","points","loads","gypsum_system","soil_moisture","aggregate","asphalt_voids")
-    if(id in noDiagram)return
     val dims=def.fields.filter{diagramInputVisible(id,it.key,raw)&&it.unit in setOf("م","سم","مم","%","عدد","وجه","درجة","طبقة","شبكة","موصل")&&!it.key.contains("price",true)}
     var editing by remember(id){mutableStateOf<CalcField?>(null)}
-    val color=MaterialTheme.colorScheme.primary
-    val accent=MaterialTheme.colorScheme.tertiary
+    val color=Color(0xFF42DFCE)
+    val accent=Color(0xFFFFC164)
     BoxCard{
         val displayable=dims.all{(MortarMix.number(raw[it.key])?:0.0).let{v->kotlin.math.abs(v)<=1e8&&(v==0.0||kotlin.math.abs(v)>=1e-8)}}
         val solid=remember(id,raw,answer,displayable) {
@@ -37,15 +49,29 @@ fun CalculatorDiagram(def:CalcDef,raw:Map<String,String>,answer:CalcAnswer?,upda
             else CalculatorGeometry.create(id,raw,answer)
         }
         Text(if(solid==null)"الرسم التوضيحي المتغير"else "المجسم ثلاثي الأبعاد",style=MaterialTheme.typography.titleSmall)
+        if(id=="sieve") SieveLabIllustration()
         if(answer==null||!displayable){
             Text("راجع المدخلات لظهور المعاينة.",style=MaterialTheme.typography.bodySmall)
         }else if(solid!=null){
-            CalculatorSolidView(solid,answer)
+            CalculatorSolidView(solid,answer,isRamp=id=="garage_ramp")
         }else{
             if(id=="garage_ramp")Text("أدخل عرض الرامب وسمك البلاطة لعرض المجسم.")
             if(id=="tile_layout")Text("المجسم يحتاج سمك البلاطة، ويعرض شبكات حتى ٤٠٠ قطعة.")
-            Canvas(Modifier.fillMaxWidth().height(200.dp).semantics{contentDescription="رسم ${def.title} من المدخلات الحالية؛ الأبعاد متاحة في الأزرار أسفل الرسم"}){
-                drawCalculator(id,raw,answer,color,accent)
+            when(id) {
+                "sieve","proctor" -> {
+                    MeasurementChart(id,raw)
+                    val result=answer.outputs.firstOrNull { id!="sieve" || "الوعاء" !in it.label }
+                    result?.let { VisualMetric(it.label,"${fmt(it.value)} ${it.unit}",Modifier.fillMaxWidth()) }
+                }
+                in geometryDiagrams -> {
+                    Canvas(Modifier.fillMaxWidth().height(200.dp)
+                        .semantics{contentDescription="رسم ${def.title} من المدخلات الحالية؛ الأبعاد متاحة في الأزرار أسفل الرسم"}){
+                        drawRoundRect(Brush.verticalGradient(listOf(Color(0xFF113B47),Color(0xFF071F29))),cornerRadius=CornerRadius(10.dp.toPx()))
+                        drawCalculator(id,raw,answer,color,accent)
+                    }
+                    answer.outputs.firstOrNull()?.let { VisualMetric(it.label,"${fmt(it.value)} ${it.unit}",Modifier.fillMaxWidth()) }
+                }
+                else -> CalculationFlow(def,raw,answer)
             }
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
@@ -56,7 +82,7 @@ fun CalculatorDiagram(def:CalcDef,raw:Map<String,String>,answer:CalcAnswer?,upda
         if(id=="compaction")Text("الحقلية مقابل القصوى المعملية؛ النسبة ليست حكم قبول تلقائي.",style=MaterialTheme.typography.labelSmall)
         if(id=="consumption_check")Text("العمود الأول: المتوقع؛ الثاني: الفعلي، بوحدة خامة موحدة.",style=MaterialTheme.typography.labelSmall)
         if(id=="flood_test")Text("الأفقي: الساعات؛ الرأسي: عمق الماء مم. خط بين قراءتين فقط، وليس رصدًا مستمرًا أو إثبات تسريب.",style=MaterialTheme.typography.labelSmall)
-        if(id=="garage_ramp")Text("الخط ينزل من البداية يسار الرسم للنهاية يمينه. لا يتضمن فحص احتكاك سيارة أو اعتماد الميل.",style=MaterialTheme.typography.bodySmall)
+        if(id=="garage_ramp")Text("اتجاه النزول من البداية للنهاية. المعاينة توضّح الأبعاد والميل الهندسي.",style=MaterialTheme.typography.bodySmall)
         if(id=="mesh")Text("الألوان تميز الاتجاهين؛ العرض مختصر عند كثرة الأسياخ. أعداد الحصر في النتيجة كاملة.",style=MaterialTheme.typography.labelSmall)
         if(id=="stirrups")Text("الرسم لجسم الكانة؛ إضافات الثني والخطافات من التفريدة المدخلة ولا يحدد شكلها هذا الرسم.",style=MaterialTheme.typography.labelSmall)
         if(id=="sieve")Text("الأفقي: فتحة المنخل مم بمقياس لوغاريتمي؛ الرأسي: المار %. الوعاء غير مرسوم.",style=MaterialTheme.typography.labelSmall)
@@ -89,7 +115,7 @@ private fun DrawScope.drawCalculator(id:String,raw:Map<String,String>,answer:Cal
         val x0=points.minOf{it.first};val x1=points.maxOf{it.first};val y0=min(0.0,points.minOf{it.second});val y1=points.maxOf{it.second}
         drawLine(c,Offset(left,top),Offset(left,top+rh),2f);drawLine(c,Offset(left,top+rh),Offset(left+rw,top+rh),2f)
         val path=Path();points.sortedBy{it.first}.forEachIndexed{i,p->val pt=Offset(left+((p.first-x0)/(x1-x0).coerceAtLeast(.0001)).toFloat()*rw,top+rh-((p.second-y0)/(y1-y0).coerceAtLeast(.0001)).toFloat()*rh);if(i==0)path.moveTo(pt.x,pt.y)else path.lineTo(pt.x,pt.y);drawCircle(accent,5f,pt)};drawPath(path,c,style=Stroke(3f))
-        val paint=android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply{color=android.graphics.Color.GRAY;textSize=11.dp.toPx()}
+        val paint=android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply{color=0xFFDAEFEB.toInt();textSize=11.dp.toPx()}
         fun tick(value:Double,x:Float,y:Float){drawContext.canvas.nativeCanvas.drawText(java.lang.String.format(java.util.Locale.US,"%.2f",value),x,y,paint)}
         tick(x0,left,top+rh+20f);tick(x1,left+rw-40f,top+rh+20f);tick(y0,0f,top+rh);tick(y1,0f,top+12f)
     }
@@ -150,8 +176,6 @@ private fun DrawScope.drawCalculator(id:String,raw:Map<String,String>,answer:Cal
             val visible=bins.take(6);visible.forEachIndexed{i,bin->val y=top+i*rh/(visible.size.coerceAtLeast(1));drawRect(c.copy(alpha=.1f),Offset(left,y),Size(rw,14f));var x=0.0;bin.take(100).forEachIndexed{j,p->drawRect(if(j%2==0)c else accent,Offset(left+(x/stock).toFloat()*rw,y),Size((p/stock).toFloat()*rw,14f));x+=p+kerf}}
         }
         "coordinate_area"->poly(ExtraCalculators.tableValues(id,raw).map{it.getValue("x") to -it.getValue("y")})
-        "proctor"->graph(ExtraCalculators.tableValues(id,raw).map{it.getValue("moisture") to (it.getValue("mass")/v("moldVolume")/(1+it.getValue("moisture")/100))})
-        "sieve"->{var sum=0.0;val pts=ExtraCalculators.tableValues(id,raw).mapNotNull{r->sum+=r.getValue("mass");if(r.getValue("size")>0)log10(r.getValue("size")) to (100-sum/v("sampleMass")*100)else null};graph(pts)}
         "level_survey"->graph(answer.outputs.drop(1).mapIndexed{i,o->i.toDouble() to o.value})
         "level_closure"->graph(answer.outputs.drop(1).mapIndexed{i,o->i.toDouble() to o.value})
         "section_volumes"->graph(ExtraCalculators.tableValues(id,raw).map{it.getValue("station") to it.getValue("cut")})
@@ -184,11 +208,6 @@ private fun DrawScope.drawCalculator(id:String,raw:Map<String,String>,answer:Cal
         "sealant","grout"->rectangle(v("jointW"),v("jointD"))
         "concrete_compression","mortar_compression"->{if(raw["_specimen"]=="cylinder")drawCircle(c,min(rw,rh)*.4f,Offset(w/2,h/2),style=Stroke(3f))else rectangle(v("a"),v("b"));drawLine(accent,Offset(w/2,0f),Offset(w/2,top),4f);drawLine(accent,Offset(w/2,top+rh),Offset(w/2,h),4f)}
         "slump"->{val ratio=(v("sampleHeight")/v("reference")).toFloat();drawLine(c,Offset(left,top),Offset(left,top+rh),3f);val base=top+rh;drawRect(c.copy(alpha=.2f),Offset(left+rw*.3f,base-rh*ratio),Size(rw*.5f,rh*ratio));drawLine(accent,Offset(left,top),Offset(left+rw,top),2f)}
-        else->{
-            // Layer/material schematic only: no invented plan dimensions or reinforcement layout.
-            val layers=(if(id=="gypsum")v("layers",1.0) else if(v("coats")>0)v("coats")else 1.0).toInt().coerceIn(1,8)
-            drawRect(c.copy(alpha=.12f),Offset(left,top+rh*.45f),Size(rw,rh*.4f))
-            repeat(layers){i->drawRect(if(i%2==0)c else accent,Offset(left,top+rh*.45f-i*8f),Size(rw,6f))}
-        }
+
     }
 }
