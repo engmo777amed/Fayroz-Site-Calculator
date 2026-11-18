@@ -5,6 +5,7 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import com.fayroz.sitecalculator.data.V8Repository
@@ -36,7 +37,13 @@ class CalculatorVisualDeviceTest {
     private fun reveal(text:String){revealNode(hasText(text))}
     private fun launch(tool:String?=null)=ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java).apply{tool?.let{putExtra("calculator",it)}})
     private fun shot(name:String){val f=File(context.getExternalFilesDir(null),"screenshots/v98-$name.png");f.parentFile!!.mkdirs();assertTrue(UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).takeScreenshot(f))}
-    @Test fun startsAtCalculatorSections(){launch().use{compose.onNodeWithText("أقسام الحاسبات").assertIsDisplayed();shot("sections")}}
+    private fun captureApp(name:String){
+        val file=File(context.getExternalFilesDir(null),"screenshots/v98-app-$name.png")
+        file.parentFile!!.mkdirs()
+        val bitmap=compose.onRoot().captureToImage().asAndroidBitmap()
+        file.outputStream().use { assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)) }
+    }
+    @Test fun startsAtCalculatorSections(){launch().use{compose.onNodeWithText("أقسام الحاسبات").assertIsDisplayed();captureApp("sections")}}
     @Test fun rampNumbersUpdateDrawingAndPersist(){
         val repo=V8Repository(context);repo.clearCalculatorDraft("garage_ramp.independent")
         launch("garage_ramp").use{
@@ -68,7 +75,7 @@ class CalculatorVisualDeviceTest {
         revealNode(hasText("علوي")).performClick()
         revealNode(hasText("منظور")).performClick()
         revealNode(hasContentDescription("مجسم ثلاثي الأبعاد من المدخلات الحالية"))
-        shot("ramp-solid")
+        captureApp("ramp-solid")
     }}
     @Test fun moistureCalculationDisplaysKnownAnswer(){launch("soil_moisture").use{
         compose.onNodeWithText("احسب واعرض النتيجة").performClick()
