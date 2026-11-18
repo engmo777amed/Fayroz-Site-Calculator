@@ -34,6 +34,24 @@ private val geometryDiagrams=setOf(
     "rolls","sealant","grout","concrete_compression","mortar_compression","slump",
 )
 
+private val visualExamples = mapOf(
+    "garage_ramp" to mapOf("rampWidth" to "3","rampThickness" to "20"),
+    "tile_layout" to mapOf("tileThickness" to "10"),
+    "sieve" to mapOf("sampleMass" to "100","_rows" to "5",
+        "_row.0.size" to "9.5","_row.0.mass" to "0",
+        "_row.1.size" to "4.75","_row.1.mass" to "11",
+        "_row.2.size" to "2.36","_row.2.mass" to "27",
+        "_row.3.size" to "0.6","_row.3.mass" to "30",
+        "_row.4.size" to "0","_row.4.mass" to "32"),
+    "proctor" to mapOf("moldVolume" to "1000","_rows" to "3",
+        "_row.0.moisture" to "8","_row.0.mass" to "1944",
+        "_row.1.moisture" to "10","_row.1.mass" to "2200",
+        "_row.2.moisture" to "12","_row.2.mass" to "2128"),
+)
+
+internal fun firstOpenVisual(toolId: String) =
+    toolId in CalculatorGeometry.supported || toolId in setOf("sieve","proctor","soil_moisture")
+
 /** Geometry is derived from the same inputs/answer used by the calculator, never a second solver. */
 @Composable
 fun CalculatorDiagram(def:CalcDef,raw:Map<String,String>,answer:CalcAnswer?,update:(String,String)->Unit){
@@ -44,15 +62,57 @@ fun CalculatorDiagram(def:CalcDef,raw:Map<String,String>,answer:CalcAnswer?,upda
     val accent=Color(0xFFFFC164)
     BoxCard{
         val displayable=dims.all{(MortarMix.number(raw[it.key])?:0.0).let{v->kotlin.math.abs(v)<=1e8&&(v==0.0||kotlin.math.abs(v)>=1e-8)}}
-        val solid=remember(id,raw,answer,displayable) {
-            if(answer==null || !displayable || id !in CalculatorGeometry.supported) null
-            else CalculatorGeometry.create(id,raw,answer)
+        val modelInput=remember(id,raw) {
+            if(id in setOf("garage_ramp","tile_layout")) {
+                raw + visualExamples.getValue(id).filterKeys { raw[it].isNullOrBlank() }
+            } else raw
         }
-        Text(if(solid==null)"الرسم التوضيحي المتغير"else "المجسم ثلاثي الأبعاد",style=MaterialTheme.typography.titleSmall)
+        val solid=remember(id,modelInput,answer,displayable) {
+            if(answer==null || !displayable || id !in CalculatorGeometry.supported) null
+            else CalculatorGeometry.create(id,modelInput,answer)
+        }
+        val solidExample=remember(id,answer,solid) {
+            if(solid==null && answer==null && id in CalculatorGeometry.supported) {
+                val defaults=def.fields.associate { field ->
+                    field.key to field.default.ifBlank {
+                        if(field.required) when(field.key) {
+                            "length" -> "4"
+                            "width" -> "2"
+                            "height" -> "0.5"
+                            "diameter" -> if(id=="round_column")"0.4" else "12"
+                            "area" -> "12"
+                            else -> "1"
+                        } else ""
+                    }
+                }
+                val specific=if(id=="stairs_concrete") mapOf("width" to "1.1","run" to "1.2",
+                    "rise" to ".68","steps" to "4","tread" to "30","riser" to "17") else emptyMap()
+                val data=defaults+specific+visualExamples[id].orEmpty()
+                runCatching {
+                    val calculated=CalculatorLibrary.evaluate(def,data)
+                    CalculatorGeometry.create(id,data,calculated)?.let { it to calculated }
+                }.getOrNull()
+            } else null
+        }
+        val chartExample=remember(id,answer) {
+            if(answer==null && id in setOf("sieve","proctor")) {
+                val data=visualExamples.getValue(id)
+                runCatching { CalculatorLibrary.evaluate(def,data) }.getOrNull()?.let { data to it }
+            } else null
+        }
+        Text(if(solid==null && solidExample==null)"الرسم التوضيحي المتغير"else "المجسم ثلاثي الأبعاد",style=MaterialTheme.typography.titleSmall)
         if(id=="sieve") SieveLabIllustration()
-        if(answer==null||!displayable){
+        if(chartExample!=null) {
+            Text("منحنى بقراءات مثال. أدخل قياساتك لرسم منحنى المشروع.",style=MaterialTheme.typography.bodySmall)
+            MeasurementChart(id,chartExample.first)
+        }else if(solidExample!=null){
+            Text("مجسم مثال. أدخل قياساتك لعرض مجسم المشروع.",style=MaterialTheme.typography.bodySmall)
+            CalculatorSolidView(solidExample.first,solidExample.second,isRamp=id=="garage_ramp")
+        }else if(answer==null||!displayable){
             Text("راجع المدخلات لظهور المعاينة.",style=MaterialTheme.typography.bodySmall)
         }else if(solid!=null){
+            if(modelInput!=raw) Text("المجسم يستخدم أبعاد عرض توضيحية للخانات الفارغة. عدّلها من المدخلات.",
+                style=MaterialTheme.typography.bodySmall)
             CalculatorSolidView(solid,answer,isRamp=id=="garage_ramp")
         }else{
             if(id=="garage_ramp")Text("أدخل عرض الرامب وسمك البلاطة لعرض المجسم.")

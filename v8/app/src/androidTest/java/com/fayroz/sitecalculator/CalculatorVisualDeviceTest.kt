@@ -38,22 +38,31 @@ class CalculatorVisualDeviceTest {
     private fun launch(tool:String?=null)=ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java).apply{tool?.let{putExtra("calculator",it)}})
     private fun shot(name:String){val f=File(context.getExternalFilesDir(null),"screenshots/v98-$name.png");f.parentFile!!.mkdirs();assertTrue(UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).takeScreenshot(f))}
     private fun captureApp(name:String){
-        val file=File(context.getExternalFilesDir(null),"screenshots/v99-app-$name.png")
+        val file=File(context.getExternalFilesDir(null),"screenshots/v991-app-$name.png")
         file.parentFile!!.mkdirs()
         val bitmap=compose.onRoot().captureToImage().asAndroidBitmap()
         file.outputStream().use { assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)) }
     }
     @Test fun startsAtCalculatorSections(){launch().use{compose.onNodeWithText("أقسام الحاسبات").assertIsDisplayed();captureApp("sections")}}
+    @Test fun rampIsVisibleFromCatalogBeforeEnteringDimensions(){
+        launch().use {
+            compose.onNodeWithText("القياسات والمناسيب").performClick()
+            revealNode(hasText("ميل مدخل الجراج")).performClick()
+            compose.onNodeWithContentDescription("مجسم ثلاثي الأبعاد من المدخلات الحالية").assertIsDisplayed()
+            compose.onNodeWithText("المجسم يستخدم أبعاد عرض توضيحية للخانات الفارغة. عدّلها من المدخلات.").assertIsDisplayed()
+            captureApp("ramp-first-open")
+        }
+    }
     @Test fun rampNumbersUpdateDrawingAndPersist(){
         val repo=V8Repository(context);repo.clearCalculatorDraft("garage_ramp.independent")
         launch("garage_ramp").use{
-            compose.onNodeWithContentDescription("إدخال فرق المنسوب نزولًا").performScrollTo().performTextReplacement("2")
-            reveal("الرسم التوضيحي المتغير")
+            revealNode(hasContentDescription("إدخال فرق المنسوب نزولًا")).performTextReplacement("2")
+            reveal("المجسم ثلاثي الأبعاد")
             dismissSystemDialog()
             compose.onNodeWithText("احسب واعرض النتيجة").performClick()
             shot("ramp-after-calculate")
-            reveal("20 %");compose.waitForIdle();shot("ramp-result")
-            reveal("الرسم التوضيحي المتغير");shot("ramp-diagram")
+            compose.onNode(SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsActions.ScrollToIndex)).performScrollToNode(hasText("20 %"));assertTrue(compose.onAllNodesWithText("20 %").fetchSemanticsNodes().isNotEmpty());compose.waitForIdle();shot("ramp-result")
+            reveal("المجسم ثلاثي الأبعاد");shot("ramp-diagram")
             compose.onNodeWithText("حفظ النتيجة").performClick()
         }
         val saved=repo.recentCalcs().first{it.toolId=="garage_ramp"}
@@ -61,16 +70,16 @@ class CalculatorVisualDeviceTest {
         assertTrue(saved.summary.contains("20"))
     }
     @Test fun rampModeHidesSolvedDimension(){launch("garage_ramp").use{
-        compose.onNodeWithText("طريقة حساب الرامب").performScrollTo()
+        reveal("طريقة حساب الرامب")
         compose.onNodeWithText("الميل من فرق المنسوب والطول").performClick()
         compose.onNodeWithText("الطول من فرق المنسوب والميل").performClick()
         compose.onAllNodesWithContentDescription("إدخال الطول الأفقي الرئيسي").assertCountEquals(0)
-        compose.onNodeWithContentDescription("إدخال الميل الرئيسي").performScrollTo().assertIsDisplayed()
+        revealNode(hasContentDescription("إدخال الميل الرئيسي")).assertIsDisplayed()
         shot("ramp-mode")
     }}
     @Test fun rampSolidRespondsToEditsAndCameraButtons(){launch("garage_ramp").use{
-        compose.onNodeWithContentDescription("إدخال عرض الرامب للمجسم").performScrollTo().performTextReplacement("3")
-        compose.onNodeWithContentDescription("إدخال سمك البلاطة الرأسي للمجسم").performScrollTo().performTextReplacement("20")
+        revealNode(hasContentDescription("إدخال عرض الرامب للمجسم")).performTextReplacement("3")
+        revealNode(hasContentDescription("إدخال سمك البلاطة الرأسي للمجسم")).performTextReplacement("20")
         revealNode(hasContentDescription("مجسم ثلاثي الأبعاد من المدخلات الحالية"))
         revealNode(hasText("علوي")).performClick()
         revealNode(hasText("منظور")).performClick()
